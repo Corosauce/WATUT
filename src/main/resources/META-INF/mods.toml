@@ -1,0 +1,11 @@
+modLoader="javafml"
+loaderVersion="[34,)"
+license = "All Rights Reserved"
+[[mods]]
+modId="watut"
+version="${file.jarVersion}"
+displayName="What Are They Up To"
+authors="Corosus"
+description='''
+
+'''
