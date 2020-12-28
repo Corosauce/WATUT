@@ -1,21 +1,17 @@
 package com.corosus.watut;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.entity.player.AbstractClientPlayerEntity;
+import net.minecraft.world.World;
 import net.minecraftforge.event.TickEvent;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 public class PlayerManager {
 
-    private HashMap<UUID, PlayerStatus> lookupPlayerStatus = new HashMap<>();
+    protected HashMap<UUID, PlayerStatus> lookupPlayerStatus = new HashMap<>();
 
-    public void tick(TickEvent.WorldTickEvent event) {
+    public void tick(World world) {
 
     }
 

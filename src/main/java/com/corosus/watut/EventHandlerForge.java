@@ -38,18 +38,19 @@ public class EventHandlerForge {
     @SubscribeEvent(priority = EventPriority.LOW)
     public void tickWorld(TickEvent.WorldTickEvent event) {
         if (event.phase == TickEvent.Phase.START) {
-            WATUT.playerManagerServer.tick(event);
-            WATUT.playerManagerClient.tick(event);
+            WATUT.playerManagerServer.tick(event.world);
         }
-    }/*
+    }
 
     @OnlyIn(Dist.CLIENT)
     @SubscribeEvent(priority = EventPriority.LOW)
     public void tickClient(TickEvent.ClientTickEvent event) {
         if (event.phase == TickEvent.Phase.START) {
-
+            if (Minecraft.getInstance().world != null) {
+                WATUT.playerManagerClient.tick(Minecraft.getInstance().world);
+            }
         }
-    }*/
+    }
 
 
 }
