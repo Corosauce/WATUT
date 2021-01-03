@@ -3,8 +3,11 @@ package com.corosus.watut;
 import com.corosus.watut.network.ToClientPlayerStatusMessage;
 import com.corosus.watut.network.ToServerPlayerStatusMessage;
 import com.corosus.watut.network.WATUTNetwork;
+import com.corosus.watut.particles.StatusParticle;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.ChatScreen;
+import net.minecraft.client.particle.TexturedParticle;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.world.World;
 import net.minecraftforge.event.TickEvent;
 
@@ -31,6 +34,30 @@ public class PlayerManagerClient extends PlayerManager {
                 lastScreenClass = null;
             }
         }
+
+        if (mc.world.getGameTime() % 5 == 0) {
+            for (PlayerEntity playerEntity : mc.world.getPlayers()) {
+                if (mc.player.getDistance(playerEntity) < 20) {
+                    if (WATUT.playerManagerClient.getPlayerStatus(mc.player.getUniqueID()).getStatusType() == PlayerStatus.StatusType.CHAT) {
+                        StatusParticle particle = new StatusParticle(mc.world, playerEntity.getPosX(), playerEntity.getPosY() + 2.2, playerEntity.getPosZ());
+                        //particle.getScale(30);
+                        //particle.setColor(0, 0, 0);
+                        particle.setSprite(EventHandlerForge.square16);
+                        particle.setMaxAge(5);
+                        particle.setSize(0.5F, 0.5F);
+                        particle.setScale(0.2F);
+                        //particle.setPosition(playerEntity.getPosX(), playerEntity.getPosY() + 2, playerEntity.getPosZ());
+                        mc.particles.addEffect(particle);
+                    }
+                }
+
+
+            }
+        }
+
+        lookupPlayerStatus.entrySet().stream().forEach(entrySet -> {
+            //WATUT.LOGGER.debug("client:" + world.getGameTime() + " - " + entrySet.getValue().getUuid() + " -> " + entrySet.getValue().getStatusType());
+        });
 
     }
 

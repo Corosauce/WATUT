@@ -21,8 +21,13 @@ public class PlayerStatus {
         public static StatusType get(int intValue) { return lookup.get(intValue); }
     }
 
-    PlayerStatus(UUID uuid) {
+    public PlayerStatus(UUID uuid) {
         this.uuid = uuid;
+    }
+
+    public PlayerStatus(UUID uuid, StatusType statusType) {
+        this.uuid = uuid;
+        this.statusType = statusType;
     }
 
     public UUID getUuid() {
@@ -46,15 +51,9 @@ public class PlayerStatus {
         buffer.writeInt(statusType.ordinal());
     }
 
-    public static ToClientPlayerStatusMessage decode(PacketBuffer buffer) {
-
-        int count = buffer.readVarInt();
-        List<UUID> players = new ArrayList<>(count);
-        for (int i = 0; i < count; i++) {
-            players.add(buffer.readUniqueId());
-        }
-
-        return new ToClientPlayerStatusMessage(players);
+    public void update(PlayerStatus status) {
+        this.uuid = status.getUuid();
+        this.statusType = status.getStatusType();
     }
 
 }
