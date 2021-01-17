@@ -5,16 +5,26 @@ import com.corosus.watut.network.ToServerPlayerStatusMessage;
 import com.corosus.watut.network.WATUTNetwork;
 import com.corosus.watut.particles.HeartParticle2;
 import com.corosus.watut.particles.StatusParticle;
+import com.mojang.blaze3d.matrix.MatrixStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.particle.TexturedParticle;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.math.vector.*;
 import net.minecraft.world.World;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 public class PlayerManagerClient extends PlayerManager {
 
     private Class lastScreenClass = null;
+
+    private HeartParticle2 particleTest = null;
+    private List<HeartParticle2> particles = new ArrayList<>();
 
     public void tick(World world) {
         super.tick(world);
@@ -36,7 +46,7 @@ public class PlayerManagerClient extends PlayerManager {
             }
         }
 
-        if (mc.world.getGameTime() % 5 == 0) {
+        if (mc.world.getGameTime() % 1 == 0) {
             for (PlayerEntity playerEntity : mc.world.getPlayers()) {
                 if (mc.player.getDistance(playerEntity) < 20) {
                     if (WATUT.playerManagerClient.getPlayerStatus(mc.player.getUniqueID()).getStatusType() == PlayerStatus.StatusType.CHAT) {
@@ -45,13 +55,102 @@ public class PlayerManagerClient extends PlayerManager {
                         particle.setMaxAge(5);
                         particle.setSize(0.5F, 0.5F);
                         particle.setScale(0.2F);*/
-                        HeartParticle2 particle = new HeartParticle2(mc.world, playerEntity.getPosX(), playerEntity.getPosY() + 2.2, playerEntity.getPosZ());
+                        //HeartParticle2 particle = new HeartParticle2(mc.world, playerEntity.getPosX(), playerEntity.getPosY() + 2.2, playerEntity.getPosZ());
                         //particle.setSprite(EventHandlerForge.square16);
                         //particle.setMaxAge(5);
                         //particle.setSize(0.5F, 0.5F);
                         //particle.setScale(0.2F);
-                        mc.particles.addEffect(particle);
+                        //mc.particles.addEffect(particle);
                     }
+
+                    int particleCount = 10;
+
+                    if (particles.size() < particleCount) {
+                        particleTest = new HeartParticle2(mc.world, playerEntity.getPosX(), playerEntity.getPosY() + 2.2, playerEntity.getPosZ());
+                        particleTest.setSprite(EventHandlerForge.square16);
+                        particleTest.setMaxAge(50);
+                        //particleTest.move(0, -0.1, 0);
+                        mc.particles.addEffect(particleTest);
+                        particles.add(particleTest);
+                    }
+
+                    Iterator<HeartParticle2> it = particles.iterator();
+                    int index = 0;
+                    while (it.hasNext()) {
+                        HeartParticle2 particle = it.next();
+                        if (!particle.isAlive()) {
+                            it.remove();
+                        } else {
+                            float x = (index * (360 / particleCount));//((world.getGameTime() * 5) % 360) + (index * (360 / particleCount));
+                            float y = ((world.getGameTime() * 15) % 360) + (index * (360 / particleCount));
+                            float z = (index * (360 / particleCount));//((world.getGameTime() * 10) % 360) + (index * (360 / particleCount));
+
+                            //Quaternion q = new Quaternion(new Vector3f(1.0F, 0.0F, 1.0F), 45, true);
+                            //Matrix4f m = new Matrix4f();
+
+                            Quaternion quaternionX = new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), (float)(-x), true);
+                            Quaternion quaternionY = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), (float)(-y), true);
+                            Quaternion quaternionZ = new Quaternion(new Vector3f(0.0F, 0.0F, 1.0F), (float)(-z), true);
+                            //quaternion.multiply(new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), (float)(-x), true));
+                            //quaternion.multiply(new Quaternion(new Vector3f(0.0F, 0.0F, 1.0F), (float)(-z), true));
+                            //Vector3f vec = new Vector3f(1, 1, 1);
+                            Vector3f vecX = new Vector3f(1F, 0, 0);
+                            Vector3f vecY = new Vector3f(0, 0.2F, 0);
+                            Vector3f vecZ = new Vector3f(0, 0, 1);
+                            vecX.transform(quaternionY);
+                            vecY.transform(quaternionX);
+                            //vecZ.transform(quaternionZ);
+
+                            Vector3f vec = new Vector3f(0, 0, 0);
+                            vec.add(vecX);
+                            vec.add(vecY);
+                            //vec.add(vecZ);
+
+                            float rotAroundPosX = 0;
+                            float rotAroundPosY = 0;
+                            float rotAroundPosZ = 0;
+                            /*float rotAroundPosX = quaternion.getX();
+                            float rotAroundPosY = quaternion.getY();
+                            float rotAroundPosZ = quaternion.getZ();*/
+                            //TransformationMatrix transformationMatrix = new TransformationMatrix(vec, quaternion, null, null);
+                            //MatrixStack matrixStack = new MatrixStack();
+                            /*Matrix4f matrix3f = new Matrix4f();
+                            matrix3f.setIdentity();
+                            matrix3f.translate(vec);
+                            matrix3f.mul(quaternion);
+                            float xx = ObfuscationReflectionHelper.getPrivateValue(Matrix4f.class, matrix3f, "m03");
+                            float yy = ObfuscationReflectionHelper.getPrivateValue(Matrix4f.class, matrix3f, "m13");
+                            float zz = ObfuscationReflectionHelper.getPrivateValue(Matrix4f.class, matrix3f, "m23");*/
+                            //vec.transform(matrix3f);
+
+                            rotAroundPosX = vec.getX();
+                            rotAroundPosY = vec.getY();
+                            rotAroundPosZ = vec.getZ();
+
+                            /*rotAroundPosX = xx;
+                            rotAroundPosY = yy;
+                            rotAroundPosZ = zz;
+
+                            Vector3f vecOut = transformationMatrix.getTranslation();
+                            rotAroundPosX = vecOut.getX();
+                            rotAroundPosY = vecOut.getY();
+                            rotAroundPosZ = vecOut.getZ();*/
+
+                            particle.setPosition(playerEntity.getPosX() + rotAroundPosX, playerEntity.getPosY() + 2.2 + rotAroundPosY, playerEntity.getPosZ() + rotAroundPosZ);
+                        }
+                        index++;
+                    }
+
+                    /*if (particleTest == null || !particleTest.isAlive()) {
+                        particleTest = new HeartParticle2(mc.world, playerEntity.getPosX(), playerEntity.getPosY() + 2.2, playerEntity.getPosZ());
+                        particleTest.setSprite(EventHandlerForge.square16);
+                        particleTest.setMaxAge(50);
+                        //particleTest.move(0, -0.1, 0);
+                        mc.particles.addEffect(particleTest);
+                    }*/
+
+
+
                 }
 
 
