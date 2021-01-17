@@ -63,12 +63,17 @@ public class PlayerManagerClient extends PlayerManager {
                         //mc.particles.addEffect(particle);
                     }
 
-                    int particleCount = 10;
+                    int particleCountCircle = 20;
+                    int particleCountLayers = 40;
 
-                    if (particles.size() < particleCount) {
+                    while (particles.size() < particleCountCircle * particleCountLayers) {
                         particleTest = new HeartParticle2(mc.world, playerEntity.getPosX(), playerEntity.getPosY() + 2.2, playerEntity.getPosZ());
                         particleTest.setSprite(EventHandlerForge.square16);
-                        particleTest.setMaxAge(50);
+                        particleTest.setMaxAge(250);
+                        particleTest.setMotion(0, 0, 0);
+                        particleTest.setScale(0.1F);
+                        //particleTest.setColor(0.1F * (particles.size() % particleCountCircle), 0, 0);
+                        particleTest.setColor(world.rand.nextFloat(), world.rand.nextFloat(), world.rand.nextFloat());
                         //particleTest.move(0, -0.1, 0);
                         mc.particles.addEffect(particleTest);
                         particles.add(particleTest);
@@ -81,9 +86,13 @@ public class PlayerManagerClient extends PlayerManager {
                         if (!particle.isAlive()) {
                             it.remove();
                         } else {
-                            float x = (index * (360 / particleCount));//((world.getGameTime() * 5) % 360) + (index * (360 / particleCount));
-                            float y = ((world.getGameTime() * 15) % 360) + (index * (360 / particleCount));
-                            float z = (index * (360 / particleCount));//((world.getGameTime() * 10) % 360) + (index * (360 / particleCount));
+                            //(index * (360 / particleCount))
+                            float x = ((world.getGameTime() * 0.5F) % 360);
+                            float y = ((world.getGameTime() * 3) % 360) + ((index % particleCountCircle) * (360 / particleCountCircle));
+                            float z = ((world.getGameTime() * 0.3F) % 360);
+
+                            int yDiff = (index / particleCountCircle) - (particleCountLayers / 2);
+                            float yDiffDist = 0.1F;
 
                             //Quaternion q = new Quaternion(new Vector3f(1.0F, 0.0F, 1.0F), 45, true);
                             //Matrix4f m = new Matrix4f();
@@ -94,16 +103,27 @@ public class PlayerManagerClient extends PlayerManager {
                             //quaternion.multiply(new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), (float)(-x), true));
                             //quaternion.multiply(new Quaternion(new Vector3f(0.0F, 0.0F, 1.0F), (float)(-z), true));
                             //Vector3f vec = new Vector3f(1, 1, 1);
-                            Vector3f vecX = new Vector3f(1F, 0, 0);
+                            Vector3f vec = new Vector3f(1F, 0 + ((float)yDiff) * yDiffDist, 0);
+                            /*Vector3f vecXZ = new Vector3f(1F, 0, 0);
                             Vector3f vecY = new Vector3f(0, 0.2F, 0);
-                            Vector3f vecZ = new Vector3f(0, 0, 1);
-                            vecX.transform(quaternionY);
-                            vecY.transform(quaternionX);
-                            //vecZ.transform(quaternionZ);
+                            Vector3f vecZ = new Vector3f(0, 0, 1);*/
 
-                            Vector3f vec = new Vector3f(0, 0, 0);
-                            vec.add(vecX);
-                            vec.add(vecY);
+                            //setup the ring of particles (yaw)
+                            vec.transform(quaternionY);
+                            //pitch them
+                            vec.transform(quaternionX);
+                            //roll them
+                            vec.transform(quaternionZ);
+                            //vecXZ.transform(quaternionZ);
+                            //vecX.transform(quaternionX);
+                            //vecY.transform(quaternionX);
+                            //vecZ.transform(quaternionX);
+
+                            //Vector3f vec = new Vector3f(0, 0, 0);
+                            //vec.add(vecX);
+                            //vec.add(vec);
+                            //vec.add(vecXZ);
+                            //vec.add(vecY);
                             //vec.add(vecZ);
 
                             float rotAroundPosX = 0;
