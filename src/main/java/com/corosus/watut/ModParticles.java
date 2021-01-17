@@ -11,6 +11,7 @@ public class ModParticles {
 	public static final ParticleType SPARKLE = new BasicParticleType(true);
 
 	public void registerParticles(RegistryEvent.Register<ParticleType<?>> evt) {
+		SPARKLE.setRegistryName("sparkle");
 		evt.getRegistry().register(SPARKLE);
 		//register(evt.getRegistry(), "sparkle", SPARKLE);
 	}

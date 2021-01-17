@@ -1,6 +1,7 @@
 package com.corosus.watut.particles;
 
 import net.minecraft.client.particle.*;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.particles.BasicParticleType;
 import net.minecraft.util.math.MathHelper;
@@ -9,7 +10,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class HeartParticle2 extends SpriteTexturedParticle {
-   private HeartParticle2(ClientWorld world, double x, double y, double z) {
+   public HeartParticle2(ClientWorld world, double x, double y, double z) {
       super(world, x, y, z, 0.0D, 0.0D, 0.0D);
       this.motionX *= (double)0.01F;
       this.motionY *= (double)0.01F;
@@ -50,6 +51,20 @@ public class HeartParticle2 extends SpriteTexturedParticle {
          }
 
       }
+   }
+
+   @Override
+   public void setSprite(TextureAtlasSprite sprite) {
+      super.setSprite(sprite);
+   }
+
+   @Override
+   public void setSize(float particleWidth, float particleHeight) {
+      super.setSize(particleWidth, particleHeight);
+   }
+
+   public void setScale(float scale) {
+      this.particleScale = scale;
    }
 
    @OnlyIn(Dist.CLIENT)
