@@ -48,7 +48,7 @@ public class PlayerManagerClient extends PlayerManager {
 
         if (mc.world.getGameTime() % 1 == 0) {
             for (PlayerEntity playerEntity : mc.world.getPlayers()) {
-                if (mc.player.getDistance(playerEntity) < 20) {
+                if (true || mc.player.getDistance(playerEntity) < 20) {
                     if (WATUT.playerManagerClient.getPlayerStatus(mc.player.getUniqueID()).getStatusType() == PlayerStatus.StatusType.CHAT) {
                         /*StatusParticle particle = new StatusParticle(mc.world, playerEntity.getPosX(), playerEntity.getPosY() + 2.2, playerEntity.getPosZ());
                         particle.setSprite(EventHandlerForge.square16);
@@ -74,9 +74,35 @@ public class PlayerManagerClient extends PlayerManager {
                         particleTest.setScale(0.1F);
                         //particleTest.setColor(0.1F * (particles.size() % particleCountCircle), 0, 0);
                         particleTest.setColor(world.rand.nextFloat(), world.rand.nextFloat(), world.rand.nextFloat());
+                        if (particles.size() < particleCountCircle * 5) {
+                            particleTest.setColor(1, 1, 1);
+                        }
                         //particleTest.move(0, -0.1, 0);
                         mc.particles.addEffect(particleTest);
                         particles.add(particleTest);
+                    }
+
+                    int testY = 100;
+
+                    float dist = (float)Math.sqrt(playerEntity.getDistanceSq(0.5, testY, 0.5));
+                    Vector3f vecDiff = new Vector3f(
+                            (float)(playerEntity.getPosX() - 0.5) / dist,
+                            (float)(playerEntity.getPosY() - testY) / dist,
+                            (float)(playerEntity.getPosZ() - 0.5) / dist);
+                    Vector3f vecAngles = new Vector3f(
+                            (float)Math.atan2(vecDiff.getY(), vecDiff.getZ()),
+                            (float)Math.atan2(vecDiff.getZ(), vecDiff.getX()), //invert if needed
+                            (float)Math.atan2(vecDiff.getX(), vecDiff.getY())); //invert if needed
+
+                    //convert to degrees
+                    vecAngles = new Vector3f((float)Math.toDegrees(vecAngles.getX()), (float)Math.toDegrees(vecAngles.getY()), (float)Math.toDegrees(vecAngles.getZ()));
+
+                    if (WATUT.playerManagerClient.getPlayerStatus(mc.player.getUniqueID()).getStatusType() == PlayerStatus.StatusType.CHAT) {
+                        System.out.println("x: " + vecAngles.getX());
+                        System.out.println("y: " + vecAngles.getY());
+                        System.out.println("z: " + vecAngles.getZ());
+                        //System.out.println("yDiff: " + (playerEntity.getPosY() - testY));
+                        System.out.println("diff: " + vecDiff);
                     }
 
                     Iterator<HeartParticle2> it = particles.iterator();
@@ -87,9 +113,13 @@ public class PlayerManagerClient extends PlayerManager {
                             it.remove();
                         } else {
                             //(index * (360 / particleCount))
-                            float x = ((world.getGameTime() * 0.5F) % 360);
-                            float y = ((world.getGameTime() * 3) % 360) + ((index % particleCountCircle) * (360 / particleCountCircle));
-                            float z = ((world.getGameTime() * 0.3F) % 360);
+                            float x = 0;//((world.getGameTime() * 0.5F) % 360);
+                            float y = /*((world.getGameTime() * 3) % 360) + */((index % particleCountCircle) * (360 / particleCountCircle));
+                            float z = 0;//((world.getGameTime() * 0.3F) % 360);
+
+                            x = vecAngles.getX() + 90;
+                            //y += vecAngles.getY();
+                            z = vecAngles.getZ();
 
                             int yDiff = (index / particleCountCircle) - (particleCountLayers / 2);
                             float yDiffDist = 0.1F;
@@ -97,9 +127,9 @@ public class PlayerManagerClient extends PlayerManager {
                             //Quaternion q = new Quaternion(new Vector3f(1.0F, 0.0F, 1.0F), 45, true);
                             //Matrix4f m = new Matrix4f();
 
-                            Quaternion quaternionX = new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), (float)(-x), true);
-                            Quaternion quaternionY = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), (float)(-y), true);
-                            Quaternion quaternionZ = new Quaternion(new Vector3f(0.0F, 0.0F, 1.0F), (float)(-z), true);
+                            Quaternion quaternionX = new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), -x, true);
+                            Quaternion quaternionY = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y, true);
+                            Quaternion quaternionZ = new Quaternion(new Vector3f(0.0F, 0.0F, 1.0F), -z, true);
                             //quaternion.multiply(new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), (float)(-x), true));
                             //quaternion.multiply(new Quaternion(new Vector3f(0.0F, 0.0F, 1.0F), (float)(-z), true));
                             //Vector3f vec = new Vector3f(1, 1, 1);
@@ -156,7 +186,7 @@ public class PlayerManagerClient extends PlayerManager {
                             rotAroundPosY = vecOut.getY();
                             rotAroundPosZ = vecOut.getZ();*/
 
-                            particle.setPosition(playerEntity.getPosX() + rotAroundPosX, playerEntity.getPosY() + 2.2 + rotAroundPosY, playerEntity.getPosZ() + rotAroundPosZ);
+                            particle.setPosition(playerEntity.getPosX() + rotAroundPosX, playerEntity.getPosY() + rotAroundPosY, playerEntity.getPosZ() + rotAroundPosZ);
                         }
                         index++;
                     }
