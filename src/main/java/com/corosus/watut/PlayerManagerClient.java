@@ -102,7 +102,8 @@ public class PlayerManagerClient extends PlayerManager {
                     double xzDist = Math.sqrt(xx * xx + zz * zz);
                     float pitchAngle = (float)Math.toDegrees(Math.atan2(vecDiff.getY(), xzDist / dist));
 
-                    if (WATUT.playerManagerClient.getPlayerStatus(mc.player.getUniqueID()).getStatusType() == PlayerStatus.StatusType.CHAT) {
+
+                    if (mc.world.getGameTime() % 40 == 0 && WATUT.playerManagerClient.getPlayerStatus(mc.player.getUniqueID()).getStatusType() == PlayerStatus.StatusType.CHAT) {
                         System.out.println("x: " + vecAngles.getX());
                         System.out.println("y: " + vecAngles.getY());
                         System.out.println("z: " + vecAngles.getZ());
@@ -140,7 +141,19 @@ public class PlayerManagerClient extends PlayerManager {
                             Quaternion quaternionY = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y, true);
                             Quaternion quaternionZ = new Quaternion(new Vector3f(0.0F, 0.0F, 1.0F), -z, true);
 
+                            //good
+                            //quaternionZ.multiply(quaternionX);
+
+                            //quaternionY.multiply(quaternionX);
+                            //quaternionY.multiply(quaternionZ);
+                            //quaternionZ.multiply(quaternionX);
+                            //quaternionY.multiply(quaternionZ);
+
                             Quaternion quatPitch = new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), pitchAngle, true);
+
+                            Quaternion temp = new Quaternion(0, 0, 0, 1);
+                            temp.multiply(quaternionY);
+                            temp.multiply(quaternionX);
 
                             //Quaternion quaternionY2 = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y, true);
                             //quaternion.multiply(new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), (float)(-x), true));
@@ -153,20 +166,25 @@ public class PlayerManagerClient extends PlayerManager {
                             Vector3f vecZ = new Vector3f(0, 0, 1);*/
 
                             //setup the ring of particles (yaw)
-                            vec.transform(quaternionY);
+                            //vec.transform(quaternionY);
+
                             //pitch them
-                            vec.transform(quaternionX);
+                            //vec.transform(quaternionX);
                             //vec.transform(quatPitch);
 
                             //aim via new yaw after pitch
                             //vec.transform(quaternionY2);
 
                             //roll them
-                            vec.transform(quaternionZ);
+                            //quaternionZ = new Quaternion(new Vector3f(0.0F, 0.0F, 1.0F), -z, true);
+                            //vec.transform(quaternionZ);
                             //vecXZ.transform(quaternionZ);
                             //vecX.transform(quaternionX);
                             //vecY.transform(quaternionX);
                             //vecZ.transform(quaternionX);
+
+                            /*vec = new Vector3f(1F, 0 + ((float)yDiff) * yDiffDist, 0);
+                            vec.transform(temp);*/
 
                             //Vector3f vec = new Vector3f(0, 0, 0);
                             //vec.add(vecX);
@@ -181,15 +199,20 @@ public class PlayerManagerClient extends PlayerManager {
                             /*float rotAroundPosX = quaternion.getX();
                             float rotAroundPosY = quaternion.getY();
                             float rotAroundPosZ = quaternion.getZ();*/
-                            //TransformationMatrix transformationMatrix = new TransformationMatrix(vec, quaternion, null, null);
+                            //TransformationMatrix transformationMatrix = new TransformationMatrix(vec, quaternionX, null, null);
+                            //transformationMatrix.
                             //MatrixStack matrixStack = new MatrixStack();
-                            /*Matrix4f matrix3f = new Matrix4f();
-                            matrix3f.setIdentity();
-                            matrix3f.translate(vec);
-                            matrix3f.mul(quaternion);
-                            float xx = ObfuscationReflectionHelper.getPrivateValue(Matrix4f.class, matrix3f, "m03");
-                            float yy = ObfuscationReflectionHelper.getPrivateValue(Matrix4f.class, matrix3f, "m13");
-                            float zz = ObfuscationReflectionHelper.getPrivateValue(Matrix4f.class, matrix3f, "m23");*/
+                            Matrix3f matrix = new Matrix3f();
+                            matrix.setIdentity();
+                            //matrix.translate(vec);
+
+                            matrix.mul(quaternionZ);
+                            matrix.mul(quaternionX);
+                            matrix.mul(quaternionY);
+                            /*float xxx = ObfuscationReflectionHelper.getPrivateValue(Matrix4f.class, matrix, "m03");
+                            float yyy = ObfuscationReflectionHelper.getPrivateValue(Matrix4f.class, matrix, "m13");
+                            float zzz = ObfuscationReflectionHelper.getPrivateValue(Matrix4f.class, matrix, "m23");*/
+                            vec.transform(matrix);
                             //vec.transform(matrix3f);
 
                             rotAroundPosX = vec.getX();
