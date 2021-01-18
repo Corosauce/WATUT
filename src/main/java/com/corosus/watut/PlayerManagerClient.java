@@ -97,12 +97,17 @@ public class PlayerManagerClient extends PlayerManager {
                     //convert to degrees
                     vecAngles = new Vector3f((float)Math.toDegrees(vecAngles.getX()), (float)Math.toDegrees(vecAngles.getY()), (float)Math.toDegrees(vecAngles.getZ()));
 
+                    double xx = playerEntity.getPosX() - 0.5;
+                    double zz = playerEntity.getPosZ() - 0.5;
+                    double xzDist = Math.sqrt(xx * xx + zz * zz);
+                    float pitchAngle = (float)Math.toDegrees(Math.atan2(vecDiff.getY(), xzDist / dist));
+
                     if (WATUT.playerManagerClient.getPlayerStatus(mc.player.getUniqueID()).getStatusType() == PlayerStatus.StatusType.CHAT) {
                         System.out.println("x: " + vecAngles.getX());
                         System.out.println("y: " + vecAngles.getY());
                         System.out.println("z: " + vecAngles.getZ());
                         //System.out.println("yDiff: " + (playerEntity.getPosY() - testY));
-                        System.out.println("diff: " + vecDiff);
+                        System.out.println("pitchAngle: " + pitchAngle);
                     }
 
                     Iterator<HeartParticle2> it = particles.iterator();
@@ -118,8 +123,12 @@ public class PlayerManagerClient extends PlayerManager {
                             float z = 0;//((world.getGameTime() * 0.3F) % 360);
 
                             x = vecAngles.getX() + 90;
-                            //y += vecAngles.getY();
+                            //y = vecAngles.getY();
+                            //y = (vecAngles.getY() / 2) + 90;
+                            //y = vecAngles.getY() + 180;
                             z = vecAngles.getZ();
+
+                            //x = 0;
 
                             int yDiff = (index / particleCountCircle) - (particleCountLayers / 2);
                             float yDiffDist = 0.1F;
@@ -130,10 +139,15 @@ public class PlayerManagerClient extends PlayerManager {
                             Quaternion quaternionX = new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), -x, true);
                             Quaternion quaternionY = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y, true);
                             Quaternion quaternionZ = new Quaternion(new Vector3f(0.0F, 0.0F, 1.0F), -z, true);
+
+                            Quaternion quatPitch = new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), pitchAngle, true);
+
+                            //Quaternion quaternionY2 = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y, true);
                             //quaternion.multiply(new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), (float)(-x), true));
                             //quaternion.multiply(new Quaternion(new Vector3f(0.0F, 0.0F, 1.0F), (float)(-z), true));
                             //Vector3f vec = new Vector3f(1, 1, 1);
                             Vector3f vec = new Vector3f(1F, 0 + ((float)yDiff) * yDiffDist, 0);
+                            //Vector3f vecWat = new Vector3f(0, 0/* + ((float)yDiff) * yDiffDist*/, 1F + (index * 0.01F));
                             /*Vector3f vecXZ = new Vector3f(1F, 0, 0);
                             Vector3f vecY = new Vector3f(0, 0.2F, 0);
                             Vector3f vecZ = new Vector3f(0, 0, 1);*/
@@ -142,6 +156,11 @@ public class PlayerManagerClient extends PlayerManager {
                             vec.transform(quaternionY);
                             //pitch them
                             vec.transform(quaternionX);
+                            //vec.transform(quatPitch);
+
+                            //aim via new yaw after pitch
+                            //vec.transform(quaternionY2);
+
                             //roll them
                             vec.transform(quaternionZ);
                             //vecXZ.transform(quaternionZ);
