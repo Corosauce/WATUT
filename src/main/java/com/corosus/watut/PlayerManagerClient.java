@@ -5,6 +5,8 @@ import com.corosus.watut.network.ToServerPlayerStatusMessage;
 import com.corosus.watut.network.WATUTNetwork;
 import com.corosus.watut.particles.HeartParticle2;
 import com.corosus.watut.particles.StatusParticle;
+import com.corosus.watut.tornado.CubicBezierCurve;
+import com.corosus.watut.tornado.TornadoFunnel;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.ChatScreen;
@@ -25,6 +27,10 @@ public class PlayerManagerClient extends PlayerManager {
 
     private HeartParticle2 particleTest = null;
     private List<HeartParticle2> particles = new ArrayList<>();
+
+    private TornadoFunnel funnel;
+
+    CubicBezierCurve bezierCurve;
 
     public void tick(World world) {
         super.tick(world);
@@ -104,13 +110,21 @@ public class PlayerManagerClient extends PlayerManager {
 
                     pitchAngle += 90;
 
-                    if (mc.world.getGameTime() % 40 == 0 && WATUT.playerManagerClient.getPlayerStatus(mc.player.getUniqueID()).getStatusType() == PlayerStatus.StatusType.CHAT) {
+                    if (bezierCurve == null || world.getGameTime() % 40 == 0) {
+                        Vector3d[] vecs = new Vector3d[4];
+                        for (int i = 0; i < vecs.length; i++) {
+                            vecs[i] = new Vector3d(world.rand.nextFloat(), world.rand.nextFloat(), world.rand.nextFloat());
+                        }
+                        bezierCurve = new CubicBezierCurve(vecs);
+                    }
+
+                    /*if (mc.world.getGameTime() % 40 == 0 && WATUT.playerManagerClient.getPlayerStatus(mc.player.getUniqueID()).getStatusType() == PlayerStatus.StatusType.CHAT) {
                         System.out.println("x: " + vecAngles.getX());
                         System.out.println("y: " + vecAngles.getY());
                         System.out.println("z: " + vecAngles.getZ());
                         //System.out.println("yDiff: " + (playerEntity.getPosY() - testY));
                         System.out.println("pitchAngle: " + pitchAngle);
-                    }
+                    }*/
 
                     Iterator<HeartParticle2> it = particles.iterator();
                     int index = 0;
@@ -125,142 +139,57 @@ public class PlayerManagerClient extends PlayerManager {
                             float y2 = ((world.getGameTime() * 3) % 360) + ((index % particleCountCircle) * (360 / particleCountCircle));
                             float z = 0;//((world.getGameTime() * 0.3F) % 360);
 
-                            x = vecAngles.getX();
                             y = vecAngles.getY() - 90;
-                            //y = (vecAngles.getY() / 2) + 90;
-                            //y = vecAngles.getY() + 180;
-                            z = vecAngles.getZ();
-
-                            //x = 45;
 
                             int yDiff = (index / particleCountCircle) - (particleCountLayers / 2);
                             float yDiffDist = 0.1F;
 
-                            //Quaternion q = new Quaternion(new Vector3f(1.0F, 0.0F, 1.0F), 45, true);
-                            //Matrix4f m = new Matrix4f();
+                            int curLayer = (index / particleCountCircle);
+                            float curvePoint = (float)curLayer / (float)particleCountLayers;
+                            float stretchCurveY = 4F;
+                            float curveAmp = 2F;
 
-                            Quaternion quaternionX = new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), -x, true);
                             Quaternion quaternionY = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y, true);
                             Quaternion quaternionYCircle = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y2, true);
-                            Quaternion quaternionZ = new Quaternion(new Vector3f(0.0F, 0.0F, 1.0F), -z, true);
-
-                            //good
-                            //quaternionZ.multiply(quaternionX);
-
-                            //quaternionY.multiply(quaternionX);
-                            //quaternionY.multiply(quaternionZ);
-                            //quaternionZ.multiply(quaternionX);
-                            //quaternionY.multiply(quaternionZ);
 
                             Quaternion quatPitch = new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), -pitchAngle, true);
-
-                            Quaternion temp = new Quaternion(0, 0, 0, 1);
-                            temp.multiply(quaternionY);
-                            temp.multiply(quaternionX);
-
-                            //Quaternion quaternionY2 = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y, true);
-                            //quaternion.multiply(new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), (float)(-x), true));
-                            //quaternion.multiply(new Quaternion(new Vector3f(0.0F, 0.0F, 1.0F), (float)(-z), true));
-                            //Vector3f vec = new Vector3f(1, 1, 1);
-                            Vector3f vec = new Vector3f(1F, 0 + ((float)yDiff) * yDiffDist, 0);
-                            Vector3f vecNew = new Vector3f(1F, 1 + ((float)yDiff) * yDiffDist, 0);
-                            //Vector3f vecWat = new Vector3f(0, 0/* + ((float)yDiff) * yDiffDist*/, 1F + (index * 0.01F));
-                            /*Vector3f vecXZ = new Vector3f(1F, 0, 0);
-                            Vector3f vecY = new Vector3f(0, 0.2F, 0);
-                            Vector3f vecZ = new Vector3f(0, 0, 1);*/
-
-                            //setup the ring of particles (yaw)
-                            //vec.transform(quaternionY);
-
-                            //pitch them
-                            //vec.transform(quaternionX);
-                            //vec.transform(quatPitch);
-
-                            //aim via new yaw after pitch
-                            //vec.transform(quaternionY2);
-
-                            //roll them
-                            //quaternionZ = new Quaternion(new Vector3f(0.0F, 0.0F, 1.0F), -z, true);
-                            //vec.transform(quaternionZ);
-                            //vecXZ.transform(quaternionZ);
-                            //vecX.transform(quaternionX);
-                            //vecY.transform(quaternionX);
-                            //vecZ.transform(quaternionX);
-
-                            /*vec = new Vector3f(1F, 0 + ((float)yDiff) * yDiffDist, 0);
-                            vec.transform(temp);*/
-
-                            //Vector3f vec = new Vector3f(0, 0, 0);
-                            //vec.add(vecX);
-                            //vec.add(vec);
-                            //vec.add(vecXZ);
-                            //vec.add(vecY);
-                            //vec.add(vecZ);
+                            //Vector3f vecNew = new Vector3f(1F, 1 + ((float)yDiff) * yDiffDist, 0);
+                            Vector3d vecCurve = bezierCurve.getValue(curvePoint);
+                            //System.out.println("curvePoint: " + curvePoint + ", " + vecCurve);
+                            Vector3f vecNew = new Vector3f((float)vecCurve.x * curveAmp, (float)vecCurve.y * curveAmp * stretchCurveY * (((float)yDiff) * yDiffDist) + 10F, (float)vecCurve.z * curveAmp);
 
                             float rotAroundPosX = 0;
                             float rotAroundPosY = 0;
                             float rotAroundPosZ = 0;
-                            /*float rotAroundPosX = quaternion.getX();
-                            float rotAroundPosY = quaternion.getY();
-                            float rotAroundPosZ = quaternion.getZ();*/
-                            //TransformationMatrix transformationMatrix = new TransformationMatrix(vec, quaternionX, null, null);
-                            //transformationMatrix.
-                            //MatrixStack matrixStack = new MatrixStack();
                             Matrix3f matrix = new Matrix3f();
                             matrix.setIdentity();
-                            //matrix.translate(vec);
-
-                            //matrix.mul(quaternionZ);
-                            //matrix.mul(quaternionX);
                             matrix.mul(quaternionY);
                             matrix.mul(quatPitch);
                             matrix.mul(quaternionYCircle);
-                            /*float xxx = ObfuscationReflectionHelper.getPrivateValue(Matrix4f.class, matrix, "m03");
-                            float yyy = ObfuscationReflectionHelper.getPrivateValue(Matrix4f.class, matrix, "m13");
-                            float zzz = ObfuscationReflectionHelper.getPrivateValue(Matrix4f.class, matrix, "m23");*/
                             vecNew.transform(matrix);
-                            //vec.transform(matrix3f);
 
-                            rotAroundPosX = vec.getX();
-                            rotAroundPosY = vec.getY();
-                            rotAroundPosZ = vec.getZ();
                             rotAroundPosX = vecNew.getX();
                             rotAroundPosY = vecNew.getY();
                             rotAroundPosZ = vecNew.getZ();
-
-                            /*rotAroundPosX = xx;
-                            rotAroundPosY = yy;
-                            rotAroundPosZ = zz;
-
-                            Vector3f vecOut = transformationMatrix.getTranslation();
-                            rotAroundPosX = vecOut.getX();
-                            rotAroundPosY = vecOut.getY();
-                            rotAroundPosZ = vecOut.getZ();*/
 
                             particle.setPosition(playerEntity.getPosX() + rotAroundPosX, playerEntity.getPosY() + rotAroundPosY, playerEntity.getPosZ() + rotAroundPosZ);
                         }
                         index++;
                     }
-
-                    /*if (particleTest == null || !particleTest.isAlive()) {
-                        particleTest = new HeartParticle2(mc.world, playerEntity.getPosX(), playerEntity.getPosY() + 2.2, playerEntity.getPosZ());
-                        particleTest.setSprite(EventHandlerForge.square16);
-                        particleTest.setMaxAge(50);
-                        //particleTest.move(0, -0.1, 0);
-                        mc.particles.addEffect(particleTest);
-                    }*/
-
-
-
                 }
-
-
             }
         }
 
         lookupPlayerStatus.entrySet().stream().forEach(entrySet -> {
             //WATUT.LOGGER.debug("client:" + world.getGameTime() + " - " + entrySet.getValue().getUuid() + " -> " + entrySet.getValue().getStatusType());
         });
+
+        if (funnel == null) {
+            funnel = new TornadoFunnel();
+            funnel.pos = new Vector3d(mc.player.getPosX(), mc.player.getPosY(), mc.player.getPosZ());
+        }
+
+        //funnel.tickGame();
 
     }
 
