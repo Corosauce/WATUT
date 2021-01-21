@@ -33,7 +33,9 @@ public class PlayerManagerClient extends PlayerManager {
 
     private TornadoFunnel funnel;
 
-    CubicBezierCurve bezierCurve;
+    public CubicBezierCurve bezierCurve;
+
+    public Vector3f[] vecSpeeds = new Vector3f[4];
 
     public void tick(World world) {
         super.tick(world);
@@ -134,6 +136,64 @@ public class PlayerManagerClient extends PlayerManager {
                         bezierCurve = new CubicBezierCurve(vecs);
                     }
 
+                    /*if (bezierCurve != null) {
+                        float randScale = 0.1F;
+                        for (int i = 0; i < bezierCurve.P.length; i++) {
+                            bezierCurve.P[i].add((world.rand.nextFloat() - world.rand.nextFloat()) * randScale, (world.rand.nextFloat() - world.rand.nextFloat()) * randScale, (world.rand.nextFloat() - world.rand.nextFloat()) * randScale);
+                            bezierCurve.P[i].normalize();
+                        }
+                    }*/
+
+                    if (bezierCurve != null) {
+                        float randScale = 0.1F;
+                        for (int i = 0; i < bezierCurve.P.length; i++) {
+                            if (vecSpeeds[i] == null) {
+                                vecSpeeds[i] = new Vector3f(world.rand.nextFloat(), world.rand.nextFloat(), world.rand.nextFloat());
+                            }
+
+                            bezierCurve.P[i].add(vecSpeeds[i].getX() * 0.01F, vecSpeeds[i].getY() * 0.01F, vecSpeeds[i].getZ() * 0.01F);
+
+                            float maxY = 0.75F;
+                            float minY = 0.25F;
+
+                            if (i == 0) {
+                                maxY = 0.25F;
+                                minY = 0.0F;
+                            } else if (i == 1) {
+                                maxY = 0.9F;
+                                minY = 0.1F;
+                            } else if (i == 2) {
+                                maxY = 0.9F;
+                                minY = 0.1F;
+                            } else if (i == 3) {
+                                maxY = 1.0F;
+                                minY = 0.75F;
+                            }
+
+                            if (bezierCurve.P[i].getX() > 1) {
+                                vecSpeeds[i].set(world.rand.nextFloat() * -1, vecSpeeds[i].getY(), vecSpeeds[i].getZ());
+                            } else if (bezierCurve.P[i].getX() < 0) {
+                                vecSpeeds[i].set(world.rand.nextFloat(), vecSpeeds[i].getY(), vecSpeeds[i].getZ());
+                            }
+                            if (bezierCurve.P[i].getY() > maxY) {
+                                vecSpeeds[i].set(vecSpeeds[i].getX(), world.rand.nextFloat() * -1, vecSpeeds[i].getZ());
+                            } else if (bezierCurve.P[i].getY() < minY) {
+                                vecSpeeds[i].set(vecSpeeds[i].getX(), world.rand.nextFloat(), vecSpeeds[i].getZ());
+                            }
+                            if (bezierCurve.P[i].getZ() > 1) {
+                                vecSpeeds[i].set(vecSpeeds[i].getX(), vecSpeeds[i].getY(), world.rand.nextFloat() * -1);
+                            } else if (bezierCurve.P[i].getZ() < 0) {
+                                vecSpeeds[i].set(vecSpeeds[i].getX(), vecSpeeds[i].getY(), world.rand.nextFloat());
+                            }
+                            //bezierCurve.P[i].normalize();
+                        }
+
+                        //bezierCurve.P[0] = new Vector3f(0.5F, 0, 0.5F);
+                        bezierCurve.P[3].set(bezierCurve.P[3].getX(), 1, bezierCurve.P[3].getZ());
+
+                        bezierCurve.P[3] = new Vector3f(0.5F, 1, 0.5F);
+                    }
+
                     /*if (mc.world.getGameTime() % 40 == 0 && WATUT.playerManagerClient.getPlayerStatus(mc.player.getUniqueID()).getStatusType() == PlayerStatus.StatusType.CHAT) {
                         System.out.println("x: " + vecAngles.getX());
                         System.out.println("y: " + vecAngles.getY());
@@ -172,7 +232,7 @@ public class PlayerManagerClient extends PlayerManager {
                             Vector2f curvePointYawPitch = getYawPitch(vecCurve2, vecCurve1);
 
                             if ((index % particleCountCircle) == 0) {
-                                System.out.println(curvePointYawPitch.x + " - " + curvePointYawPitch.y);
+                                //System.out.println(curvePointYawPitch.x + " - " + curvePointYawPitch.y);
                             }
 
                             //Quaternion quaternionY = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y, true);
@@ -189,7 +249,7 @@ public class PlayerManagerClient extends PlayerManager {
                             //Vector3f vecNew = new Vector3f(1F * curveAmp, (1F + ((float)yDiff) * yDiffDist * (dist*2F)) - (dist/2F), 0F);
                             //Vector3f vecNew = new Vector3f(1F * curveAmp, (1F + ((float)yDiff) * yDiffDist * (dist*2F)) - (dist/2F), 1F * curveAmp);
                             //Vector3f vecNew = new Vector3f(1F * curveAmp, (((float)yDiff) * distFinal) - (dist/2F), 0);
-                            Vector3f vecNew = new Vector3f(1F, 0F, 0);
+                            Vector3f vecNew = new Vector3f(0.3F + (curLayer * 0.05F)/* + (curLayer * 0.05F)*/, 0F, 0);
 
                             float rotAroundPosX = 0;
                             float rotAroundPosY = 0;
