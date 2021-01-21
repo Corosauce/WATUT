@@ -7,10 +7,7 @@ import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.vector.Matrix3f;
-import net.minecraft.util.math.vector.Quaternion;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.util.math.vector.Vector3f;
+import net.minecraft.util.math.vector.*;
 import net.minecraft.world.World;
 
 import java.util.*;
@@ -30,6 +27,8 @@ public class TornadoFunnel {
     public int particleCount = amountPerLayer * 50;
     public int funnelPieces = 2;
 
+    CubicBezierCurve bezierCurve;
+
     static class FunnelPiece {
 
         public List<HeartParticle2> listParticles = new ArrayList<>();
@@ -43,6 +42,8 @@ public class TornadoFunnel {
 
         public boolean needInit = true;
 
+        CubicBezierCurve bezierCurve;
+
     }
 
     public TornadoFunnel() {
@@ -53,7 +54,7 @@ public class TornadoFunnel {
 
         amountPerLayer = 30;
         particleCount = amountPerLayer * 50;
-        funnelPieces = 2;
+        funnelPieces = 10;
 
 
 
@@ -112,9 +113,30 @@ public class TornadoFunnel {
 
             particleCount = layers * amountPerLayer;
 
-            while (piece.listParticles.size() > particleCount) {
+            /*while (piece.listParticles.size() > particleCount) {
                 piece.listParticles.get(piece.listParticles.size() - 1).setExpired();
                 piece.listParticles.remove(piece.listParticles.size() - 1);
+            }*/
+
+            /*while (piece.listParticles.size() > 0) {
+                piece.listParticles.get(piece.listParticles.size() - 1).setExpired();
+                piece.listParticles.remove(piece.listParticles.size() - 1);
+            }*/
+
+            if (piece.bezierCurve == null || entP.world.getGameTime() % 40 == 0) {
+                Vector3f[] vecs = new Vector3f[4];
+                for (int ii = 0; ii < vecs.length; ii++) {
+                    vecs[ii] = new Vector3f(entP.world.rand.nextFloat(), entP.world.rand.nextFloat(), entP.world.rand.nextFloat());
+                }
+                piece.bezierCurve = new CubicBezierCurve(vecs);
+            }
+
+            if (bezierCurve == null || entP.world.getGameTime() % 40 == 0) {
+                Vector3f[] vecs = new Vector3f[4];
+                for (int ii = 0; ii < vecs.length; ii++) {
+                    vecs[ii] = new Vector3f(entP.world.rand.nextFloat(), entP.world.rand.nextFloat(), entP.world.rand.nextFloat());
+                }
+                bezierCurve = new CubicBezierCurve(vecs);
             }
 
             while (piece.listParticles.size() < particleCount) {
@@ -123,7 +145,7 @@ public class TornadoFunnel {
                 //if (entP.getDistanceSq(pos) < 10D * 10D) continue;
 
                 //pos = world.getPrecipitationHeight(pos).add(0, 1, 0);
-                
+
                 ClientWorld world = (ClientWorld)entP.world;
 
                 HeartParticle2 particleTest = new HeartParticle2(world, pos.getX() + rand.nextFloat(),
@@ -173,13 +195,13 @@ public class TornadoFunnel {
                 piece.posEnd = new Vector3d(piece.posStart.x, piece.posStart.y + 20, piece.posStart.z);
             }*/
 
-            double rate = 0.5F/* + (ii * 0.1F)*/;
-            double distMax = 20;
+            double rate = 0.2F/* + (ii * 0.1F)*/;
+            double distMax = 5 + (listFunnel.size() - ii);
 
             Random rand = new Random();
 
-            //piece.posEnd = piece.posEnd.addVector(rate * piece.vecDirX, 0, rate * piece.vecDirZ);
-            //piece.posEnd = piece.posEnd.addVector(rate * rand.nextFloat() * piece.vecDirX, 0, rate * rand.nextFloat() * piece.vecDirZ);
+            piece.posEnd = piece.posEnd.add(rate * piece.vecDirX, 0, rate * piece.vecDirZ * 0.7);
+            //piece.posEnd = piece.posEnd.add(rate * rand.nextFloat() * piece.vecDirX, 0, rate * rand.nextFloat() * piece.vecDirZ);
 
             int offset = 360 / listFunnel.size();
             long timeC = (world.getGameTime() * (ii+1) + (offset * ii)) * 1;
@@ -191,6 +213,8 @@ public class TornadoFunnel {
 
             //piece.posEnd = piece.posEnd.addVector(-1, 0, 0);
 
+            float speedAmp = 0.3F;
+
             double xx1 = piece.posEnd.x - piece.posStart.x;
             double zz1 = piece.posEnd.z - piece.posStart.z;
             double xzDist2 = (double) MathHelper.sqrt(xx1 * xx1 + zz1 * zz1);
@@ -198,18 +222,22 @@ public class TornadoFunnel {
             if (xzDist2 > distMax) {
                 if (piece.posEnd.x - piece.posStart.x > 0) {
                     piece.vecDirX = -1;
+                    piece.vecDirX *= (0.5F + rand.nextFloat()) + (ii * speedAmp);
                 }
 
                 if (piece.posEnd.x - piece.posStart.x < 0) {
                     piece.vecDirX = 1;
+                    piece.vecDirX *= (0.5F + rand.nextFloat()) + (ii * speedAmp);
                 }
 
                 if (piece.posEnd.z - piece.posStart.z > 0) {
                     piece.vecDirZ = -1;
+                    piece.vecDirZ *= (0.5F + rand.nextFloat()) + (ii * speedAmp);
                 }
 
                 if (piece.posEnd.z - piece.posStart.z < 0) {
                     piece.vecDirZ = 1;
+                    piece.vecDirZ *= (0.5F + rand.nextFloat()) + (ii * speedAmp);
                 }
             }
 
@@ -266,11 +294,13 @@ public class TornadoFunnel {
 
                     int testY = 100;
 
-                    float dist2 = (float)Math.sqrt(player.getDistanceSq(0.5, testY, 0.5));
+                    //float dist2 = (float)Math.sqrt(player.getDistanceSq(0.5, testY, 0.5));
+                    float dist2 = (float)Math.sqrt(piece.posStart.distanceTo(piece.posEnd));
+
                     Vector3f vecDiff = new Vector3f(
-                            (float)(player.getPosX() - 0.5) / dist2,
-                            (float)(player.getPosY() - testY) / dist2,
-                            (float)(player.getPosZ() - 0.5) / dist2);
+                            (float)(piece.posStart.x - piece.posEnd.x) / dist2,
+                            (float)(piece.posStart.y - piece.posEnd.y) / dist2,
+                            (float)(piece.posStart.z - piece.posEnd.z) / dist2);
                     Vector3f vecAngles = new Vector3f(
                             (float)Math.atan2(vecDiff.getY(), vecDiff.getZ()),
                             (float)Math.atan2(vecDiff.getZ(), vecDiff.getX()), //invert if needed
@@ -279,22 +309,28 @@ public class TornadoFunnel {
                     //convert to degrees
                     vecAngles = new Vector3f((float)Math.toDegrees(vecAngles.getX()), (float)Math.toDegrees(vecAngles.getY()), (float)Math.toDegrees(vecAngles.getZ()));
 
-                    double xx = player.getPosX() - 0.5;
-                    double zz = player.getPosZ() - 0.5;
+                    double xx = piece.posStart.x - piece.posEnd.x;
+                    double zz = piece.posStart.z - piece.posEnd.z;
                     double xzDist = Math.sqrt(xx * xx + zz * zz);
                     float pitchAngle = (float)Math.toDegrees(Math.atan2(vecDiff.getY(), xzDist / dist2));
 
                     pitchAngle += 90;
                     y = vecAngles.getY() - 90;
 
-                    int yDiff = (index / particleCountCircle) - (particleCountLayers / 2);
-                    float yDiffDist = 0.1F;
+                    double curvePoint = Math.min(1F, (float)(index / particleCountCircle) / (float)particleCountLayers);
+                    double curvePoint2 = (index / particleCountCircle);
+                    double yDiff = curvePoint2 * (dist / particleCountLayers)/* - (particleCountLayers / 2)*/;
+                    float yDiffDist = 2F;
+                    float curveAmp = 1F;
 
                     Quaternion quaternionY = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y, true);
                     Quaternion quaternionYCircle = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y2, true);
 
                     Quaternion quatPitch = new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), -pitchAngle, true);
-                    Vector3f vecNew = new Vector3f(1F, 1 + ((float)yDiff) * yDiffDist, 0);
+                    Vector3f vecCurve = piece.bezierCurve.getValue((float)curvePoint);
+                    //Vector3f vecNew = new Vector3f((float)vecCurve.x * curveAmp, 1 + ((float)yDiff) * yDiffDist, (float)vecCurve.z * curveAmp);
+                    Vector3f vecNew = new Vector3f((float)vecCurve.getX() * curveAmp, 1 + ((float)yDiff) * yDiffDist, (float)vecCurve.getZ() * curveAmp);
+                    //Vector3f vecNew = new Vector3f((float)0, 1 + ((float)yDiff) * yDiffDist, (float)0);
 
                     float rotAroundPosX = 0;
                     float rotAroundPosY = 0;
@@ -303,14 +339,17 @@ public class TornadoFunnel {
                     matrix.setIdentity();
                     matrix.mul(quaternionY);
                     matrix.mul(quatPitch);
-                    matrix.mul(quaternionYCircle);
+                    //matrix.mul(quaternionYCircle);
                     vecNew.transform(matrix);
 
                     rotAroundPosX = vecNew.getX();
                     rotAroundPosY = vecNew.getY();
                     rotAroundPosZ = vecNew.getZ();
 
-                    part.setPosition(player.getPosX() + rotAroundPosX, player.getPosY() + rotAroundPosY, player.getPosZ() + rotAroundPosZ);
+                    //part.setPosition(player.getPosX() + rotAroundPosX, player.getPosY() + rotAroundPosY, player.getPosZ() + rotAroundPosZ);
+                    //part.setPosition(pos.x + rotAroundPosX, pos.y + rotAroundPosY, pos.z + rotAroundPosZ);
+                    //part.setPosition(pos.x + x1, pos.y + y1, pos.z + z1);
+                    part.setPosition(piece.posStart.x + rotAroundPosX, piece.posStart.y + rotAroundPosY, piece.posStart.z + rotAroundPosZ);
                 }
 
                 index++;

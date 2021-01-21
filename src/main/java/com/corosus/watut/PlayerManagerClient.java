@@ -8,10 +8,13 @@ import com.corosus.watut.particles.StatusParticle;
 import com.corosus.watut.tornado.CubicBezierCurve;
 import com.corosus.watut.tornado.TornadoFunnel;
 import com.mojang.blaze3d.matrix.MatrixStack;
+import net.java.games.input.Keyboard;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.particle.TexturedParticle;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.*;
 import net.minecraft.world.World;
 import net.minecraftforge.event.TickEvent;
@@ -90,11 +93,24 @@ public class PlayerManagerClient extends PlayerManager {
 
                     int testY = 100;
 
-                    float dist = (float)Math.sqrt(playerEntity.getDistanceSq(0.5, testY, 0.5));
+                    Vector3f pos1 = new Vector3f(0.5F, 150, 0.5F);
+                    Vector3f pos2 = new Vector3f(0.5F, 100, 0.5F);
+
+                    /*float dist = (float)Math.sqrt(playerEntity.getDistanceSq(0.5, testY, 0.5));
                     Vector3f vecDiff = new Vector3f(
                             (float)(playerEntity.getPosX() - 0.5) / dist,
                             (float)(playerEntity.getPosY() - testY) / dist,
                             (float)(playerEntity.getPosZ() - 0.5) / dist);
+                    Vector3f vecAngles = new Vector3f(
+                            (float)Math.atan2(vecDiff.getY(), vecDiff.getZ()),
+                            (float)Math.atan2(vecDiff.getZ(), vecDiff.getX()), //invert if needed
+                            (float)Math.atan2(vecDiff.getX(), vecDiff.getY())); //invert if needed*/
+
+                    float dist = getDistance(pos1, pos2);
+                    Vector3f vecDiff = new Vector3f(
+                            (pos1.getX() - pos2.getX()) / dist,
+                            (pos1.getY() - pos2.getY()) / dist,
+                            (pos1.getZ() - pos2.getZ()) / dist);
                     Vector3f vecAngles = new Vector3f(
                             (float)Math.atan2(vecDiff.getY(), vecDiff.getZ()),
                             (float)Math.atan2(vecDiff.getZ(), vecDiff.getX()), //invert if needed
@@ -103,17 +119,17 @@ public class PlayerManagerClient extends PlayerManager {
                     //convert to degrees
                     vecAngles = new Vector3f((float)Math.toDegrees(vecAngles.getX()), (float)Math.toDegrees(vecAngles.getY()), (float)Math.toDegrees(vecAngles.getZ()));
 
-                    double xx = playerEntity.getPosX() - 0.5;
-                    double zz = playerEntity.getPosZ() - 0.5;
+                    double xx = pos1.getX() - pos2.getX();
+                    double zz = pos1.getZ() - pos2.getZ();
                     double xzDist = Math.sqrt(xx * xx + zz * zz);
                     float pitchAngle = (float)Math.toDegrees(Math.atan2(vecDiff.getY(), xzDist / dist));
 
                     pitchAngle += 90;
 
-                    if (bezierCurve == null || world.getGameTime() % 40 == 0) {
-                        Vector3d[] vecs = new Vector3d[4];
+                    if (bezierCurve == null || /*world.getGameTime() % 200 == 0*/playerEntity.isSprinting()) {
+                        Vector3f[] vecs = new Vector3f[4];
                         for (int i = 0; i < vecs.length; i++) {
-                            vecs[i] = new Vector3d(world.rand.nextFloat(), world.rand.nextFloat(), world.rand.nextFloat());
+                            vecs[i] = new Vector3f(world.rand.nextFloat(), world.rand.nextFloat(), world.rand.nextFloat());
                         }
                         bezierCurve = new CubicBezierCurve(vecs);
                     }
@@ -142,21 +158,38 @@ public class PlayerManagerClient extends PlayerManager {
                             y = vecAngles.getY() - 90;
 
                             int yDiff = (index / particleCountCircle) - (particleCountLayers / 2);
-                            float yDiffDist = 0.1F;
+                            float yDiffDist = 0.01F;
 
                             int curLayer = (index / particleCountCircle);
                             float curvePoint = (float)curLayer / (float)particleCountLayers;
                             float stretchCurveY = 4F;
                             float curveAmp = 2F;
 
-                            Quaternion quaternionY = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y, true);
+                            float distFinal = dist / 2F;
+
+                            Vector3f vecCurve1 = bezierCurve.getValue(curvePoint);
+                            Vector3f vecCurve2 = bezierCurve.getValue((float)Math.min(1D, (float)(curLayer+1) / (float)particleCountLayers));
+                            Vector2f curvePointYawPitch = getYawPitch(vecCurve2, vecCurve1);
+
+                            if ((index % particleCountCircle) == 0) {
+                                System.out.println(curvePointYawPitch.x + " - " + curvePointYawPitch.y);
+                            }
+
+                            //Quaternion quaternionY = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y, true);
+                            Quaternion quaternionY = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -curvePointYawPitch.x - 90, true);
                             Quaternion quaternionYCircle = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y2, true);
 
-                            Quaternion quatPitch = new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), -pitchAngle, true);
+                            Quaternion quatPitch = new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), curvePointYawPitch.y, true);
                             //Vector3f vecNew = new Vector3f(1F, 1 + ((float)yDiff) * yDiffDist, 0);
-                            Vector3d vecCurve = bezierCurve.getValue(curvePoint);
+                            //Vector3d vecCurve = bezierCurve.getValue(curvePoint);
+                            Vector3f vecCurve = bezierCurve.getValue(curvePoint);
                             //System.out.println("curvePoint: " + curvePoint + ", " + vecCurve);
-                            Vector3f vecNew = new Vector3f((float)vecCurve.x * curveAmp, (float)vecCurve.y * curveAmp * stretchCurveY * (((float)yDiff) * yDiffDist) + 10F, (float)vecCurve.z * curveAmp);
+                            //Vector3f vecNew = new Vector3f((float)vecCurve.x * curveAmp, (float)vecCurve.y * curveAmp * stretchCurveY * (((float)yDiff) * yDiffDist) + 10F, (float)vecCurve.z * curveAmp);
+                            //Vector3f vecNew = new Vector3f((float)vecCurve.getX() * curveAmp - curveAmp/2F, (1F + ((float)yDiff) * yDiffDist * (dist*2F)) - (dist/2F), (float)vecCurve.getZ() * curveAmp - curveAmp/2F);
+                            //Vector3f vecNew = new Vector3f(1F * curveAmp, (1F + ((float)yDiff) * yDiffDist * (dist*2F)) - (dist/2F), 0F);
+                            //Vector3f vecNew = new Vector3f(1F * curveAmp, (1F + ((float)yDiff) * yDiffDist * (dist*2F)) - (dist/2F), 1F * curveAmp);
+                            //Vector3f vecNew = new Vector3f(1F * curveAmp, (((float)yDiff) * distFinal) - (dist/2F), 0);
+                            Vector3f vecNew = new Vector3f(1F, 0F, 0);
 
                             float rotAroundPosX = 0;
                             float rotAroundPosY = 0;
@@ -172,7 +205,8 @@ public class PlayerManagerClient extends PlayerManager {
                             rotAroundPosY = vecNew.getY();
                             rotAroundPosZ = vecNew.getZ();
 
-                            particle.setPosition(playerEntity.getPosX() + rotAroundPosX, playerEntity.getPosY() + rotAroundPosY, playerEntity.getPosZ() + rotAroundPosZ);
+                            //particle.setPosition(pos1.getX() + rotAroundPosX, pos1.getY() + rotAroundPosY, pos1.getZ() + rotAroundPosZ);
+                            particle.setPosition(pos1.getX() + (vecCurve1.getX()*distFinal) + rotAroundPosX, pos1.getY() + (vecCurve1.getY()*distFinal) + rotAroundPosY, pos1.getZ() + (vecCurve1.getZ()*distFinal) + rotAroundPosZ);
                         }
                         index++;
                     }
@@ -200,6 +234,43 @@ public class PlayerManagerClient extends PlayerManager {
         ToServerPlayerStatusMessage message = new ToServerPlayerStatusMessage(status.getUuid(), status.getStatusType());
         WATUTNetwork.CHANNEL.sendToServer(message);
         WATUT.LOGGER.debug("syncing state client -> server");
+    }
+
+    public float getDistance(Vector3f vec1, Vector3f vec2) {
+        float f = (vec1.getX() - vec2.getX());
+        float f1 = (vec1.getY() - vec2.getY());
+        float f2 = (vec1.getZ() - vec2.getZ());
+        return MathHelper.sqrt(f * f + f1 * f1 + f2 * f2);
+    }
+
+    /**
+     *
+     * @param pos2
+     * @param pos1
+     * @return yaw and pitch in degrees
+     */
+    public Vector2f getYawPitch(Vector3f pos2, Vector3f pos1) {
+        float dist = getDistance(pos1, pos2);
+        Vector3f vecDiff = new Vector3f(
+                (pos1.getX() - pos2.getX()) / dist,
+                (pos1.getY() - pos2.getY()) / dist,
+                (pos1.getZ() - pos2.getZ()) / dist);
+        Vector3f vecAngles = new Vector3f(
+                (float)Math.atan2(vecDiff.getY(), vecDiff.getZ()),
+                (float)Math.atan2(vecDiff.getZ(), vecDiff.getX()), //invert if needed
+                (float)Math.atan2(vecDiff.getX(), vecDiff.getY())); //invert if needed
+
+        double xx = pos1.getX() - pos2.getX();
+        double zz = pos1.getZ() - pos2.getZ();
+        double xzDist = Math.sqrt(xx * xx + zz * zz);
+        double wat = xzDist / dist;
+        float pitchAngle = (float)Math.toDegrees(Math.atan2(vecDiff.getY(), xzDist / dist));
+
+        vecAngles = new Vector3f((float)Math.toDegrees(vecAngles.getX()), (float)Math.toDegrees(vecAngles.getY()), (float)Math.toDegrees(vecAngles.getZ()));
+
+        pitchAngle += 90;
+
+        return new Vector2f(vecAngles.getY(), pitchAngle);
     }
 
 }
