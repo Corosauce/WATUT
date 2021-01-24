@@ -249,6 +249,7 @@ public class PlayerManagerClient extends PlayerManager {
                             float stretchCurveY = 4F;
                             float curveAmp = 2F;
                             y2 = ((world.getGameTime() * (2 + (particleCountLayers - curLayer) * (particleCountLayers - curLayer) * 0.02F)) % 360) + ((index % particleCountCircle) * (360 / particleCountCircle));
+                            //y2 = ((index % particleCountCircle) * (360 / particleCountCircle));
 
                             float distFinal = dist / 2F;
 
@@ -265,7 +266,8 @@ public class PlayerManagerClient extends PlayerManager {
 
                             //Quaternion quaternionY = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y, true);
                             Quaternion quaternionY = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -curvePointYawPitch.x - 90, true);
-                            Quaternion quaternionYCircle = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y2, true);
+                            //adding quaternionY here cancels out the unwanted rotations from the bezier curve adjustments
+                            Quaternion quaternionYCircle = new Quaternion(new Vector3f(0.0F, 1.0F, 0.0F), -y2 + (curvePointYawPitch.x - 90), true);
 
                             Quaternion quatPitch = new Quaternion(new Vector3f(1.0F, 0.0F, 0.0F), curvePointYawPitch.y, true);
                             //Vector3f vecNew = new Vector3f(1F, 1 + ((float)yDiff) * yDiffDist, 0);
