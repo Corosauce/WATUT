@@ -82,21 +82,24 @@ public class PlayerManagerClient extends PlayerManager {
                         particleTest.setSprite(EventHandlerForge.square16);
                         particleTest.setMaxAge(250);
                         particleTest.setMotion(0, 0, 0);
-                        particleTest.setScale(0.1F);
+                        particleTest.setScale(0.3F);
                         //particleTest.setColor(0.1F * (particles.size() % particleCountCircle), 0, 0);
                         particleTest.setColor(world.rand.nextFloat(), world.rand.nextFloat(), world.rand.nextFloat());
                         if (particles.size() < particleCountCircle * 5) {
                             particleTest.setColor(1, 1, 1);
                         }
+                        float randGrey = 0.4F + (world.rand.nextFloat() * 0.4F);
+                        particleTest.setColor(randGrey, randGrey, randGrey);
                         //particleTest.move(0, -0.1, 0);
                         mc.particles.addEffect(particleTest);
+                        particleTest.setAngle(world.rand.nextInt(360));
                         particles.add(particleTest);
                     }
 
                     int testY = 100;
 
-                    Vector3f pos1 = new Vector3f(0.5F, 150, 0.5F);
-                    Vector3f pos2 = new Vector3f(0.5F, 100, 0.5F);
+                    Vector3f pos1 = new Vector3f(0.5F, 70, 0.5F);
+                    Vector3f pos2 = new Vector3f(0.5F, 120, 0.5F);
 
                     /*float dist = (float)Math.sqrt(playerEntity.getDistanceSq(0.5, testY, 0.5));
                     Vector3f vecDiff = new Vector3f(
@@ -128,7 +131,7 @@ public class PlayerManagerClient extends PlayerManager {
 
                     pitchAngle += 90;
 
-                    if (bezierCurve == null || /*world.getGameTime() % 200 == 0*/playerEntity.isSprinting()) {
+                    if (bezierCurve == null/* || world.getGameTime() % 200 == 0playerEntity.isSprinting()*/) {
                         Vector3f[] vecs = new Vector3f[4];
                         for (int i = 0; i < vecs.length; i++) {
                             vecs[i] = new Vector3f(world.rand.nextFloat(), world.rand.nextFloat(), world.rand.nextFloat());
@@ -170,28 +173,46 @@ public class PlayerManagerClient extends PlayerManager {
                                 minY = 0.75F;
                             }
 
-                            if (bezierCurve.P[i].getX() > 1) {
-                                vecSpeeds[i].set(world.rand.nextFloat() * -1, vecSpeeds[i].getY(), vecSpeeds[i].getZ());
-                            } else if (bezierCurve.P[i].getX() < 0) {
-                                vecSpeeds[i].set(world.rand.nextFloat(), vecSpeeds[i].getY(), vecSpeeds[i].getZ());
+                            //maxY += 2;
+                            float minXZ = 0;
+                            float maxXZ = 1;
+
+                            float randSpeed = 1F;
+
+                            if (bezierCurve.P[i].getX() > maxXZ) {
+                                vecSpeeds[i].set(world.rand.nextFloat() * -1 * randSpeed, vecSpeeds[i].getY(), vecSpeeds[i].getZ());
+                            } else if (bezierCurve.P[i].getX() < minXZ) {
+                                vecSpeeds[i].set(world.rand.nextFloat() * randSpeed, vecSpeeds[i].getY(), vecSpeeds[i].getZ());
                             }
                             if (bezierCurve.P[i].getY() > maxY) {
-                                vecSpeeds[i].set(vecSpeeds[i].getX(), world.rand.nextFloat() * -1, vecSpeeds[i].getZ());
+                                vecSpeeds[i].set(vecSpeeds[i].getX(), world.rand.nextFloat() * -1 * randSpeed, vecSpeeds[i].getZ());
                             } else if (bezierCurve.P[i].getY() < minY) {
-                                vecSpeeds[i].set(vecSpeeds[i].getX(), world.rand.nextFloat(), vecSpeeds[i].getZ());
+                                vecSpeeds[i].set(vecSpeeds[i].getX(), world.rand.nextFloat() * randSpeed, vecSpeeds[i].getZ());
                             }
-                            if (bezierCurve.P[i].getZ() > 1) {
-                                vecSpeeds[i].set(vecSpeeds[i].getX(), vecSpeeds[i].getY(), world.rand.nextFloat() * -1);
-                            } else if (bezierCurve.P[i].getZ() < 0) {
-                                vecSpeeds[i].set(vecSpeeds[i].getX(), vecSpeeds[i].getY(), world.rand.nextFloat());
+                            if (bezierCurve.P[i].getZ() > maxXZ) {
+                                vecSpeeds[i].set(vecSpeeds[i].getX(), vecSpeeds[i].getY(), world.rand.nextFloat() * -1 * randSpeed);
+                            } else if (bezierCurve.P[i].getZ() < minXZ) {
+                                vecSpeeds[i].set(vecSpeeds[i].getX(), vecSpeeds[i].getY(), world.rand.nextFloat() * randSpeed);
                             }
                             //bezierCurve.P[i].normalize();
                         }
 
                         //bezierCurve.P[0] = new Vector3f(0.5F, 0, 0.5F);
+
+                        //base of tornado
+                        //bezierCurve.P[1].set(bezierCurve.P[0].getX(), bezierCurve.P[0].getY() + 0.3F, bezierCurve.P[0].getZ());
+                        bezierCurve.P[0].set(bezierCurve.P[3].getX(), 0, bezierCurve.P[3].getZ());
+
+                        //top of tornado
+                        //bezierCurve.P[2].set(bezierCurve.P[3].getX(), bezierCurve.P[3].getY() - 0.3F, bezierCurve.P[3].getZ());
                         bezierCurve.P[3].set(bezierCurve.P[3].getX(), 1, bezierCurve.P[3].getZ());
 
-                        bezierCurve.P[3] = new Vector3f(0.5F, 1, 0.5F);
+                        /*bezierCurve.P[0].set(0.5F, 0, 0.5F);
+                        bezierCurve.P[1].set(0.5F, 0.8F, 0.5F);
+                        bezierCurve.P[2].set(0.5F, 0.2F, 0.5F);
+                        bezierCurve.P[3].set(0.5F, 0.99F, 0.5F);*/
+
+                        //bezierCurve.P[3] = new Vector3f(0.5F, 1, 0.5F);
                     }
 
                     /*if (mc.world.getGameTime() % 40 == 0 && WATUT.playerManagerClient.getPlayerStatus(mc.player.getUniqueID()).getStatusType() == PlayerStatus.StatusType.CHAT) {
@@ -204,6 +225,9 @@ public class PlayerManagerClient extends PlayerManager {
 
                     Iterator<HeartParticle2> it = particles.iterator();
                     int index = 0;
+
+                    float adjustedCurvePos = 0;
+
                     while (it.hasNext()) {
                         HeartParticle2 particle = it.next();
                         if (!particle.isAlive()) {
@@ -211,8 +235,8 @@ public class PlayerManagerClient extends PlayerManager {
                         } else {
                             //(index * (360 / particleCount))
                             float x = 0;//((world.getGameTime() * 0.5F) % 360);
+                            float y2 = ((world.getGameTime() * 2) % 360) + ((index % particleCountCircle) * (360 / particleCountCircle));
                             float y = /*((world.getGameTime() * 3) % 360) + */((index % particleCountCircle) * (360 / particleCountCircle));
-                            float y2 = ((world.getGameTime() * 3) % 360) + ((index % particleCountCircle) * (360 / particleCountCircle));
                             float z = 0;//((world.getGameTime() * 0.3F) % 360);
 
                             y = vecAngles.getY() - 90;
@@ -224,14 +248,18 @@ public class PlayerManagerClient extends PlayerManager {
                             float curvePoint = (float)curLayer / (float)particleCountLayers;
                             float stretchCurveY = 4F;
                             float curveAmp = 2F;
+                            y2 = ((world.getGameTime() * (2 + (particleCountLayers - curLayer) * (particleCountLayers - curLayer) * 0.02F)) % 360) + ((index % particleCountCircle) * (360 / particleCountCircle));
 
                             float distFinal = dist / 2F;
 
                             Vector3f vecCurve1 = bezierCurve.getValue(curvePoint);
                             Vector3f vecCurve2 = bezierCurve.getValue((float)Math.min(1D, (float)(curLayer+1) / (float)particleCountLayers));
                             Vector2f curvePointYawPitch = getYawPitch(vecCurve2, vecCurve1);
+                            float curveDist = getDistance(vecCurve1, vecCurve2);
 
                             if ((index % particleCountCircle) == 0) {
+                                adjustedCurvePos += curveDist;
+                                //System.out.println(getDistance(vecCurve1, vecCurve2));
                                 //System.out.println(curvePointYawPitch.x + " - " + curvePointYawPitch.y);
                             }
 
@@ -249,7 +277,8 @@ public class PlayerManagerClient extends PlayerManager {
                             //Vector3f vecNew = new Vector3f(1F * curveAmp, (1F + ((float)yDiff) * yDiffDist * (dist*2F)) - (dist/2F), 0F);
                             //Vector3f vecNew = new Vector3f(1F * curveAmp, (1F + ((float)yDiff) * yDiffDist * (dist*2F)) - (dist/2F), 1F * curveAmp);
                             //Vector3f vecNew = new Vector3f(1F * curveAmp, (((float)yDiff) * distFinal) - (dist/2F), 0);
-                            Vector3f vecNew = new Vector3f(0.3F + (curLayer * 0.05F)/* + (curLayer * 0.05F)*/, 0F, 0);
+                            Vector3f vecNew = new Vector3f(1.3F + Math.min((curLayer * curLayer * 0.005F), 40)/* + (curLayer * 0.05F)*/, 0F, 0);
+                            //Vector3f vecNew = new Vector3f(3.3F/* + (curLayer * 0.05F)*/, 0F, 0);
 
                             float rotAroundPosX = 0;
                             float rotAroundPosY = 0;
@@ -266,7 +295,9 @@ public class PlayerManagerClient extends PlayerManager {
                             rotAroundPosZ = vecNew.getZ();
 
                             //particle.setPosition(pos1.getX() + rotAroundPosX, pos1.getY() + rotAroundPosY, pos1.getZ() + rotAroundPosZ);
-                            particle.setPosition(pos1.getX() + (vecCurve1.getX()*distFinal) + rotAroundPosX, pos1.getY() + (vecCurve1.getY()*distFinal) + rotAroundPosY, pos1.getZ() + (vecCurve1.getZ()*distFinal) + rotAroundPosZ);
+                            //particle.setPosition(pos1.getX() + (vecCurve1.getX()*distFinal) + rotAroundPosX, pos1.getY() + (vecCurve1.getY()*distFinal) + rotAroundPosY, pos1.getZ() + (vecCurve1.getZ()*distFinal) + rotAroundPosZ);
+                            particle.setPosition(pos1.getX() + (vecCurve1.getX()*distFinal) + rotAroundPosX, pos1.getY() + (curLayer) + rotAroundPosY, pos1.getZ() + (vecCurve1.getZ()*distFinal) + rotAroundPosZ);
+                            //particle.setPosition(pos1.getX() + (vecCurve1.getX()*distFinal) + rotAroundPosX, pos1.getY() + 1 + curLayer, pos1.getZ() + (vecCurve1.getZ()*distFinal) + rotAroundPosZ);
                         }
                         index++;
                     }

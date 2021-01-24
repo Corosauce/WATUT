@@ -76,8 +76,10 @@ public class HeartParticle2 extends SpriteTexturedParticle {
          quaternion = renderInfo.getRotation();
       } else {
          quaternion = new Quaternion(renderInfo.getRotation());
+         //quaternion = new Quaternion(0, 0, 0, 1);
          float f3 = MathHelper.lerp(partialTicks, this.prevParticleAngle, this.particleAngle);
          quaternion.multiply(Vector3f.ZP.rotation(f3));
+         //quaternion.multiply(Vector3f.YP.rotation(f3));
       }
 
       Vector3f vector3f1 = new Vector3f(-1.0F, -1.0F, 0.0F);
@@ -146,5 +148,9 @@ public class HeartParticle2 extends SpriteTexturedParticle {
          heartparticle.selectSpriteRandomly(this.spriteSet);
          return heartparticle;
       }
+   }
+
+   public void setAngle(float angle) {
+      this.particleAngle = angle;
    }
 }
