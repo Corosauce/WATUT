@@ -18,6 +18,14 @@ public class PlayerStatusManager {
     }
 
     public void tickPlayerClient(Player player) {
+
+    }
+
+    public PlayerStatus getStatus(Player player) {
+        if (!lookupPlayerToStatus.containsKey(player.getUUID())) {
+            lookupPlayerToStatus.put(player.getUUID(), PlayerStatus.NONE);
+        }
+        return lookupPlayerToStatus.get(player.getUUID());
     }
 
     public void setStatus(Player player, PlayerStatus statusType) {

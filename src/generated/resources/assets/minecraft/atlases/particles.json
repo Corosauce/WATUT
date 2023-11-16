@@ -1,0 +1,36 @@
+{
+  "sources": [
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/chat_idle_0"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/chat_idle_1"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/chat_typing_0"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/chat_typing_1"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/chat_typing_2"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/chat_typing_3"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/chat_typing_4"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/chat_typing_5"
+    }
+  ]
+}
