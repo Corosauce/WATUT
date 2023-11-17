@@ -3,6 +3,8 @@ package com.corosus.watut;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.data.DataGenerator;
+import net.minecraft.data.PackOutput;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.BlockItem;
@@ -14,7 +16,10 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.data.ExistingFileHelper;
+import net.minecraftforge.data.event.GatherDataEvent;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -25,6 +30,7 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -81,6 +87,7 @@ public class Watut
     {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         modEventBus.addListener(this::setup);
+        modEventBus.addListener(this::gatherData);
 
         // Register the commonSetup method for modloading
         modEventBus.addListener(this::commonSetup);
@@ -102,6 +109,10 @@ public class Watut
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
         MinecraftForge.EVENT_BUS.register(new EventHandlerForge());
+
+        if (FMLEnvironment.dist.isClient()) {
+            modEventBus.addListener(ParticleRegistry::getRegisteredParticles);
+        }
     }
 
     private void commonSetup(final FMLCommonSetupEvent event)
@@ -151,5 +162,38 @@ public class Watut
 
     public static void dbg(Object obj) {
         System.out.println("" + obj);
+    }
+
+
+
+
+    /**
+     *
+     * run runData for me
+     *
+     * @param event
+     */
+    private void gatherData(GatherDataEvent event) {
+        DataGenerator gen = event.getGenerator();
+        if (event.includeServer()) {
+
+        }
+        if (event.includeClient()) {
+            gatherClientData(event);
+        }
+    }
+
+    /**
+     *
+     * run runData for me
+     *
+     * @param event
+     */
+    @OnlyIn(Dist.CLIENT)
+    private void gatherClientData(GatherDataEvent event) {
+        DataGenerator gen = event.getGenerator();
+        PackOutput packOutput = gen.getPackOutput();
+        ExistingFileHelper existingFileHelper = event.getExistingFileHelper();
+        gen.addProvider(event.includeClient(), new ParticleRegistry(packOutput, existingFileHelper));
     }
 }
