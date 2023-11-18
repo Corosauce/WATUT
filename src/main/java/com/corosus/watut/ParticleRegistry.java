@@ -29,6 +29,9 @@ public class ParticleRegistry extends SpriteSourceProvider {
     public static TextureAtlasSprite chat_typing_4;
     public static TextureAtlasSprite chat_typing_5;
 
+    public static TextureAtlasSprite inventory;
+    public static TextureAtlasSprite crafting;
+
     public static SpriteSet chat_idle_set;
     public static SpriteSet chat_typing_set;
 
@@ -49,6 +52,9 @@ public class ParticleRegistry extends SpriteSourceProvider {
         addSprite(new ResourceLocation(Watut.MODID + ":particles/chat_typing_3"));
         addSprite(new ResourceLocation(Watut.MODID + ":particles/chat_typing_4"));
         addSprite(new ResourceLocation(Watut.MODID + ":particles/chat_typing_5"));
+
+        addSprite(new ResourceLocation(Watut.MODID + ":particles/inventory"));
+        addSprite(new ResourceLocation(Watut.MODID + ":particles/crafting"));
     }
 
     public void addSprite(ResourceLocation res) {
@@ -69,6 +75,9 @@ public class ParticleRegistry extends SpriteSourceProvider {
         chat_typing_3 = event.getAtlas().getSprite(new ResourceLocation(Watut.MODID + ":particles/chat_typing_3"));
         chat_typing_4 = event.getAtlas().getSprite(new ResourceLocation(Watut.MODID + ":particles/chat_typing_4"));
         chat_typing_5 = event.getAtlas().getSprite(new ResourceLocation(Watut.MODID + ":particles/chat_typing_5"));
+
+        inventory = event.getAtlas().getSprite(new ResourceLocation(Watut.MODID + ":particles/inventory"));
+        crafting = event.getAtlas().getSprite(new ResourceLocation(Watut.MODID + ":particles/crafting"));
 
         List<TextureAtlasSprite> list = new ArrayList<>();
         list.add(chat_idle_0);

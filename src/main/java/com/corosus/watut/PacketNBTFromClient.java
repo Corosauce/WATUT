@@ -30,11 +30,13 @@ public class PacketNBTFromClient {
                     CompoundTag nbt = msg.nbt;
                     String packetCommand = nbt.getString(WatutNetworking.NBTPacketCommand);
 
-                    Watut.dbg("packet command from client: " + packetCommand + " - ");
-                    if (packetCommand.equals(WatutNetworking.NBTPacketCommandUpdateStatusPlayer)) {
-                        ServerPlayer playerEntity = ctx.get().getSender();
-                        if (playerEntity != null) {
-                            Watut.getPlayerStatusManagerServer().receiveStatus(playerEntity, PlayerStatus.get(nbt.getInt(WatutNetworking.NBTDataPlayerStatus)));
+                    //Watut.dbg("packet command from client: " + packetCommand + " - ");
+                    ServerPlayer playerEntity = ctx.get().getSender();
+                    if (playerEntity != null) {
+                        if (packetCommand.equals(WatutNetworking.NBTPacketCommandUpdateStatusPlayer)) {
+                            Watut.getPlayerStatusManagerServer().receiveStatus(playerEntity, PlayerStatus.PlayerGuiState.get(nbt.getInt(WatutNetworking.NBTDataPlayerStatus)));
+                        } else if (packetCommand.equals(WatutNetworking.NBTPacketCommandUpdateMousePlayer)) {
+                            Watut.getPlayerStatusManagerServer().receiveMouse(playerEntity, nbt.getFloat(WatutNetworking.NBTDataPlayerMouseX), nbt.getFloat(WatutNetworking.NBTDataPlayerMouseY));
                         }
                     }
                 } catch (Exception ex) {

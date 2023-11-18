@@ -1,20 +1,26 @@
 package com.corosus.watut;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.network.NetworkDirection;
+import net.minecraft.world.level.biome.Climate;
 import net.minecraftforge.network.PacketDistributor;
 
 public class PlayerStatusManagerServer extends PlayerStatusManager {
 
-    public void receiveStatus(Player player, PlayerStatus playerStatus) {
-        System.out.println("got status on server: " + playerStatus);
-        setStatus(player, playerStatus);
+    public void receiveStatus(Player player, PlayerStatus.PlayerGuiState playerStatus) {
+        //Watut.dbg("got status on server: " + playerStatus);
+        setGuiStatus(player.getUUID(), playerStatus);
         sendStatusToClients(player, playerStatus);
     }
 
-    public void sendStatusToClients(Player player, PlayerStatus playerStatus) {
+    public void receiveMouse(Player player, float x, float y) {
+        //Watut.dbg("got status on server: " + playerStatus);
+        setMouse(player.getUUID(), x, y);
+        sendMouseToClients(player, x, y);
+    }
+
+    public void sendStatusToClients(Player player, PlayerStatus.PlayerGuiState playerStatus) {
         CompoundTag data = new CompoundTag();
         data.putString(WatutNetworking.NBTPacketCommand, WatutNetworking.NBTPacketCommandUpdateStatusPlayer);
         data.putString(WatutNetworking.NBTDataPlayerUUID, player.getUUID().toString());
@@ -28,5 +34,19 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         } else {
             WeatherNetworking.HANDLER.sendTo(new PacketNBTFromServer(data), entP.connection.connection, NetworkDirection.PLAY_TO_CLIENT);
         }*/
+    }
+
+    public void sendMouseToClients(Player player, float x, float y) {
+        CompoundTag data = new CompoundTag();
+        data.putString(WatutNetworking.NBTPacketCommand, WatutNetworking.NBTPacketCommandUpdateMousePlayer);
+        data.putString(WatutNetworking.NBTDataPlayerUUID, player.getUUID().toString());
+        data.putFloat(WatutNetworking.NBTDataPlayerMouseX, x);
+        data.putFloat(WatutNetworking.NBTDataPlayerMouseY, y);
+
+        //TODO: SEND TO ONLY THOSE REALLY CLOSE
+        WatutNetworking.HANDLER.send(PacketDistributor.NEAR.with(() ->
+                new PacketDistributor.TargetPoint(player.getX(), player.getY(), player.getZ(), 16, player.level().dimension())),
+                new PacketNBTFromServer(data));
+        //WatutNetworking.HANDLER.send(PacketDistributor.DIMENSION.with(() -> player.level().dimension()), new PacketNBTFromServer(data));
     }
 }

@@ -1,15 +1,14 @@
 package com.corosus.watut.particle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.particle.*;
+import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
-public class ParticleAnimated extends ParticleRotating {
+public class ParticleStatic extends ParticleRotating {
 
-    private final SpriteSet sprites;
-
-    public ParticleAnimated(ClientLevel pLevel, double pX, double pY, double pZ, SpriteSet pSprites) {
+    public ParticleStatic(ClientLevel pLevel, double pX, double pY, double pZ, TextureAtlasSprite sprite) {
         super(pLevel, pX, pY, pZ);
-        this.sprites = pSprites;
+        this.sprite = sprite;
         this.lifetime = Integer.MAX_VALUE;
         this.gravity = 0.0F;
         this.setSize(0.2F, 0.2F);
@@ -17,11 +16,14 @@ public class ParticleAnimated extends ParticleRotating {
         this.xd = 0;
         this.yd = 0;
         this.zd = 0;
-        this.setSpriteFromAge(pSprites);
     }
 
     public void setSize(float pWidth, float pHeight) {
         super.setSize(pWidth, pHeight);
+    }
+
+    public void setQuadSize(float size) {
+        this.quadSize = size;
     }
 
     public void tick() {
@@ -31,9 +33,7 @@ public class ParticleAnimated extends ParticleRotating {
         if (this.age++ >= this.lifetime) {
             this.remove();
         } else {
-            //this.yd -= (double)this.gravity;
             this.move(this.xd, this.yd, this.zd);
-            this.setSpriteFromAge(this.sprites);
         }
     }
 

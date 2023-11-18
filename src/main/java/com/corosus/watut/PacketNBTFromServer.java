@@ -32,10 +32,12 @@ public class PacketNBTFromServer {
                     CompoundTag nbt = msg.nbt;
                     String packetCommand = nbt.getString(WatutNetworking.NBTPacketCommand);
 
-                    System.out.println("packet command from server: " + packetCommand);
+                    //Watut.dbg("packet command from server: " + packetCommand);
+                    UUID uuid = UUID.fromString(nbt.getString(WatutNetworking.NBTDataPlayerUUID));
                     if (packetCommand.equals(WatutNetworking.NBTPacketCommandUpdateStatusPlayer)) {
-                        UUID uuid = UUID.fromString(nbt.getString(WatutNetworking.NBTDataPlayerUUID));
-                        Watut.getPlayerStatusManagerClient().receiveStatus(uuid, PlayerStatus.get(nbt.getInt(WatutNetworking.NBTDataPlayerStatus)));
+                        Watut.getPlayerStatusManagerClient().receiveStatus(uuid, PlayerStatus.PlayerGuiState.get(nbt.getInt(WatutNetworking.NBTDataPlayerStatus)));
+                    } else if (packetCommand.equals(WatutNetworking.NBTPacketCommandUpdateMousePlayer)) {
+                        Watut.getPlayerStatusManagerClient().receiveMouse(uuid, nbt.getFloat(WatutNetworking.NBTDataPlayerMouseX), nbt.getFloat(WatutNetworking.NBTDataPlayerMouseY));
                     }
                 } catch (Exception ex) {
                     ex.printStackTrace();

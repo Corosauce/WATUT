@@ -1,7 +1,5 @@
 package com.corosus.watut;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.HashMap;
@@ -22,18 +20,26 @@ public class PlayerStatusManager {
     }
 
     public PlayerStatus getStatus(Player player) {
-        if (!lookupPlayerToStatus.containsKey(player.getUUID())) {
-            lookupPlayerToStatus.put(player.getUUID(), PlayerStatus.NONE);
+        return getStatus(player.getUUID());
+    }
+
+    public PlayerStatus getStatus(UUID uuid) {
+        PlayerStatus status = lookupPlayerToStatus.get(uuid);
+        if (status == null) {
+            status = new PlayerStatus(PlayerStatus.PlayerGuiState.NONE);
+            lookupPlayerToStatus.put(uuid, status);
         }
-        return lookupPlayerToStatus.get(player.getUUID());
+        return status;
     }
 
-    public void setStatus(Player player, PlayerStatus statusType) {
-        setStatus(player.getUUID(), statusType);
+    public void setGuiStatus(UUID uuid, PlayerStatus.PlayerGuiState statusType) {
+        getStatus(uuid).setPlayerGuiState(statusType);
     }
 
-    public void setStatus(UUID uuid, PlayerStatus statusType) {
-        lookupPlayerToStatus.put(uuid, statusType);
+    public void setMouse(UUID uuid, float x, float y) {
+        PlayerStatus status = getStatus(uuid);
+        status.setScreenPosPercentX(x);
+        status.setScreenPosPercentY(y);
     }
 
 }
