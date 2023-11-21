@@ -1,5 +1,6 @@
 package com.corosus.watut;
 
+import com.corosus.watut.math.Lerpables;
 import net.minecraft.client.particle.Particle;
 
 import java.util.EnumSet;
@@ -36,9 +37,47 @@ public class PlayerStatus {
     private String lastTypeString;
     private float screenPosPercentX = 0;
     private float screenPosPercentY = 0;
+    //so we can orient the particle to the bodys orientation
+    //private ModelPart body;
+    private Lerpables lerpTarget = new Lerpables();
+    private Lerpables lerpPrev = new Lerpables();
+
+    public float lerpTicks = 0;
+    //for partial ticks
+    public float lerpTicksPrev = 0;
+    public float lerpTicksMax = 5;
+
+    public float yRotHead = 0;
+    public float xRotHead = 0;
+
+    public float yRotHeadBeforePoses = 0;
+    public float xRotHeadBeforePoses = 0;
 
     public PlayerStatus(PlayerGuiState playerGuiState) {
         this.playerGuiState = playerGuiState;
+    }
+
+    public void tick() {
+        this.lerpTicksPrev = lerpTicks;
+        if (isLerping()) {
+            this.lerpTicks++;
+        }
+    }
+
+    public void setNewLerp(float ticks) {
+        lerpTicksMax = ticks;
+        lerpTicks = 0;
+        lerpTicksPrev = 0;
+    }
+
+    public float getPartialLerp(float partialTick) {
+        float lerpPrev = (lerpTicksPrev / lerpTicksMax);
+        float lerp = (lerpTicks / lerpTicksMax);
+        return Math.min(lerpPrev + ((lerp - lerpPrev) * partialTick), lerpTicksMax);
+    }
+
+    public boolean isLerping() {
+        return this.lerpTicks < this.lerpTicksMax;
     }
 
     public PlayerGuiState getPlayerGuiState() {
@@ -87,5 +126,21 @@ public class PlayerStatus {
 
     public void setScreenPosPercentY(float screenPosPercentY) {
         this.screenPosPercentY = screenPosPercentY;
+    }
+
+    public Lerpables getLerpTarget() {
+        return lerpTarget;
+    }
+
+    public void setLerpTarget(Lerpables lerpTarget) {
+        this.lerpTarget = lerpTarget;
+    }
+
+    public Lerpables getLerpPrev() {
+        return lerpPrev;
+    }
+
+    public void setLerpPrev(Lerpables lerpPrev) {
+        this.lerpPrev = lerpPrev;
     }
 }

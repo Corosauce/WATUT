@@ -29,7 +29,7 @@ public class EventHandlerForge {
     public void guiRender(RenderGuiEvent.Post event) {
         //System.out.println("hook");
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen instanceof ChatScreen) {
+        if (mc.screen instanceof ChatScreen && mc.getConnection() != null) {
             ChatScreen chat = (ChatScreen) mc.screen;
             GuiGraphics guigraphics = new GuiGraphics(mc, mc.renderBuffers().bufferSource());
             int height = chat.height + 26;

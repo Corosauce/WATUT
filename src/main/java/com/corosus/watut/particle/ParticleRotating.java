@@ -1,10 +1,14 @@
 package com.corosus.watut.particle;
 
-import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.*;
 import com.mojang.math.Axis;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.particle.TextureSheetParticle;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
@@ -12,14 +16,43 @@ import org.joml.Vector3f;
 
 public abstract class ParticleRotating extends TextureSheetParticle {
 
-    public boolean useCustomRotation = false;
+    public boolean useCustomRotation = true;
     public float prevRotationYaw;
     public float rotationYaw;
     public float prevRotationPitch;
     public float rotationPitch;
 
+
+    ParticleRenderType PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL = new ParticleRenderType() {
+        public void begin(BufferBuilder p_107455_, TextureManager p_107456_) {
+            RenderSystem.depthMask(true);
+            RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
+            RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
+            RenderSystem.disableCull();
+            p_107455_.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+        }
+
+        public void end(Tesselator p_107458_) {
+            //RenderSystem.enableCull();
+            p_107458_.end();
+        }
+
+        public String toString() {
+            return "PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL";
+        }
+    };
+
     public ParticleRotating(ClientLevel pLevel, double pX, double pY, double pZ) {
         super(pLevel, pX, pY, pZ);
+    }
+
+    public void setQuadSize(float size) {
+        this.quadSize = size;
+    }
+
+    public ParticleRenderType getRenderType() {
+        return PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL;
     }
 
     public void render(VertexConsumer pBuffer, Camera pRenderInfo, float pPartialTicks) {

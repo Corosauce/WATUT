@@ -10,6 +10,8 @@ public class ParticleStatic extends ParticleRotating {
         super(pLevel, pX, pY, pZ);
         this.sprite = sprite;
         this.lifetime = Integer.MAX_VALUE;
+        //TODO: temp until i clean up stagnant particles from disconnects etc
+        this.lifetime = 20*60*1;
         this.gravity = 0.0F;
         this.setSize(0.2F, 0.2F);
         this.quadSize = 0.5F;
@@ -22,10 +24,6 @@ public class ParticleStatic extends ParticleRotating {
         super.setSize(pWidth, pHeight);
     }
 
-    public void setQuadSize(float size) {
-        this.quadSize = size;
-    }
-
     public void tick() {
         this.xo = this.x;
         this.yo = this.y;
@@ -35,10 +33,6 @@ public class ParticleStatic extends ParticleRotating {
         } else {
             this.move(this.xd, this.yd, this.zd);
         }
-    }
-
-    public ParticleRenderType getRenderType() {
-        return ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
     }
 
 }

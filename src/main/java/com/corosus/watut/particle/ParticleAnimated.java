@@ -10,7 +10,9 @@ public class ParticleAnimated extends ParticleRotating {
     public ParticleAnimated(ClientLevel pLevel, double pX, double pY, double pZ, SpriteSet pSprites) {
         super(pLevel, pX, pY, pZ);
         this.sprites = pSprites;
-        this.lifetime = Integer.MAX_VALUE;
+        //this.lifetime = Integer.MAX_VALUE;
+        //TODO: temp until i clean up stagnant particles from disconnects etc
+        this.lifetime = 20*60*1;
         this.gravity = 0.0F;
         this.setSize(0.2F, 0.2F);
         this.quadSize = 0.5F;
@@ -35,10 +37,6 @@ public class ParticleAnimated extends ParticleRotating {
             this.move(this.xd, this.yd, this.zd);
             this.setSpriteFromAge(this.sprites);
         }
-    }
-
-    public ParticleRenderType getRenderType() {
-        return ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
     }
 
 }
