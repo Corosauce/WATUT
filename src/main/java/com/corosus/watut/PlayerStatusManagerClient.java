@@ -4,6 +4,7 @@ import com.corosus.watut.math.Lerpables;
 import com.corosus.watut.particle.ParticleAnimated;
 import com.corosus.watut.particle.ParticleRotating;
 import com.corosus.watut.particle.ParticleStatic;
+import com.ibm.icu.impl.Pair;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ChatScreen;
@@ -19,6 +20,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.network.NetworkDirection;
 
 import java.util.HashMap;
@@ -33,11 +35,12 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     private long typingIdleTimeout = 60;
 
     //TODO: DEBUG VAL
-    private boolean singleplayerTesting = true;
+    private boolean singleplayerTesting = false;
 
     private int armMouseTickRate = 5;
 
     public void tickPlayerClient(Player player) {
+        singleplayerTesting = true;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player.getUUID().equals(player.getUUID())) {
             tickLocalPlayerClient(player);
@@ -60,8 +63,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             if (checkIfTyping(chat.input.getValue(), player)) {
                 sendStatus(PlayerStatus.PlayerGuiState.CHAT_TYPING);
             } else {
-                //sendStatus(PlayerStatus.PlayerGuiState.CHAT_OPEN);
-                sendStatus(PlayerStatus.PlayerGuiState.INVENTORY);
+                sendStatus(PlayerStatus.PlayerGuiState.CHAT_OPEN);
+                //sendStatus(PlayerStatus.PlayerGuiState.CHAT_TYPING);
+                //sendStatus(PlayerStatus.PlayerGuiState.INVENTORY);
             }
         } else if (mc.screen instanceof InventoryScreen) {
             sendStatus(PlayerStatus.PlayerGuiState.INVENTORY);
@@ -74,19 +78,36 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
 
         if (mc.screen != null && mc.level.getGameTime() % armMouseTickRate == 0) {
-            double xPercent = (mc.mouseHandler.xpos() / mc.getWindow().getScreenWidth()) - 0.5;
-            double yPercent = (mc.mouseHandler.ypos() / mc.getWindow().getScreenHeight()) - 0.5;
-            //TODO: factor in clients gui scale, aka a ratio of gui covering screen, adjust hand move scale accordingly
-            //emphasize the movements
-            double emphasis = 1.5;
-            double edgeLimit = 0.5;
-            xPercent *= emphasis;
-            yPercent *= emphasis;
-            xPercent = Math.max(Math.min(xPercent * emphasis, edgeLimit), -edgeLimit);
-            //yPercent = Math.max(Math.min(yPercent * emphasis, edgeLimit), -edgeLimit);
-            //System.out.println(xPercent);
-            sendMouse((float) xPercent, (float) yPercent);
+            sendMouse(getMousePos(), selfPlayerStatus.isPressing());
         }
+    }
+
+    public void onMouse(InputEvent.MouseButton.Post event) {
+        /*System.out.println("getButton: " + event.getButton());
+        System.out.println("getAction: " + event.getAction());
+        System.out.println("getModifiers: " + event.getModifiers());*/
+
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null && mc.player != null) {
+            sendMouse(getMousePos(), event.getAction() != 0);
+        }
+    }
+
+    public Pair<Float, Float> getMousePos() {
+        Minecraft mc = Minecraft.getInstance();
+        double xPercent = (mc.mouseHandler.xpos() / mc.getWindow().getScreenWidth()) - 0.5;
+        double yPercent = (mc.mouseHandler.ypos() / mc.getWindow().getScreenHeight()) - 0.5;
+        //TODO: factor in clients gui scale, aka a ratio of gui covering screen, adjust hand move scale accordingly
+        //emphasize the movements
+        double emphasis = 1.5;
+        //emphasis = 3;
+        double edgeLimit = 0.5;
+        xPercent *= emphasis;
+        yPercent *= emphasis;
+        xPercent = Math.max(Math.min(xPercent * emphasis, edgeLimit), -edgeLimit);
+        //yPercent = Math.max(Math.min(yPercent * emphasis, edgeLimit), -edgeLimit);
+        //System.out.println(xPercent);
+        return Pair.of((float) xPercent, (float) yPercent);
     }
 
     public boolean checkIfTyping(String input, Player player) {
@@ -149,7 +170,6 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             Vec3 posParticle = getParticlePosition(player);
             if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_OPEN) {
                 particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_idle_set);
-                //particle = new ParticleStatic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.crafting);
             } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_TYPING) {
                 particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_typing_set);
             } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.INVENTORY) {
@@ -202,6 +222,15 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
             if (playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
                 playerStatus.yRotHeadBeforePoses = playerModel.head.yRot;
+                /*while (playerStatus.yRotHeadBeforePoses > Math.PI/2) {
+                    playerStatus.yRotHeadBeforePoses -= Math.PI;
+                }
+                if (playerStatus.yRotHeadBeforePoses > Math.PI/2) {
+                    playerStatus.yRotHeadBeforePoses = 0;
+                }*/
+                /*if (player.level().getGameTime() % 40 == 0) {
+                    System.out.println("yrot: " + playerModel.head.yRot);
+                }*/
                 playerStatus.xRotHeadBeforePoses = playerModel.head.xRot;
             }
 
@@ -210,18 +239,34 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
                 playerModel.rightArm.yRot += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().rightArm.yRot, playerStatus.getLerpTarget().rightArm.yRot);
                 playerModel.rightArm.xRot += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().rightArm.xRot, playerStatus.getLerpTarget().rightArm.xRot);
+                playerModel.rightArm.x += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().rightArm.x, playerStatus.getLerpTarget().rightArm.x);
+                playerModel.rightArm.y += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().rightArm.y, playerStatus.getLerpTarget().rightArm.y);
+                playerModel.rightArm.z += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().rightArm.z, playerStatus.getLerpTarget().rightArm.z);
+
 
                 playerModel.leftArm.yRot += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().leftArm.yRot, playerStatus.getLerpTarget().leftArm.yRot);
                 playerModel.leftArm.xRot += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().leftArm.xRot, playerStatus.getLerpTarget().leftArm.xRot);
 
-                playerModel.head.yRot = Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().head.yRot, playerStatus.getLerpTarget().head.yRot);
+                //TODO: workaround to a weird issue of just the y rotation in creative mode being super out of wack
+                // likely because of paper doll in inventory screen, couldnt fix by removing Math.PI until within range
+                if (!player.isCreative()) {
+                    playerModel.head.yRot = Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().head.yRot, playerStatus.getLerpTarget().head.yRot);
+                }
+
                 playerModel.head.xRot = Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().head.xRot, playerStatus.getLerpTarget().head.xRot);
+
+                //System.out.println("playerModel.head.yRot: " + playerModel.head.yRot);
+
+                //System.out.println("!!! playerStatus.getLerpPrev().head.yRot: " + playerStatus.getLerpPrev().head.yRot + " - " + playerStatus.getLerpTarget().head.yRot);
 
                 /*playerModel.rightArm.yRot += playerStatus.getLerpTarget().rightArm.yRot;
                 playerModel.rightArm.xRot += playerStatus.getLerpTarget().rightArm.xRot;*/
 
                 playerModel.rightSleeve.yRot = playerModel.rightArm.yRot;
                 playerModel.rightSleeve.xRot = playerModel.rightArm.xRot;
+                playerModel.rightSleeve.x = playerModel.rightArm.x;
+                playerModel.rightSleeve.y = playerModel.rightArm.y;
+                playerModel.rightSleeve.z = playerModel.rightArm.z;
 
                 playerModel.leftSleeve.yRot = playerModel.leftArm.yRot;
                 playerModel.leftSleeve.xRot = playerModel.leftArm.xRot;
@@ -237,114 +282,36 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     playerModel.leftArm.xRot -= typeAngle2;
                     playerModel.leftSleeve.xRot -= typeAngle2;
                 }
+
+
             }
         }
     }
 
-    public void setupRotationsHookOld(EntityModel model, Entity pEntity, float pLimbSwing, float pLimbSwingAmount, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch) {
-        Minecraft mc = Minecraft.getInstance();
-        boolean inOwnInventory = pEntity == mc.player && mc.screen instanceof InventoryScreen;
-        if (model instanceof PlayerModel && pEntity instanceof Player && (!inOwnInventory)) {
-            PlayerModel playerModel = (PlayerModel) model;
-            Player player = (Player) pEntity;
-            PlayerStatus playerStatus = getStatus(player);
-            playerStatus.yRotHead = playerModel.head.yRot;
-            playerStatus.xRotHead = playerModel.head.xRot;
-            if (playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_TYPING) {
-                float typeAngle = (float) (45 + (Math.toRadians(Math.sin((pAgeInTicks / 1F) % 360) * 15)));
-                float typeAngle2 = (float) (45 + (Math.toRadians(-Math.sin((pAgeInTicks / 1F) % 360) * 15)));
-                playerModel.rightArm.xRot -= typeAngle;
-                playerModel.rightSleeve.xRot -= typeAngle;
-                playerModel.leftArm.xRot -= typeAngle2;
-                playerModel.leftSleeve.xRot -= typeAngle2;
-
-                double tiltIn = Math.toRadians(20);
-                playerModel.rightArm.yRot -= tiltIn;
-                playerModel.rightSleeve.yRot -= tiltIn;
-                playerModel.leftArm.yRot += tiltIn;
-                playerModel.leftSleeve.yRot += tiltIn;
-
-                playerModel.head.yRot = playerModel.body.yRot;
-                playerModel.head.xRot = (float) Math.toRadians(25);
-
-                playerModel.hat.yRot = playerModel.head.yRot;
-                playerModel.hat.xRot = playerModel.head.xRot;
-
-            } else if (playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_OPEN) {
-
-            } else if (playerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE) {
-                /*double xPercent = playerStatus.getScreenPosPercentX();
-                double yPercent = playerStatus.getScreenPosPercentY();
-                double x = Math.toRadians(90) - Math.toRadians(22.5) - yPercent;
-                double y = -Math.toRadians(15) + xPercent;
-                //y = 0;
-                playerModel.rightArm.yRot += y;
-                playerModel.rightSleeve.yRot += y;
-                playerModel.rightArm.xRot -= x;
-                playerModel.rightSleeve.xRot -= x;*/
-
-                float partialTick = pAgeInTicks - ((int)pAgeInTicks);
-
-                playerModel.rightArm.yRot += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().rightArm.yRot, playerStatus.getLerpTarget().rightArm.yRot);
-                playerModel.rightArm.xRot += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().rightArm.xRot, playerStatus.getLerpTarget().rightArm.xRot);
-
-                playerModel.leftArm.yRot += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().leftArm.yRot, playerStatus.getLerpTarget().leftArm.yRot);
-                playerModel.leftArm.xRot += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().leftArm.xRot, playerStatus.getLerpTarget().leftArm.xRot);
-
-                playerModel.head.yRot = Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().head.yRot, playerStatus.getLerpTarget().head.yRot);
-                playerModel.head.xRot += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().head.xRot, playerStatus.getLerpTarget().head.xRot);
-
-                /*playerModel.rightArm.yRot += playerStatus.getLerpTarget().rightArm.yRot;
-                playerModel.rightArm.xRot += playerStatus.getLerpTarget().rightArm.xRot;*/
-
-                playerModel.rightSleeve.yRot = playerModel.rightArm.yRot;
-                playerModel.rightSleeve.xRot = playerModel.rightArm.xRot;
-
-                playerModel.leftSleeve.yRot = playerModel.leftArm.yRot;
-                playerModel.leftSleeve.xRot = playerModel.leftArm.xRot;
-
-                playerModel.hat.xRot = playerModel.head.xRot;
-                playerModel.hat.yRot = playerModel.head.yRot;
-            }
-        }
-    }
-
-    public void setHandsTarget(UUID uuid) {
-        //System.out.println("setHandsTarget");
-        PlayerStatus playerStatus = getStatus(uuid);
-
-        playerStatus.getLerpPrev().rightArm = playerStatus.getLerpTarget().rightArm.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().rightArm);
-        playerStatus.getLerpPrev().leftArm = playerStatus.getLerpTarget().leftArm.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().leftArm);
-        playerStatus.getLerpPrev().head = playerStatus.getLerpTarget().head.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().head);
-        playerStatus.setNewLerp(armMouseTickRate * 2);
-
-        double xPercent = playerStatus.getScreenPosPercentX();
-        double yPercent = playerStatus.getScreenPosPercentY();
-        double x = Math.toRadians(90) - Math.toRadians(22.5) - yPercent;
-        double y = -Math.toRadians(15) + xPercent;
-
-        playerStatus.getLerpTarget().rightArm.yRot = (float) y;
-        playerStatus.getLerpTarget().rightArm.xRot = (float) -x;
-
-        playerStatus.getLerpTarget().leftArm.xRot = (float) -Math.toRadians(70);
-        playerStatus.getLerpTarget().leftArm.yRot = (float) Math.toRadians(25);
-    }
-
-    public void setPoseTarget(UUID uuid) {
+    public void setPoseTarget(UUID uuid, boolean becauseMousePress) {
         //System.out.println("setPoseTarget");
         PlayerStatus playerStatus = getStatus(uuid);
 
         playerStatus.getLerpPrev().rightArm = playerStatus.getLerpTarget().rightArm.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().rightArm);
         playerStatus.getLerpPrev().leftArm = playerStatus.getLerpTarget().leftArm.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().leftArm);
         playerStatus.getLerpPrev().head = playerStatus.getLerpTarget().head.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().head);
-        playerStatus.setNewLerp(armMouseTickRate * 2);
+
+        /*if (playerStatus.getLerpPrev().head.yRot > Math.PI/2) {
+            playerStatus.getLerpPrev().head.yRot = 0;
+        }*/
 
         boolean pointing = playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.INVENTORY ||
                 playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.CRAFTING ||
                 playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.MISC;
         boolean typing = playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_TYPING;
-        if (pointing || typing) {
 
+        if (becauseMousePress) {
+            playerStatus.setNewLerp(armMouseTickRate * 0.5F);
+        } else {
+            playerStatus.setNewLerp(armMouseTickRate * 2F);
+        }
+
+        if (pointing || typing) {
             playerStatus.getLerpTarget().head.xRot = (float) Math.toRadians(15);
             playerStatus.getLerpTarget().head.yRot = 0;
         }
@@ -355,12 +322,34 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             double x = Math.toRadians(90) - Math.toRadians(22.5) - yPercent;
             double y = -Math.toRadians(15) + xPercent;
 
+            //x = Math.toRadians(180);
+
             playerStatus.getLerpTarget().rightArm.yRot = (float) y;
             playerStatus.getLerpTarget().rightArm.xRot = (float) -x;
 
+            if (playerStatus.isPressing()) {
+                /*playerStatus.getLerpTarget().rightArm.z = (float) (1 * Math.sin(-x));
+                playerStatus.getLerpTarget().rightArm.y = (float) (1 * Math.cos(-x));*/
+                Vec3 vec = calculateViewVector((float) Math.toDegrees(y), (float) Math.toDegrees(x));
+                float press = 1;
+                playerStatus.getLerpTarget().rightArm.x = (float) (press * vec.y);
+                playerStatus.getLerpTarget().rightArm.y = (float) (press * vec.z);
+                playerStatus.getLerpTarget().rightArm.z = (float) (press * vec.x);
+            } else {
+                playerStatus.getLerpTarget().rightArm.x = (float) 0;
+                playerStatus.getLerpTarget().rightArm.z = (float) 0;
+                playerStatus.getLerpTarget().rightArm.y = (float) 0;
+            }
+
             playerStatus.getLerpTarget().leftArm.xRot = (float) -Math.toRadians(70);
             playerStatus.getLerpTarget().leftArm.yRot = (float) Math.toRadians(25);
+
+
         } else if (typing) {
+            double x = Math.toRadians(90) - Math.toRadians(22.5);
+            playerStatus.getLerpTarget().rightArm.xRot = (float) -x;
+            playerStatus.getLerpTarget().leftArm.xRot = (float) -x;
+
             double tiltIn = Math.toRadians(20);
             playerStatus.getLerpTarget().rightArm.yRot = (float) -tiltIn;
             playerStatus.getLerpTarget().leftArm.yRot = (float) tiltIn;
@@ -370,7 +359,13 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             playerStatus.setLerpTarget(new Lerpables());
             playerStatus.getLerpTarget().head.xRot = playerStatus.xRotHeadBeforePoses;
             playerStatus.getLerpTarget().head.yRot = playerStatus.yRotHeadBeforePoses;
+
+            /*System.out.println("playerStatus.xRotHeadBeforePoses: " + playerStatus.xRotHeadBeforePoses);
+            System.out.println("playerStatus.yRotHeadBeforePoses: " + playerStatus.yRotHeadBeforePoses);*/
         }
+
+        /*System.out.println("yRot: " + playerStatus.getLerpTarget().head.yRot);
+        System.out.println(": " + playerStatus.getLerpPrev().head.yRot + " - " + playerStatus.getLerpTarget().head.yRot);*/
 
 
     }
@@ -390,7 +385,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         return this.calculateViewVector(player.getXRot(), player.yBodyRot);
     }
 
-    protected final Vec3 calculateViewVector(float pXRot, float pYRot) {
+    public Vec3 calculateViewVector(float pXRot, float pYRot) {
         float f = pXRot * ((float)Math.PI / 180F);
         float f1 = -pYRot * ((float)Math.PI / 180F);
         float f2 = Mth.cos(f1);
@@ -441,17 +436,21 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         selfPlayerStatus.setPlayerGuiState(playerStatus);
     }
 
-    public void sendMouse(float x, float y) {
-        if (selfPlayerStatus.getScreenPosPercentX() != x || selfPlayerStatus.getScreenPosPercentY() != y) {
+    public void sendMouse(Pair<Float, Float>  pos, boolean pressed) {
+        float x = pos.first;
+        float y = pos.second;
+        if (selfPlayerStatus.getScreenPosPercentX() != x || selfPlayerStatus.getScreenPosPercentY() != y || selfPlayerStatus.isPressing() != pressed) {
             CompoundTag data = new CompoundTag();
             data.putString(WatutNetworking.NBTPacketCommand, WatutNetworking.NBTPacketCommandUpdateMousePlayer);
             data.putFloat(WatutNetworking.NBTDataPlayerMouseX, x);
             data.putFloat(WatutNetworking.NBTDataPlayerMouseY, y);
+            data.putBoolean(WatutNetworking.NBTDataPlayerMousePressed, pressed);
 
             WatutNetworking.HANDLER.sendTo(new PacketNBTFromClient(data), Minecraft.getInstance().player.connection.getConnection(), NetworkDirection.PLAY_TO_SERVER);
         }
         selfPlayerStatus.setScreenPosPercentX(x);
         selfPlayerStatus.setScreenPosPercentY(y);
+        selfPlayerStatus.setPressing(pressed);
     }
 
     public void receiveStatus(UUID uuid, PlayerStatus.PlayerGuiState playerStatus) {
@@ -465,7 +464,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             if (getStatusPrev(uuid).getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
                 getStatus(uuid).setLerpTarget(new Lerpables());
             }
-            setPoseTarget(uuid);
+            setPoseTarget(uuid, false);
             //setHandsTarget(uuid);
             //since were fully overriding the head position, this needs to happen
             if (getStatusPrev(uuid).getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
@@ -475,12 +474,13 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
     }
 
-    public void receiveMouse(UUID uuid, float x, float y) {
+    public void receiveMouse(UUID uuid, float x, float y, boolean pressed) {
         PlayerInfo playerInfo = Minecraft.getInstance().getConnection().getPlayerInfo(uuid);
         //Watut.dbg("got moud on client: " + playerStatus + " for player name: " + playerInfo.getProfile().getName());
         //Watut.dbg("x: " + x);
-        setMouse(uuid, x, y);
-        setPoseTarget(uuid);
+        boolean differentPress = getStatus(uuid).isPressing() != pressed;
+        setMouse(uuid, x, y, pressed);
+        setPoseTarget(uuid, differentPress);
         //setHandsTarget(uuid);
     }
 

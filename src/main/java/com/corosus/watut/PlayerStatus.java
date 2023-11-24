@@ -37,6 +37,7 @@ public class PlayerStatus {
     private String lastTypeString;
     private float screenPosPercentX = 0;
     private float screenPosPercentY = 0;
+    private boolean isPressing = false;
     //so we can orient the particle to the bodys orientation
     //private ModelPart body;
     private Lerpables lerpTarget = new Lerpables();
@@ -142,5 +143,13 @@ public class PlayerStatus {
 
     public void setLerpPrev(Lerpables lerpPrev) {
         this.lerpPrev = lerpPrev;
+    }
+
+    public boolean isPressing() {
+        return isPressing;
+    }
+
+    public void setPressing(boolean pressing) {
+        isPressing = pressing;
     }
 }

@@ -37,7 +37,7 @@ public class PacketNBTFromServer {
                     if (packetCommand.equals(WatutNetworking.NBTPacketCommandUpdateStatusPlayer)) {
                         Watut.getPlayerStatusManagerClient().receiveStatus(uuid, PlayerStatus.PlayerGuiState.get(nbt.getInt(WatutNetworking.NBTDataPlayerStatus)));
                     } else if (packetCommand.equals(WatutNetworking.NBTPacketCommandUpdateMousePlayer)) {
-                        Watut.getPlayerStatusManagerClient().receiveMouse(uuid, nbt.getFloat(WatutNetworking.NBTDataPlayerMouseX), nbt.getFloat(WatutNetworking.NBTDataPlayerMouseY));
+                        Watut.getPlayerStatusManagerClient().receiveMouse(uuid, nbt.getFloat(WatutNetworking.NBTDataPlayerMouseX), nbt.getFloat(WatutNetworking.NBTDataPlayerMouseY), nbt.getBoolean(WatutNetworking.NBTDataPlayerMousePressed));
                     }
                 } catch (Exception ex) {
                     ex.printStackTrace();

@@ -26,6 +26,7 @@ public class WatutNetworking {
     public static String NBTDataPlayerStatus = "playerStatus";
     public static String NBTDataPlayerMouseX = "playerMouseX";
     public static String NBTDataPlayerMouseY = "playerMouseY";
+    public static String NBTDataPlayerMousePressed = "playerMousePressed";
 
     public static final SimpleChannel HANDLER = NetworkRegistry.ChannelBuilder
             .named(NETWORK_CHANNEL_ID_MAIN)

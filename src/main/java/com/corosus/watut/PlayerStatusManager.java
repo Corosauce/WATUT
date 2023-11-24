@@ -36,10 +36,11 @@ public class PlayerStatusManager {
         getStatus(uuid).setPlayerGuiState(statusType);
     }
 
-    public void setMouse(UUID uuid, float x, float y) {
+    public void setMouse(UUID uuid, float x, float y, boolean pressed) {
         PlayerStatus status = getStatus(uuid);
         status.setScreenPosPercentX(x);
         status.setScreenPosPercentY(y);
+        status.setPressing(pressed);
     }
 
 }

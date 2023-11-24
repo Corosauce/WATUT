@@ -14,10 +14,10 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         sendStatusToClients(player, playerStatus);
     }
 
-    public void receiveMouse(Player player, float x, float y) {
+    public void receiveMouse(Player player, float x, float y, boolean pressed) {
         //Watut.dbg("got status on server: " + playerStatus);
-        setMouse(player.getUUID(), x, y);
-        sendMouseToClients(player, x, y);
+        setMouse(player.getUUID(), x, y, pressed);
+        sendMouseToClients(player, x, y, pressed);
     }
 
     public void sendStatusToClients(Player player, PlayerStatus.PlayerGuiState playerStatus) {
@@ -36,14 +36,14 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         }*/
     }
 
-    public void sendMouseToClients(Player player, float x, float y) {
+    public void sendMouseToClients(Player player, float x, float y, boolean pressed) {
         CompoundTag data = new CompoundTag();
         data.putString(WatutNetworking.NBTPacketCommand, WatutNetworking.NBTPacketCommandUpdateMousePlayer);
         data.putString(WatutNetworking.NBTDataPlayerUUID, player.getUUID().toString());
         data.putFloat(WatutNetworking.NBTDataPlayerMouseX, x);
         data.putFloat(WatutNetworking.NBTDataPlayerMouseY, y);
+        data.putBoolean(WatutNetworking.NBTDataPlayerMousePressed, pressed);
 
-        //TODO: SEND TO ONLY THOSE REALLY CLOSE
         WatutNetworking.HANDLER.send(PacketDistributor.NEAR.with(() ->
                 new PacketDistributor.TargetPoint(player.getX(), player.getY(), player.getZ(), 16, player.level().dimension())),
                 new PacketNBTFromServer(data));

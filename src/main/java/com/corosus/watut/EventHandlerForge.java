@@ -6,6 +6,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent;
@@ -36,6 +37,12 @@ public class EventHandlerForge {
             guigraphics.drawString(mc.font, Watut.getPlayerStatusManagerClient().getTypingPlayers(), 2, height - 50, 16777215);
             guigraphics.flush();
         }
+    }
+
+    @SubscribeEvent
+    @OnlyIn(Dist.CLIENT)
+    public void onMouse(InputEvent.MouseButton.Post event) {
+        Watut.getPlayerStatusManagerClient().onMouse(event);
     }
 
     @SubscribeEvent
