@@ -35,6 +35,7 @@ public class PlayerStatus {
     private Particle particle;
     private long lastTypeTime;
     private String lastTypeString;
+    private float typingAmplifier = 1F;
     private float screenPosPercentX = 0;
     private float screenPosPercentY = 0;
     private boolean isPressing = false;
@@ -151,5 +152,13 @@ public class PlayerStatus {
 
     public void setPressing(boolean pressing) {
         isPressing = pressing;
+    }
+
+    public float getTypingAmplifier() {
+        return typingAmplifier;
+    }
+
+    public void setTypingAmplifier(float typingAmplifier) {
+        this.typingAmplifier = typingAmplifier;
     }
 }

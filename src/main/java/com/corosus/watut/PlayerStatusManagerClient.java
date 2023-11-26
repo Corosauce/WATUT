@@ -9,6 +9,8 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.inventory.CraftingScreen;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.client.gui.screens.inventory.EffectRenderingInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.PlayerModel;
@@ -63,9 +65,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             if (checkIfTyping(chat.input.getValue(), player)) {
                 sendStatus(PlayerStatus.PlayerGuiState.CHAT_TYPING);
             } else {
-                sendStatus(PlayerStatus.PlayerGuiState.CHAT_OPEN);
+                //sendStatus(PlayerStatus.PlayerGuiState.CHAT_OPEN);
                 //sendStatus(PlayerStatus.PlayerGuiState.CHAT_TYPING);
-                //sendStatus(PlayerStatus.PlayerGuiState.INVENTORY);
+                sendStatus(PlayerStatus.PlayerGuiState.INVENTORY);
             }
         } else if (mc.screen instanceof InventoryScreen) {
             sendStatus(PlayerStatus.PlayerGuiState.INVENTORY);
@@ -135,9 +137,12 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
             if (entry.getValue().getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_TYPING) {
-                GameProfile profile = mc.getConnection().getPlayerInfo(entry.getKey()).getProfile();
-                if (profile != null) {
-                    str += profile.getName() + ", ";
+                PlayerInfo info = mc.getConnection().getPlayerInfo(entry.getKey());
+                if (info != null) {
+                    GameProfile profile = info.getProfile();
+                    if (profile != null) {
+                        str += profile.getName() + ", ";
+                    }
                 }
             }
         }
@@ -212,20 +217,24 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     public void setupRotationsHook(EntityModel model, Entity pEntity, float pLimbSwing, float pLimbSwingAmount, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch) {
         Minecraft mc = Minecraft.getInstance();
-        boolean inOwnInventory = pEntity == mc.player && mc.screen instanceof InventoryScreen;
-        if (model instanceof PlayerModel && pEntity instanceof Player && (!inOwnInventory)) {
+        boolean inOwnInventory = pEntity == mc.player && (mc.screen instanceof EffectRenderingInventoryScreen);
+        if (model instanceof PlayerModel && pEntity instanceof Player && (!inOwnInventory || singleplayerTesting)) {
+            //boolean contextIsInventoryPaperDoll =
             PlayerModel playerModel = (PlayerModel) model;
             Player player = (Player) pEntity;
             PlayerStatus playerStatus = getStatus(player);
-            playerStatus.yRotHead = playerModel.head.yRot;
-            playerStatus.xRotHead = playerModel.head.xRot;
-
+            //account for weird inventory paper model state
+            if (playerModel.head.yRot <= Math.PI) {
+                playerStatus.yRotHead = playerModel.head.yRot;
+                playerStatus.xRotHead = playerModel.head.xRot;
+            }
             if (playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
                 playerStatus.yRotHeadBeforePoses = playerModel.head.yRot;
-                /*while (playerStatus.yRotHeadBeforePoses > Math.PI/2) {
-                    playerStatus.yRotHeadBeforePoses -= Math.PI;
+                //while > 180, -360
+                while (playerStatus.yRotHeadBeforePoses > Math.PI) {
+                    playerStatus.yRotHeadBeforePoses -= Math.PI * 2;
                 }
-                if (playerStatus.yRotHeadBeforePoses > Math.PI/2) {
+                /*if (playerStatus.yRotHeadBeforePoses > Math.PI/2) {
                     playerStatus.yRotHeadBeforePoses = 0;
                 }*/
                 /*if (player.level().getGameTime() % 40 == 0) {
@@ -249,7 +258,12 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
                 //TODO: workaround to a weird issue of just the y rotation in creative mode being super out of wack
                 // likely because of paper doll in inventory screen, couldnt fix by removing Math.PI until within range
-                if (!player.isCreative()) {
+                // still happening even for non creative, wat
+                // well we still need to find the optimal direction to rotate and fix the target rotation value to that so it doesnt invert and spin i guess
+                float yRotDiff = playerStatus.getLerpTarget().head.yRot - playerStatus.getLerpPrev().head.yRot;
+                //if (!player.isCreative()) {
+                //if head diff < 90 degrees
+                if (Math.abs(yRotDiff) < Math.PI / 2) {
                     playerModel.head.yRot = Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().head.yRot, playerStatus.getLerpTarget().head.yRot);
                 }
 
