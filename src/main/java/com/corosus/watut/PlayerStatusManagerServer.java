@@ -20,6 +20,23 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         sendMouseToClients(player, x, y, pressed);
     }
 
+    /**
+     * receive data from client, inject the relevant player uuid, and send it right back to the rest of the relevant clients except sender
+     *
+     * @param player
+     * @param data
+     */
+    public void receiveAny(Player player, CompoundTag data) {
+        data.putString(WatutNetworking.NBTDataPlayerUUID, player.getUUID().toString());
+        if (data.contains(WatutNetworking.NBTDataPlayerStatus)) {
+            WatutNetworking.HANDLER.send(PacketDistributor.ALL.noArg(), new PacketNBTFromServer(data));
+        } else {
+            WatutNetworking.HANDLER.send(PacketDistributor.NEAR.with(() ->
+                            new PacketDistributor.TargetPoint(player.getX(), player.getY(), player.getZ(), 16, player.level().dimension())),
+                    new PacketNBTFromServer(data));
+        }
+    }
+
     public void sendStatusToClients(Player player, PlayerStatus.PlayerGuiState playerStatus) {
         CompoundTag data = new CompoundTag();
         data.putString(WatutNetworking.NBTPacketCommand, WatutNetworking.NBTPacketCommandUpdateStatusPlayer);

@@ -31,14 +31,21 @@ public class PlayerStatus {
         }
     }
 
+    //synced values
     private PlayerGuiState playerGuiState;
-    private Particle particle;
-    private long lastTypeTime;
-    private String lastTypeString;
     private float typingAmplifier = 1F;
     private float screenPosPercentX = 0;
     private float screenPosPercentY = 0;
     private boolean isPressing = false;
+
+    //misc values used on either transmitting client or receiving client
+    private Particle particle;
+    private long lastTypeTime;
+    private String lastTypeString = "";
+
+    private long lastTypeTimeForAmp;
+    private String lastTypeStringForAmp = "";
+    private int lastTypeDiff;
     //so we can orient the particle to the bodys orientation
     //private ModelPart body;
     private Lerpables lerpTarget = new Lerpables();
@@ -49,11 +56,11 @@ public class PlayerStatus {
     public float lerpTicksPrev = 0;
     public float lerpTicksMax = 5;
 
-    public float yRotHead = 0;
-    public float xRotHead = 0;
+    public float yRotHeadWhileOverriding = 0;
+    public float xRotHeadWhileOverriding = 0;
 
-    public float yRotHeadBeforePoses = 0;
-    public float xRotHeadBeforePoses = 0;
+    public float yRotHeadBeforeOverriding = 0;
+    public float xRotHeadBeforeOverriding = 0;
 
     public PlayerStatus(PlayerGuiState playerGuiState) {
         this.playerGuiState = playerGuiState;
@@ -160,5 +167,29 @@ public class PlayerStatus {
 
     public void setTypingAmplifier(float typingAmplifier) {
         this.typingAmplifier = typingAmplifier;
+    }
+
+    public int getLastTypeDiff() {
+        return lastTypeDiff;
+    }
+
+    public void setLastTypeDiff(int lastTypeDiff) {
+        this.lastTypeDiff = lastTypeDiff;
+    }
+
+    public long getLastTypeTimeForAmp() {
+        return lastTypeTimeForAmp;
+    }
+
+    public void setLastTypeTimeForAmp(long lastTypeTimeForAmp) {
+        this.lastTypeTimeForAmp = lastTypeTimeForAmp;
+    }
+
+    public String getLastTypeStringForAmp() {
+        return lastTypeStringForAmp;
+    }
+
+    public void setLastTypeStringForAmp(String lastTypeStringForAmp) {
+        this.lastTypeStringForAmp = lastTypeStringForAmp;
     }
 }

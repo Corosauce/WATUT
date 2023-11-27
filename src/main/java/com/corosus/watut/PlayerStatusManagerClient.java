@@ -9,7 +9,6 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.inventory.CraftingScreen;
-import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.EffectRenderingInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.model.EntityModel;
@@ -28,6 +27,9 @@ import net.minecraftforge.network.NetworkDirection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
 
 public class PlayerStatusManagerClient extends PlayerStatusManager {
 
@@ -114,15 +116,36 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     public boolean checkIfTyping(String input, Player player) {
         PlayerStatus status = getStatus(player);
+        int lengthPrev = status.getLastTypeStringForAmp().length();
         if (input.length() > 0) {
             if (!input.startsWith("/")) {
                 if (!input.equals(status.getLastTypeString())) {
                     status.setLastTypeString(input);
                     status.setLastTypeTime(player.level().getGameTime());
                 }
+                if (!input.equals(status.getLastTypeStringForAmp())) {
+                    if (player.level().getGameTime() % 20 == 0) {
+                        status.setLastTypeStringForAmp(input);
+                        status.setLastTypeTimeForAmp(player.level().getGameTime());
+
+                        int length = input.length();
+                        int newDiff = length - lengthPrev;
+                        float amp = newDiff / (float)8;
+                        //System.out.println("diff: " + newDiff);
+                        System.out.println("amp: " + amp);
+                        status.setTypingAmplifier(amp);
+                        sendTyping(status);
+                        //only count new text as typing, and lazily detect pasting or scrolling previous commands to not acount
+                        if (newDiff > 0 && newDiff < 5) {
+
+                        }
+                    }
+                }
             }
         } else {
             status.setLastTypeString(input);
+            status.setLastTypeStringForAmp(input);
+            status.setLastTypeDiff(0);
             return false;
         }
         if (status.getLastTypeTime() + typingIdleTimeout >= player.level().getGameTime()) {
@@ -219,28 +242,21 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         Minecraft mc = Minecraft.getInstance();
         boolean inOwnInventory = pEntity == mc.player && (mc.screen instanceof EffectRenderingInventoryScreen);
         if (model instanceof PlayerModel && pEntity instanceof Player && (!inOwnInventory || singleplayerTesting)) {
-            //boolean contextIsInventoryPaperDoll =
             PlayerModel playerModel = (PlayerModel) model;
             Player player = (Player) pEntity;
             PlayerStatus playerStatus = getStatus(player);
-            //account for weird inventory paper model state
-            if (playerModel.head.yRot <= Math.PI) {
-                playerStatus.yRotHead = playerModel.head.yRot;
-                playerStatus.xRotHead = playerModel.head.xRot;
-            }
-            if (playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
-                playerStatus.yRotHeadBeforePoses = playerModel.head.yRot;
-                //while > 180, -360
-                while (playerStatus.yRotHeadBeforePoses > Math.PI) {
-                    playerStatus.yRotHeadBeforePoses -= Math.PI * 2;
+            //try to filter out paper model, could use a better context clue, this is using a quirk of rotation not getting wrapped
+            boolean contextIsInventoryPaperDoll = playerModel.head.yRot > Math.PI;
+            if (!contextIsInventoryPaperDoll) {
+                if (playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
+                    playerStatus.yRotHeadBeforeOverriding = playerModel.head.yRot;
+                    playerStatus.xRotHeadBeforeOverriding = playerModel.head.xRot;
+                } else {
+                    if (playerModel.head.yRot <= Math.PI) {
+                        playerStatus.yRotHeadWhileOverriding = playerModel.head.yRot;
+                        playerStatus.xRotHeadWhileOverriding = playerModel.head.xRot;
+                    }
                 }
-                /*if (playerStatus.yRotHeadBeforePoses > Math.PI/2) {
-                    playerStatus.yRotHeadBeforePoses = 0;
-                }*/
-                /*if (player.level().getGameTime() % 40 == 0) {
-                    System.out.println("yrot: " + playerModel.head.yRot);
-                }*/
-                playerStatus.xRotHeadBeforePoses = playerModel.head.xRot;
             }
 
             if (playerStatus.isLerping() || playerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE) {
@@ -289,8 +305,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 playerModel.hat.yRot = playerModel.head.yRot;
 
                 if (playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_TYPING) {
-                    float typeAngle = (float) ((Math.toRadians(Math.sin((pAgeInTicks / 1F) % 360) * 15)));
-                    float typeAngle2 = (float) ((Math.toRadians(-Math.sin((pAgeInTicks / 1F) % 360) * 15)));
+                    float typeAngle = (float) ((Math.toRadians(Math.sin((pAgeInTicks / 1F) % 360) * 15 * playerStatus.getTypingAmplifier())));
+                    float typeAngle2 = (float) ((Math.toRadians(-Math.sin((pAgeInTicks / 1F) % 360) * 15 * playerStatus.getTypingAmplifier())));
                     playerModel.rightArm.xRot -= typeAngle;
                     playerModel.rightSleeve.xRot -= typeAngle;
                     playerModel.leftArm.xRot -= typeAngle2;
@@ -309,10 +325,6 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         playerStatus.getLerpPrev().rightArm = playerStatus.getLerpTarget().rightArm.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().rightArm);
         playerStatus.getLerpPrev().leftArm = playerStatus.getLerpTarget().leftArm.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().leftArm);
         playerStatus.getLerpPrev().head = playerStatus.getLerpTarget().head.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().head);
-
-        /*if (playerStatus.getLerpPrev().head.yRot > Math.PI/2) {
-            playerStatus.getLerpPrev().head.yRot = 0;
-        }*/
 
         boolean pointing = playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.INVENTORY ||
                 playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.CRAFTING ||
@@ -371,8 +383,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         if (!pointing && !typing) {
             playerStatus.setLerpTarget(new Lerpables());
-            playerStatus.getLerpTarget().head.xRot = playerStatus.xRotHeadBeforePoses;
-            playerStatus.getLerpTarget().head.yRot = playerStatus.yRotHeadBeforePoses;
+            playerStatus.getLerpTarget().head.xRot = playerStatus.xRotHeadBeforeOverriding;
+            playerStatus.getLerpTarget().head.yRot = playerStatus.yRotHeadBeforeOverriding;
 
             /*System.out.println("playerStatus.xRotHeadBeforePoses: " + playerStatus.xRotHeadBeforePoses);
             System.out.println("playerStatus.yRotHeadBeforePoses: " + playerStatus.yRotHeadBeforePoses);*/
@@ -445,12 +457,21 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             CompoundTag data = new CompoundTag();
             data.putString(WatutNetworking.NBTPacketCommand, WatutNetworking.NBTPacketCommandUpdateStatusPlayer);
             data.putInt(WatutNetworking.NBTDataPlayerStatus, playerStatus.ordinal());
+            //data.putFloat(WatutNetworking.NBTDataPlayerTypingAmp, playerStatus);
             WatutNetworking.HANDLER.sendTo(new PacketNBTFromClient(data), Minecraft.getInstance().player.connection.getConnection(), NetworkDirection.PLAY_TO_SERVER);
         }
         selfPlayerStatus.setPlayerGuiState(playerStatus);
     }
 
-    public void sendMouse(Pair<Float, Float>  pos, boolean pressed) {
+    public void sendTyping(PlayerStatus status) {
+        CompoundTag data = new CompoundTag();
+        data.putString(WatutNetworking.NBTPacketCommand, WatutNetworking.NBTPacketCommandUpdateStatusAny);
+        data.putFloat(WatutNetworking.NBTDataPlayerTypingAmp, status.getTypingAmplifier());
+
+        WatutNetworking.HANDLER.sendTo(new PacketNBTFromClient(data), Minecraft.getInstance().player.connection.getConnection(), NetworkDirection.PLAY_TO_SERVER);
+    }
+
+    public void sendMouse(Pair<Float, Float> pos, boolean pressed) {
         float x = pos.first;
         float y = pos.second;
         if (selfPlayerStatus.getScreenPosPercentX() != x || selfPlayerStatus.getScreenPosPercentY() != y || selfPlayerStatus.isPressing() != pressed) {
@@ -481,9 +502,10 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             setPoseTarget(uuid, false);
             //setHandsTarget(uuid);
             //since were fully overriding the head position, this needs to happen
+            //for lerping back to neutral pos when exiting a different state
             if (getStatusPrev(uuid).getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
-                getStatus(uuid).getLerpPrev().head.yRot = getStatus(uuid).yRotHead;
-                getStatus(uuid).getLerpPrev().head.xRot = getStatus(uuid).xRotHead;
+                getStatus(uuid).getLerpPrev().head.yRot = getStatus(uuid).yRotHeadWhileOverriding;
+                getStatus(uuid).getLerpPrev().head.xRot = getStatus(uuid).xRotHeadWhileOverriding;
             }
         }
     }
@@ -497,5 +519,18 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         setPoseTarget(uuid, differentPress);
         //setHandsTarget(uuid);
     }
+
+    public void receiveAny(UUID uuid, CompoundTag data) {
+        PlayerStatus status = getStatus(uuid);
+        if (data.contains(WatutNetworking.NBTDataPlayerTypingAmp)) {
+            status.setTypingAmplifier(data.getFloat(WatutNetworking.NBTDataPlayerTypingAmp));
+        }
+    }
+
+    /*public void setIfExists(PlayerStatus status, CompoundTag data, String key, Function function) {
+        if (data.contains(key)) {
+            function.apply(data.getFloat(key));
+        }
+    }*/
 
 }

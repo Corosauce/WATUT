@@ -21,9 +21,10 @@ public class WatutNetworking {
     public static String NBTPacketCommand = "packetCommand";
     public static String NBTPacketCommandUpdateStatusPlayer = "updateStatusPlayer";
     public static String NBTPacketCommandUpdateMousePlayer = "updateMousePlayer";
-    public static String NBTPacketCommandUpdateStatusAll = "updateStatusAll";
+    public static String NBTPacketCommandUpdateStatusAny = "updateStatusAny";
     public static String NBTDataPlayerUUID = "playerUuid";
     public static String NBTDataPlayerStatus = "playerStatus";
+    public static String NBTDataPlayerTypingAmp = "playerTypingAmp";
     public static String NBTDataPlayerMouseX = "playerMouseX";
     public static String NBTDataPlayerMouseY = "playerMouseY";
     public static String NBTDataPlayerMousePressed = "playerMousePressed";
