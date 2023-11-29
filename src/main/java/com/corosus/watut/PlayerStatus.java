@@ -41,6 +41,7 @@ public class PlayerStatus {
 
     //misc values used on either transmitting client or receiving client
     private Particle particle;
+    private Particle particleIdle;
     private long lastTypeTime;
     private String lastTypeString = "";
     private boolean flagForRemoval = false;
@@ -224,5 +225,13 @@ public class PlayerStatus {
 
     public void setFlagForRemoval(boolean flagForRemoval) {
         this.flagForRemoval = flagForRemoval;
+    }
+
+    public Particle getParticleIdle() {
+        return particleIdle;
+    }
+
+    public void setParticleIdle(Particle particleIdle) {
+        this.particleIdle = particleIdle;
     }
 }

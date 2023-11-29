@@ -67,6 +67,10 @@
     {
       "type": "minecraft:single",
       "resource": "watut:particles/chat_typing_5"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/idle"
     }
   ]
 }

@@ -20,6 +20,7 @@ public class ParticleRegistry extends SpriteSourceProvider {
     public static SpriteInfo crafting;
     public static SpriteInfo chat_idle;
     public static SpriteInfo chat_typing;
+    public static SpriteInfo idle;
 
     private static List<SpriteInfo> particles = new ArrayList<>();
 
@@ -29,6 +30,7 @@ public class ParticleRegistry extends SpriteSourceProvider {
         crafting = add("crafting_", 3, 0);
         chat_idle = add("chat_idle_", 2, 6);
         chat_typing = add("chat_typing_", 6, 2);
+        idle = add("idle");
     }
 
     public static SpriteInfo add(String name) {

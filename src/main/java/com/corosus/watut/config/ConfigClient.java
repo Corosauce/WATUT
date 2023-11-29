@@ -11,6 +11,9 @@ public class ConfigClient implements IConfigCategory {
     public static boolean sendActiveGui = true;
     public static boolean sendIdleState = true;
 
+    public static boolean showIdleStatesInPlayerList = true;
+    public static boolean showIdleStatesInPlayerAboveHead = true;
+
     @Override
     public String getName() {
         return "-client";

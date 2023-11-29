@@ -4,7 +4,8 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "watut.refmap.json",
   "client": [
-    "client.SetupRotationsInject"
+    "client.SetupRotationsInject",
+    "client.RenderPingIconInject"
   ],
   "injectors": {
     "defaultRequire": 0

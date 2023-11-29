@@ -21,6 +21,8 @@ public abstract class ParticleRotating extends TextureSheetParticle {
     public float rotationYaw;
     public float prevRotationPitch;
     public float rotationPitch;
+    public float prevRotationRoll;
+    public float rotationRoll;
 
 
     public static ParticleRenderType PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL = new ParticleRenderType() {
@@ -69,6 +71,7 @@ public abstract class ParticleRotating extends TextureSheetParticle {
             quaternion = new Quaternionf(0, 0, 0, 1);
             quaternion.mul(Axis.YP.rotationDegrees(Mth.lerp(pPartialTicks, this.prevRotationYaw, rotationYaw)));
             quaternion.mul(Axis.XP.rotationDegrees(Mth.lerp(pPartialTicks, this.prevRotationPitch, rotationPitch)));
+            quaternion.mul(Axis.ZP.rotationDegrees(Mth.lerp(pPartialTicks, this.prevRotationRoll, rotationRoll)));
         } else {
             if (this.roll == 0.0F) {
                 quaternion = pRenderInfo.rotation();
@@ -97,5 +100,11 @@ public abstract class ParticleRotating extends TextureSheetParticle {
         pBuffer.vertex((double)avector3f[1].x(), (double)avector3f[1].y(), (double)avector3f[1].z()).uv(f7, f4).color(this.rCol, this.gCol, this.bCol, this.alpha).uv2(j).endVertex();
         pBuffer.vertex((double)avector3f[2].x(), (double)avector3f[2].y(), (double)avector3f[2].z()).uv(f6, f4).color(this.rCol, this.gCol, this.bCol, this.alpha).uv2(j).endVertex();
         pBuffer.vertex((double)avector3f[3].x(), (double)avector3f[3].y(), (double)avector3f[3].z()).uv(f6, f5).color(this.rCol, this.gCol, this.bCol, this.alpha).uv2(j).endVertex();
+    }
+
+    public void setPosPrev(double pX, double pY, double pZ) {
+        this.xo = pX;
+        this.yo = pY;
+        this.zo = pZ;
     }
 }

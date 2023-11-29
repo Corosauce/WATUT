@@ -41,10 +41,6 @@ public class PlayerStatusManager {
         return status;
     }
 
-    public void setGuiStatus(UUID uuid, PlayerStatus.PlayerGuiState statusType) {
-        getStatus(uuid).setPlayerGuiState(statusType);
-    }
-
     public void setMouse(UUID uuid, float x, float y, boolean pressed) {
         PlayerStatus status = getStatus(uuid);
         status.setScreenPosPercentX(x);

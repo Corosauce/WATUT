@@ -3,20 +3,16 @@ package com.corosus.watut;
 import com.corosus.watut.config.ConfigCommon;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.biome.Climate;
-import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 
 public class PlayerStatusManagerServer extends PlayerStatusManager {
 
-    public void receiveStatus(Player player, PlayerStatus.PlayerGuiState playerStatus) {
+    public void receiveStatus(Player player, PlayerStatus.PlayerGuiState playerGuiState) {
         //Watut.dbg("got status on server: " + playerStatus);
-        setGuiStatus(player.getUUID(), playerStatus);
-        sendStatusToClients(player, playerStatus);
+        getStatus(player).setPlayerGuiState(playerGuiState);
+        sendStatusToClients(player, playerGuiState);
     }
 
     public void receiveMouse(Player player, float x, float y, boolean pressed) {
@@ -63,7 +59,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     }
 
     public void broadcast(String msg) {
-        if (ConfigCommon.announceIdleStates) {
+        if (ConfigCommon.announceIdleStatesInChat) {
             ServerLifecycleHooks.getCurrentServer().getPlayerList().broadcastSystemMessage(Component.literal(msg), false);
         }
     }
