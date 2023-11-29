@@ -46,11 +46,11 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         PlayerStatus status = getStatus(player);
         if (ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayerCount() > 1 || singleplayerTesting) {
             if (idleTicks > 0) {
-                if (status.getIdleTicks() == 0) {
+                if (!status.isIdle()) {
                     broadcast(player.getDisplayName().getString() + " has gone idle");
                 }
             } else {
-                if (status.getIdleTicks() != 0) {
+                if (status.isIdle()) {
                     broadcast(player.getDisplayName().getString() + " is no longer idle");
                 }
             }

@@ -90,7 +90,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     public void tickLocalPlayerClient(Player player) {
         Minecraft mc = Minecraft.getInstance();
-        if (ConfigClient.sendActiveGui && getStatus(player).getIdleTicks() <= 0) {
+        if (ConfigClient.sendActiveGui && !getStatus(player).isIdle()) {
             if (mc.screen instanceof ChatScreen) {
                 ChatScreen chat = (ChatScreen) mc.screen;
                 //Watut.dbg("chat: " + chat.input.getValue());
@@ -151,10 +151,6 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
     }
 
-    public boolean isIdle(UUID uuid) {
-        return getStatus(uuid).getIdleTicks() > 0;
-    }
-
     public void onMouse(InputEvent.MouseButton.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.player != null && mc.player.level() != null) {
@@ -179,8 +175,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         if (!ConfigClient.sendIdleState) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.player != null && mc.player.level() != null) {
-            if (isIdle(mc.player.getUUID())) {
-                PlayerStatus status = getStatus(mc.player);
+            PlayerStatus status = getStatus(mc.player);
+            if (status.isIdle()) {
                 status.setIdleTicks(0);
                 sendIdle(status);
             }
@@ -297,14 +293,14 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         float idleY = (float) (2.2 + (cos * 0.03F));
 
         if (shouldAnimate(player)) {
-            if ((playerStatus.getIdleTicks() > 0) != (playerStatusPrev.getIdleTicks() > 0) || playerStatus.getParticleIdle() == null) {
+            if ((playerStatus.isIdle()) != (playerStatusPrev.isIdle()) || playerStatus.getParticleIdle() == null) {
                 //System.out.println("asdasd");
                 if (playerStatus.getParticleIdle() != null) {
                     //Watut.dbg("remove particle");
                     playerStatus.getParticleIdle().remove();
                     playerStatus.setParticleIdle(null);
                 }
-                if (ConfigClient.showIdleStatesInPlayerAboveHead && playerStatus.getIdleTicks() > 0) {
+                if (ConfigClient.showIdleStatesInPlayerAboveHead && playerStatus.isIdle()) {
                     ParticleRotating particle = new ParticleStatic((ClientLevel) player.level(), player.position().x, player.position().y + idleY, player.position().z, ParticleRegistry.idle.getSprite());
                     if (particle != null) {
                         playerStatus.setParticleIdle(particle);
@@ -400,7 +396,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     public boolean renderPingIconHook(PlayerTabOverlay playerTabOverlay, GuiGraphics pGuiGraphics, int p_281809_, int p_282801_, int pY, PlayerInfo pPlayerInfo) {
         if (Minecraft.getInstance().particleEngine == null || pPlayerInfo == null || pPlayerInfo.getProfile() == null || !ConfigClient.showIdleStatesInPlayerList) return false;
         PlayerStatus playerStatus = getStatus(pPlayerInfo.getProfile().getId());
-        if (playerStatus.getIdleTicks() > 0) {
+        if (playerStatus.isIdle()) {
             pGuiGraphics.pose().pushPose();
             pGuiGraphics.pose().translate(0.0F, 0.0F, 101F);
             TextureAtlasSprite sprite = ParticleRegistry.idle.getSprite();

@@ -234,4 +234,8 @@ public class PlayerStatus {
     public void setParticleIdle(Particle particleIdle) {
         this.particleIdle = particleIdle;
     }
+
+    public boolean isIdle() {
+        return idleTicks > 0;
+    }
 }
