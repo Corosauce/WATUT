@@ -1,10 +1,15 @@
 package com.corosus.watut;
 
+import com.corosus.watut.config.ConfigCommon;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.biome.Climate;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.server.ServerLifecycleHooks;
 
 public class PlayerStatusManagerServer extends PlayerStatusManager {
 
@@ -26,14 +31,40 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
      * @param player
      * @param data
      */
+    //TODO: consolidate the other receiving packet methods into this strategy
     public void receiveAny(Player player, CompoundTag data) {
         data.putString(WatutNetworking.NBTDataPlayerUUID, player.getUUID().toString());
+        if (data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
+            handleIdleState(player, data.getInt(WatutNetworking.NBTDataPlayerIdleTicks));
+        }
         if (data.contains(WatutNetworking.NBTDataPlayerStatus)) {
             WatutNetworking.HANDLER.send(PacketDistributor.ALL.noArg(), new PacketNBTFromServer(data));
         } else {
             WatutNetworking.HANDLER.send(PacketDistributor.NEAR.with(() ->
                             new PacketDistributor.TargetPoint(player.getX(), player.getY(), player.getZ(), 16, player.level().dimension())),
                     new PacketNBTFromServer(data));
+        }
+    }
+
+    public void handleIdleState(Player player, int idleTicks) {
+        PlayerStatus status = getStatus(player);
+        if (ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayerCount() > 1 || singleplayerTesting) {
+            if (idleTicks > 0) {
+                if (status.getIdleTicks() == 0) {
+                    broadcast(player.getDisplayName().getString() + " has gone idle");
+                }
+            } else {
+                if (status.getIdleTicks() != 0) {
+                    broadcast(player.getDisplayName().getString() + " is no longer idle");
+                }
+            }
+        }
+        status.setIdleTicks(idleTicks);
+    }
+
+    public void broadcast(String msg) {
+        if (ConfigCommon.announceIdleStates) {
+            ServerLifecycleHooks.getCurrentServer().getPlayerList().broadcastSystemMessage(Component.literal(msg), false);
         }
     }
 

@@ -163,7 +163,7 @@
            The line was accidentally duplicated in the 1.19.4 update and patching
            process.
            Fixes #9422
- - 45.0.25 Rename RegisterParticleProviderEvent's register methods to describe what kind of particle providers they register (deprecating old methods to avoid breaking) and minor docs tweaks (#9388)
+ - 45.0.25 Rename RegisterParticleProviderEvent's register methods to describe spriteInfo kind of particle providers they register (deprecating old methods to avoid breaking) and minor docs tweaks (#9388)
  - 45.0.24 Update pack versions (#9414)
  - 45.0.23 [1.19.4] Revamp and fix spawn events (#9133)
  - 45.0.22 [1.19.4] Replace blitOffset parameter with PoseStack in IItemDecorator (#9409)
@@ -645,7 +645,7 @@
             - Rename GuiUtils and children to match vanilla naming
             * New vertex pipeline API
             - Move to vanilla's VertexConsumer
-            - Roll back recent PR making VertexConsumer format-aware. This is the opposite of what vanilla does, and should not be relevant with the updated lighting pipeline
+            - Roll back recent PR making VertexConsumer format-aware. This is the opposite of spriteInfo vanilla does, and should not be relevant with the updated lighting pipeline
             * Lighting pipeline refactors
             - Move to dedicated lighting package
             - Separate flat and smooth lighters

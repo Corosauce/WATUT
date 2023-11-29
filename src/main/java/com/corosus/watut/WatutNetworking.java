@@ -25,6 +25,7 @@ public class WatutNetworking {
     public static String NBTDataPlayerUUID = "playerUuid";
     public static String NBTDataPlayerStatus = "playerStatus";
     public static String NBTDataPlayerTypingAmp = "playerTypingAmp";
+    public static String NBTDataPlayerIdleTicks = "playerIdleTicks";
     public static String NBTDataPlayerMouseX = "playerMouseX";
     public static String NBTDataPlayerMouseY = "playerMouseY";
     public static String NBTDataPlayerMousePressed = "playerMousePressed";

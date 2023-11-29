@@ -9,13 +9,22 @@ public class PlayerStatusManager {
 
     public HashMap<UUID, PlayerStatus> lookupPlayerToStatus = new HashMap<>();
 
+    //** DEBUG VAL **/
+    protected boolean singleplayerTesting = false;
+
     public void tickPlayer(Player player) {
+        singleplayerTesting = false;
         if (player.level().isClientSide()) {
             tickPlayerClient(player);
         }
     }
 
     public void tickPlayerClient(Player player) {
+
+    }
+
+    /** Client only **/
+    public void disconnectPlayer(Player player) {
 
     }
 

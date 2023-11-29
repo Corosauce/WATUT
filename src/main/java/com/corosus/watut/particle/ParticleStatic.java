@@ -10,8 +10,6 @@ public class ParticleStatic extends ParticleRotating {
         super(pLevel, pX, pY, pZ);
         this.sprite = sprite;
         this.lifetime = Integer.MAX_VALUE;
-        //TODO: temp until i clean up stagnant particles from disconnects etc
-        this.lifetime = 20*60*1;
         this.gravity = 0.0F;
         this.setSize(0.2F, 0.2F);
         this.quadSize = 0.5F;

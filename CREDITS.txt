@@ -7,7 +7,7 @@ helped it along it's way.
 
 First, the people who originally created the Forge projects way back in Minecraft 
 alpha. Eloraam of RedPower, and SpaceToad of Buildcraft, without their acceptiance 
-of me taking over the project, who knows what Minecraft modding would be today.
+of me taking over the project, who knows spriteInfo Minecraft modding would be today.
 
 Secondly, someone who has worked with me, and developed some of the core features
 that allow modding to be as functional, and as simple as it is, cpw. For developing

@@ -1,5 +1,8 @@
 package com.corosus.watut;
 
+import com.corosus.modconfig.ConfigMod;
+import com.corosus.watut.config.ConfigClient;
+import com.corosus.watut.config.ConfigCommon;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.Registries;
@@ -65,15 +68,13 @@ public class Watut
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         modEventBus.addListener(this::setup);
         modEventBus.addListener(this::gatherData);
-
-        // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
-
         MinecraftForge.EVENT_BUS.register(new EventHandlerForge());
-
         if (FMLEnvironment.dist.isClient()) {
             modEventBus.addListener(ParticleRegistry::getRegisteredParticles);
         }
+        ConfigMod.addConfigFile(MODID, new ConfigCommon());
+        ConfigMod.addConfigFile(MODID, new ConfigClient());
     }
 
     private void setup(final FMLCommonSetupEvent event) {
@@ -83,9 +84,6 @@ public class Watut
     public static void dbg(Object obj) {
         System.out.println("" + obj);
     }
-
-
-
 
     /**
      *

@@ -1,13 +1,13 @@
 {
-  "required": true,
+  "required": false,
   "package": "com.corosus.watut.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "watut.refmap.json",
   "client": [
-    "client.SetupRotationsOverride"
+    "client.SetupRotationsInject"
   ],
   "injectors": {
-    "defaultRequire": 1
+    "defaultRequire": 0
   },
   "minVersion": "0.8"
 }

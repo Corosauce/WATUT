@@ -34,8 +34,8 @@ public abstract class ParticleRotating extends TextureSheetParticle {
         }
 
         public void end(Tesselator p_107458_) {
-            //RenderSystem.enableCull();
             p_107458_.end();
+            RenderSystem.enableCull();
         }
 
         public String toString() {
@@ -49,6 +49,10 @@ public abstract class ParticleRotating extends TextureSheetParticle {
 
     public void setQuadSize(float size) {
         this.quadSize = size;
+    }
+
+    public void setAlpha(float alpha) {
+        this.alpha = alpha;
     }
 
     public ParticleRenderType getRenderType() {

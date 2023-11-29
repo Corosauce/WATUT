@@ -2,13 +2,14 @@ package com.corosus.watut.particle;
 
 import com.corosus.watut.spritesets.SpriteSetPlayer;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.particle.*;
+import net.minecraft.client.particle.SpriteSet;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
-public class ParticleAnimated extends ParticleRotating {
+public class ParticleStaticLoD extends ParticleRotating {
 
     private final SpriteSetPlayer sprites;
 
-    public ParticleAnimated(ClientLevel pLevel, double pX, double pY, double pZ, SpriteSetPlayer pSprites) {
+    public ParticleStaticLoD(ClientLevel pLevel, double pX, double pY, double pZ, SpriteSetPlayer pSprites) {
         super(pLevel, pX, pY, pZ);
         this.sprites = pSprites;
         this.lifetime = Integer.MAX_VALUE;
@@ -18,7 +19,7 @@ public class ParticleAnimated extends ParticleRotating {
         this.xd = 0;
         this.yd = 0;
         this.zd = 0;
-        this.setSpriteFromAge(pSprites);
+        this.setParticleFromDistanceToCamera(0);
     }
 
     public void setSize(float pWidth, float pHeight) {
@@ -32,10 +33,14 @@ public class ParticleAnimated extends ParticleRotating {
         if (this.age++ >= this.lifetime) {
             this.remove();
         } else {
-            //this.yd -= (double)this.gravity;
             this.move(this.xd, this.yd, this.zd);
-            this.setSpriteFromAge(this.sprites);
         }
+    }
+
+    public void setParticleFromDistanceToCamera(float distanceToCamera) {
+        float step = 3F;
+        int i = (int) Math.max(0, Math.min(sprites.getFrames()-1, ((distanceToCamera - step) / step) + 1));
+        this.setSprite(sprites.getList().get(i));
     }
 
 }

@@ -37,11 +37,13 @@ public class PlayerStatus {
     private float screenPosPercentX = 0;
     private float screenPosPercentY = 0;
     private boolean isPressing = false;
+    private int idleTicks = 0;
 
     //misc values used on either transmitting client or receiving client
     private Particle particle;
     private long lastTypeTime;
     private String lastTypeString = "";
+    private boolean flagForRemoval = false;
 
     private long lastTypeTimeForAmp;
     private String lastTypeStringForAmp = "";
@@ -61,6 +63,8 @@ public class PlayerStatus {
 
     public float yRotHeadBeforeOverriding = 0;
     public float xRotHeadBeforeOverriding = 0;
+
+    private float typingAmplifierSmooth = 0.5F;
 
     public PlayerStatus(PlayerGuiState playerGuiState) {
         this.playerGuiState = playerGuiState;
@@ -83,6 +87,11 @@ public class PlayerStatus {
         float lerpPrev = (lerpTicksPrev / lerpTicksMax);
         float lerp = (lerpTicks / lerpTicksMax);
         return Math.min(lerpPrev + ((lerp - lerpPrev) * partialTick), lerpTicksMax);
+    }
+
+    public void remove() {
+        if (particle != null) particle.remove();
+        particle = null;
     }
 
     public boolean isLerping() {
@@ -191,5 +200,29 @@ public class PlayerStatus {
 
     public void setLastTypeStringForAmp(String lastTypeStringForAmp) {
         this.lastTypeStringForAmp = lastTypeStringForAmp;
+    }
+
+    public int getIdleTicks() {
+        return idleTicks;
+    }
+
+    public void setIdleTicks(int idleTicks) {
+        this.idleTicks = idleTicks;
+    }
+
+    public float getTypingAmplifierSmooth() {
+        return typingAmplifierSmooth;
+    }
+
+    public void setTypingAmplifierSmooth(float typingAmplifierSmooth) {
+        this.typingAmplifierSmooth = typingAmplifierSmooth;
+    }
+
+    public boolean isFlagForRemoval() {
+        return flagForRemoval;
+    }
+
+    public void setFlagForRemoval(boolean flagForRemoval) {
+        this.flagForRemoval = flagForRemoval;
     }
 }
