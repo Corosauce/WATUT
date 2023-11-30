@@ -32,7 +32,7 @@ public class PacketNBTFromServer {
                     CompoundTag nbt = msg.nbt;
                     String packetCommand = nbt.getString(WatutNetworking.NBTPacketCommand);
 
-                    //Watut.dbg("packet command from server: " + packetCommand);
+                    Watut.dbg("packet command from server: " + packetCommand);
                     UUID uuid = UUID.fromString(nbt.getString(WatutNetworking.NBTDataPlayerUUID));
                     if (packetCommand.equals(WatutNetworking.NBTPacketCommandUpdateStatusPlayer)) {
                         Watut.getPlayerStatusManagerClient().receiveStatus(uuid, PlayerStatus.PlayerGuiState.get(nbt.getInt(WatutNetworking.NBTDataPlayerStatus)));
@@ -40,6 +40,10 @@ public class PacketNBTFromServer {
                         Watut.getPlayerStatusManagerClient().receiveMouse(uuid, nbt.getFloat(WatutNetworking.NBTDataPlayerMouseX), nbt.getFloat(WatutNetworking.NBTDataPlayerMouseY), nbt.getBoolean(WatutNetworking.NBTDataPlayerMousePressed));
                     } else if (packetCommand.equals(WatutNetworking.NBTPacketCommandUpdateStatusAny)) {
                         Watut.getPlayerStatusManagerClient().receiveAny(uuid, nbt);
+                    } else if (packetCommand.equals(WatutNetworking.NBTPacketCommandUpdateStatusAny + "All")) {
+                        Watut.getPlayerStatusManagerClient().receiveAny(uuid, nbt);
+                        Watut.getPlayerStatusManagerClient().receiveStatus(uuid, PlayerStatus.PlayerGuiState.get(nbt.getInt(WatutNetworking.NBTDataPlayerStatus)));
+                        Watut.getPlayerStatusManagerClient().receiveMouse(uuid, nbt.getFloat(WatutNetworking.NBTDataPlayerMouseX), nbt.getFloat(WatutNetworking.NBTDataPlayerMouseY), nbt.getBoolean(WatutNetworking.NBTDataPlayerMousePressed));
                     }
                 } catch (Exception ex) {
                     ex.printStackTrace();

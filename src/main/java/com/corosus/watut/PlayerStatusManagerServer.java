@@ -2,10 +2,15 @@ package com.corosus.watut;
 
 import com.corosus.watut.config.ConfigCommon;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
+
+import java.util.Map;
+import java.util.UUID;
 
 public class PlayerStatusManagerServer extends PlayerStatusManager {
 
@@ -33,7 +38,8 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         if (data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
             handleIdleState(player, data.getInt(WatutNetworking.NBTDataPlayerIdleTicks));
         }
-        if (data.contains(WatutNetworking.NBTDataPlayerStatus)) {
+        getStatus(player).getNbtCache().merge(data);
+        if (data.contains(WatutNetworking.NBTDataPlayerStatus) || data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
             WatutNetworking.HANDLER.send(PacketDistributor.ALL.noArg(), new PacketNBTFromServer(data));
         } else {
             WatutNetworking.HANDLER.send(PacketDistributor.NEAR.with(() ->
@@ -70,6 +76,8 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         data.putString(WatutNetworking.NBTDataPlayerUUID, player.getUUID().toString());
         data.putInt(WatutNetworking.NBTDataPlayerStatus, playerStatus.ordinal());
         //WatutNetworking.HANDLER.sendTo(new PacketNBTFromClient(data), Minecraft.getInstance().player.connection.getConnection(), NetworkDirection.PLAY_TO_CLIENT);
+        CompoundTag tag = getStatus(player).getNbtCache();
+        tag.merge(data);
         WatutNetworking.HANDLER.send(PacketDistributor.ALL.noArg(), new PacketNBTFromServer(data));
 
         /*if (entP == null) {
@@ -88,9 +96,26 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         data.putFloat(WatutNetworking.NBTDataPlayerMouseY, y);
         data.putBoolean(WatutNetworking.NBTDataPlayerMousePressed, pressed);
 
+        getStatus(player).getNbtCache().merge(data);
         WatutNetworking.HANDLER.send(PacketDistributor.NEAR.with(() ->
-                new PacketDistributor.TargetPoint(player.getX(), player.getY(), player.getZ(), 16, player.level().dimension())),
+                new PacketDistributor.TargetPoint(player.getX(), player.getY(), player.getZ(), mouseDataSendDist, player.level().dimension())),
                 new PacketNBTFromServer(data));
         //WatutNetworking.HANDLER.send(PacketDistributor.DIMENSION.with(() -> player.level().dimension()), new PacketNBTFromServer(data));
+    }
+
+    @Override
+    public void playerLoggedIn(Player player) {
+        super.playerLoggedIn(player);
+
+        Watut.dbg("player loggedin");
+        if (player instanceof ServerPlayer) {
+            for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
+                Watut.dbg("sending update all packet for " + entry.getKey().toString() + " to " + player.getDisplayName().getString() + " with status " + PlayerStatus.PlayerGuiState.get(entry.getValue().getNbtCache().getInt(WatutNetworking.NBTDataPlayerStatus)));
+                entry.getValue().getNbtCache().putString(WatutNetworking.NBTPacketCommand, WatutNetworking.NBTPacketCommandUpdateStatusAny + "All");
+                WatutNetworking.HANDLER.send(PacketDistributor.PLAYER.with(() -> (ServerPlayer) player), new PacketNBTFromServer(entry.getValue().getNbtCache()));
+            }
+        }
+
+
     }
 }

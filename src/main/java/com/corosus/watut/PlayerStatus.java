@@ -2,6 +2,7 @@ package com.corosus.watut;
 
 import com.corosus.watut.math.Lerpables;
 import net.minecraft.client.particle.Particle;
+import net.minecraft.nbt.CompoundTag;
 
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -67,6 +68,8 @@ public class PlayerStatus {
 
     private float typingAmplifierSmooth = 0.5F;
 
+    private CompoundTag nbtCache = new CompoundTag();
+
     public PlayerStatus(PlayerGuiState playerGuiState) {
         this.playerGuiState = playerGuiState;
     }
@@ -92,6 +95,7 @@ public class PlayerStatus {
 
     public void remove() {
         if (particle != null) particle.remove();
+        if (particleIdle != null) particleIdle.remove();
         particle = null;
     }
 
@@ -237,5 +241,13 @@ public class PlayerStatus {
 
     public boolean isIdle() {
         return idleTicks > 0;
+    }
+
+    public CompoundTag getNbtCache() {
+        return nbtCache;
+    }
+
+    public void setNbtCache(CompoundTag nbtCache) {
+        this.nbtCache = nbtCache;
     }
 }

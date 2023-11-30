@@ -20,11 +20,14 @@ import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.particle.Particle;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.event.TickEvent;
@@ -33,13 +36,20 @@ import net.minecraftforge.network.NetworkDirection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 public class PlayerStatusManagerClient extends PlayerStatusManager {
 
-    //TODO: some things are using the lookup and not this, maybe deprecate this for that
+    //selfPlayer statuses are important, a use case: tracking things to send packets for locally,
+    //then we allow for packet to be sent to self as well, where we also use the lookup to then compare previous state so we can correctly setup pose for self as well as others
+    //local use case:
+    //idle state tracking and comparison when it changes from selfPlayer previous
+    //remote use case:
+    //idle state pose setup when it changes from NON selfPlayer previous, setting up lerp
     private PlayerStatus selfPlayerStatus = new PlayerStatus(PlayerStatus.PlayerGuiState.NONE);
+    private PlayerStatus selfPlayerStatusPrev = new PlayerStatus(PlayerStatus.PlayerGuiState.NONE);
+
     public HashMap<UUID, PlayerStatus> lookupPlayerToStatusPrev = new HashMap<>();
-    //public HashMap<UUID, ParticleAnimated> lookupPlayerToParticle = new HashMap<>();
     private long typingIdleTimeout = 60;
 
     private int armMouseTickRate = 5;
@@ -48,6 +58,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     private int typeRatePollCounter = 0;
     private int animateTime = 0;
+
+    private Level lastLevel;
 
     public void tickGame(TickEvent.ClientTickEvent event) {
         animateTime++;
@@ -62,6 +74,15 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 }
             }
         }
+        Level level = Minecraft.getInstance().level;
+        if (lastLevel != level) {
+            Watut.dbg("resetting particles");
+            for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
+                entry.getValue().setParticle(null);
+                entry.getValue().setParticleIdle(null);
+            }
+        }
+        lastLevel = level;
     }
 
     public void tickPlayerClient(Player player) {
@@ -85,15 +106,15 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         } else if (status.getTypingAmplifierSmooth() > status.getTypingAmplifier() + adjRateTyping) {
             status.setTypingAmplifierSmooth(status.getTypingAmplifierSmooth() - adjRateTyping);
         }
-        //System.out.println("?? " + status.getTypingAmplifierSmooth());
     }
 
     public void tickLocalPlayerClient(Player player) {
         Minecraft mc = Minecraft.getInstance();
-        if (ConfigClient.sendActiveGui && !getStatus(player).isIdle()) {
+        PlayerStatus status = getStatusLocal();
+        PlayerStatus statusPrev = getStatusPrevLocal();
+        if (ConfigClient.sendActiveGui && !status.isIdle()) {
             if (mc.screen instanceof ChatScreen) {
                 ChatScreen chat = (ChatScreen) mc.screen;
-                //Watut.dbg("chat: " + chat.input.getValue());
                 if (checkIfTyping(chat.input.getValue(), player)) {
                     sendStatus(PlayerStatus.PlayerGuiState.CHAT_TYPING);
                 } else {
@@ -112,14 +133,17 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 sendStatus(PlayerStatus.PlayerGuiState.MISC);
             } else if (mc.screen == null) {
                 sendStatus(PlayerStatus.PlayerGuiState.NONE);
-                //System.out.println(mc.gui);
+                //Watut.dbg(mc.gui);
             }
         } else {
             sendStatus(PlayerStatus.PlayerGuiState.NONE);
         }
 
         if (ConfigClient.sendMouseInfo && mc.screen != null && mc.level.getGameTime() % armMouseTickRate == 0) {
-            sendMouse(getMousePos(), selfPlayerStatus.isPressing());
+            PlayerStatus.PlayerGuiState playerGuiState = status.getPlayerGuiState();
+            if (playerGuiState == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiState == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiState == PlayerStatus.PlayerGuiState.MISC) {
+                sendMouse(getMousePos(), status.isPressing());
+            }
         }
 
         //init
@@ -129,15 +153,13 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         //idle detection
         long ticksIdle = player.level().getGameTime() - lastActionTime;
+        statusPrev.setIdleTicks(status.getIdleTicks());
         if (ConfigClient.sendIdleState && ticksIdle > ConfigCommon.ticksToMarkPlayerIdle) {
             int minutesIdle = (int)(ticksIdle / 20 / 60);
-            if (singleplayerTesting || minutesIdle != lastMinuteSentIdleStat/* || (lastMinuteSentIdleStat == 0 && getStatus(player).getIdleTicks() != getStatusPrev(player).getIdleTicks())*/) {
+            status.setIdleTicks((int) ticksIdle);
+            if (status.isIdle() != statusPrev.isIdle()) {
                 lastMinuteSentIdleStat = minutesIdle;
-                //System.out.println("sending idle, " + lastMinuteSentIdleStat);
-                PlayerStatus status = getStatus(player);
-                status.setIdleTicks((int) ticksIdle);
                 sendIdle(status);
-                //System.out.println("idle");
             }
         }
     }
@@ -175,7 +197,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         if (!ConfigClient.sendIdleState) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.player != null && mc.player.level() != null) {
-            PlayerStatus status = getStatus(mc.player);
+            PlayerStatus status = getStatusLocal();
             if (status.isIdle()) {
                 status.setIdleTicks(0);
                 sendIdle(status);
@@ -197,12 +219,11 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         yPercent *= emphasis;
         xPercent = Math.max(Math.min(xPercent * emphasis, edgeLimit), -edgeLimit);
         //yPercent = Math.max(Math.min(yPercent * emphasis, edgeLimit), -edgeLimit);
-        //System.out.println(xPercent);
         return Pair.of((float) xPercent, (float) yPercent);
     }
 
     public boolean checkIfTyping(String input, Player player) {
-        PlayerStatus status = getStatus(player);
+        PlayerStatus status = getStatusLocal();
         typeRatePollCounter++;
         if (input.length() > 0) {
             if (!input.startsWith("/")) {
@@ -248,7 +269,6 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         Minecraft mc = Minecraft.getInstance();
         String str = "";
 
-
         for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
             if (entry.getValue().getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_TYPING) {
                 PlayerInfo info = mc.getConnection().getPlayerInfo(entry.getKey());
@@ -260,6 +280,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 }
             }
         }
+
         int playersLengthStr = str.length();
         String anim = "";
         int animRate = 6;
@@ -268,7 +289,6 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             time -= animRate;
             anim += ".";
         }
-
 
         if (playersLengthStr > 50) {
             str = "Several people are typing" + anim;
@@ -290,13 +310,11 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         long stableTime = animateTime;
         float sin = (float) Math.sin((stableTime / 30F) % 360);
         float cos = (float) Math.cos((stableTime / 30F) % 360);
-        float idleY = (float) (2.2 + (cos * 0.03F));
+        float idleY = (float) (2.6 + (cos * 0.03F));
 
         if (shouldAnimate(player)) {
             if ((playerStatus.isIdle()) != (playerStatusPrev.isIdle()) || playerStatus.getParticleIdle() == null) {
-                //System.out.println("asdasd");
                 if (playerStatus.getParticleIdle() != null) {
-                    //Watut.dbg("remove particle");
                     playerStatus.getParticleIdle().remove();
                     playerStatus.setParticleIdle(null);
                 }
@@ -306,13 +324,13 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                         playerStatus.setParticleIdle(particle);
                         Minecraft.getInstance().particleEngine.add(particle);
                         particle.setQuadSize((float) (0.3F + Math.sin((stableTime / 10F) % 360) * 0.01F));
+
+                        Watut.dbg("spawning idle particle for " + player.getUUID());
                     }
                 }
             }
             if (playerStatus.getPlayerGuiState() != playerStatusPrev.getPlayerGuiState() || playerStatus.getParticle() == null) {
-                //System.out.println(playerStatus.getPlayerGuiState() + " vs " + playerStatusPrev.getPlayerGuiState());
                 if (playerStatus.getParticle() != null) {
-                    //Watut.dbg("remove particle");
                     playerStatus.getParticle().remove();
                     playerStatus.setParticle(null);
                 }
@@ -362,7 +380,6 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 playerStatus.getParticle().remove();
                 playerStatus.setParticle(null);
             } else {
-                //updateParticle(player, particle);
                 Vec3 posParticle = getParticlePosition(player);
                 particle.setPos(posParticle.x, posParticle.y, posParticle.z);
                 particle.setParticleSpeed(0, 0, 0);
@@ -372,8 +389,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     if (Minecraft.getInstance().cameraEntity != null) {
                         double distToCamera = Minecraft.getInstance().cameraEntity.distanceTo(player);
                         double distToCameraCapped = Math.max(3F, Math.min(10F, distToCamera));
-                        //System.out.println(distToCamera);
-                        float alpha = (float) Math.max(0.35F, 1F - (distToCamera / 10F));
+                        //Watut.dbg(distToCamera);
+                        float alpha = (float) Math.max(0.35F, 1F - (distToCameraCapped / 10F));
                         particle.setAlpha(alpha);
                         ((ParticleStaticLoD) particle).setParticleFromDistanceToCamera((float) distToCamera);
                     } else {
@@ -423,7 +440,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     playerStatus.yRotHeadBeforeOverriding = playerModel.head.yRot;
                     playerStatus.xRotHeadBeforeOverriding = playerModel.head.xRot;
                     if (player.level().getGameTime() % 5 == 0) {
-                        //System.out.println("setting head data for " + playerStatus.yRotHeadBeforeOverriding);
+                        //Watut.dbg("setting head data for " + playerStatus.yRotHeadBeforeOverriding);
                     }
                 } else {
                     if (playerModel.head.yRot <= Math.PI) {
@@ -433,7 +450,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 }
             }
 
-            if (playerStatus.isLerping() || playerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE) {
+            if (playerStatus.isLerping() || playerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE || playerStatus.isIdle()) {
                 float partialTick = pAgeInTicks - ((int)pAgeInTicks);
 
                 playerModel.rightArm.yRot += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().rightArm.yRot, playerStatus.getLerpTarget().rightArm.yRot);
@@ -441,7 +458,6 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 playerModel.rightArm.x += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().rightArm.x, playerStatus.getLerpTarget().rightArm.x);
                 playerModel.rightArm.y += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().rightArm.y, playerStatus.getLerpTarget().rightArm.y);
                 playerModel.rightArm.z += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().rightArm.z, playerStatus.getLerpTarget().rightArm.z);
-
 
                 playerModel.leftArm.yRot += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().leftArm.yRot, playerStatus.getLerpTarget().leftArm.yRot);
                 playerModel.leftArm.xRot += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().leftArm.xRot, playerStatus.getLerpTarget().leftArm.xRot);
@@ -451,16 +467,15 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 // still happening even for non creative, wat
                 // well we still need to find the optimal direction to rotate and fix the target rotation value to that so it doesnt invert and spin i guess
                 float yRotDiff = playerStatus.getLerpTarget().head.yRot - playerStatus.getLerpPrev().head.yRot;
-                //if (!player.isCreative()) {
-                //if head diff < 90 degrees
                 if (Math.abs(yRotDiff) < Math.PI / 2) {
                     playerModel.head.yRot = Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().head.yRot, playerStatus.getLerpTarget().head.yRot);
                     if (player.level().getGameTime() % 5 == 0) {
-                        //System.out.println("yRot: " + playerModel.head.yRot);
+                        //Watut.dbg("yRot: " + playerModel.head.yRot);
                     }
                 }
 
                 playerModel.head.xRot = Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().head.xRot, playerStatus.getLerpTarget().head.xRot);
+                playerModel.head.zRot = Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().head.zRot, playerStatus.getLerpTarget().head.zRot);
 
                 playerModel.rightSleeve.yRot = playerModel.rightArm.yRot;
                 playerModel.rightSleeve.xRot = playerModel.rightArm.xRot;
@@ -484,13 +499,21 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     playerModel.leftSleeve.xRot -= typeAngle2;
                 }
 
-
+                if (playerStatus.isIdle()) {
+                    float angle = (float) ((Math.toRadians(Math.sin((pAgeInTicks * 0.05F) % 360) * 15)));
+                    float angle2 = (float) ((Math.toRadians(Math.cos((pAgeInTicks * 0.05F) % 360) * 7)));
+                    playerModel.head.xRot += angle2;
+                    playerModel.head.zRot += angle;
+                }
             }
+            playerModel.hat.xRot = playerModel.head.xRot;
+            playerModel.hat.yRot = playerModel.head.yRot;
+            playerModel.hat.zRot = playerModel.head.zRot;
         }
     }
 
     public void setPoseTarget(UUID uuid, boolean becauseMousePress) {
-        //System.out.println("setPoseTarget");
+        //Watut.dbg("setPoseTarget");
         PlayerStatus playerStatus = getStatus(uuid);
 
         playerStatus.getLerpPrev().rightArm = playerStatus.getLerpTarget().rightArm.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().rightArm);
@@ -527,14 +550,10 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             double x = Math.toRadians(90) - Math.toRadians(22.5) - yPercent;
             double y = -Math.toRadians(15) + xPercent;
 
-            //x = Math.toRadians(180);
-
             playerStatus.getLerpTarget().rightArm.yRot = (float) y;
             playerStatus.getLerpTarget().rightArm.xRot = (float) -x;
 
             if (playerStatus.isPressing()) {
-                /*playerStatus.getLerpTarget().rightArm.z = (float) (1 * Math.sin(-x));
-                playerStatus.getLerpTarget().rightArm.y = (float) (1 * Math.cos(-x));*/
                 Vec3 vec = calculateViewVector((float) Math.toDegrees(y), (float) Math.toDegrees(x));
                 float press = 1;
                 playerStatus.getLerpTarget().rightArm.x = (float) (press * vec.y);
@@ -561,26 +580,24 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
 
         //reset to neutral
-        if (!pointing && !typing) {
+        if (!pointing && !typing && !playerStatus.isIdle()) {
             playerStatus.setLerpTarget(new Lerpables());
             playerStatus.getLerpTarget().head.xRot = playerStatus.xRotHeadBeforeOverriding;
             playerStatus.getLerpTarget().head.yRot = playerStatus.yRotHeadBeforeOverriding;
+        }
 
-            /*System.out.println("playerStatus.xRotHeadBeforePoses: " + playerStatus.xRotHeadBeforePoses);
-            System.out.println("playerStatus.yRotHeadBeforePoses: " + playerStatus.yRotHeadBeforePoses);*/
+        if (playerStatus.isIdle()) {
+            playerStatus.getLerpTarget().head.xRot = (float) Math.toRadians(70);
+            playerStatus.setNewLerp(40);
+        }
+
+        //setup head lerp from to be where our head was before overrides started
+        if (getStatusPrev(uuid).getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE && getStatus(uuid).getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE) {
+            playerStatus.getLerpPrev().head.xRot = playerStatus.xRotHeadBeforeOverriding;
+            playerStatus.getLerpPrev().head.yRot = playerStatus.yRotHeadBeforeOverriding;
         }
 
 
-
-
-        /*System.out.println("yRot: " + playerStatus.getLerpTarget().head.yRot);
-        System.out.println(": " + playerStatus.getLerpPrev().head.yRot + " - " + playerStatus.getLerpTarget().head.yRot);*/
-
-
-    }
-
-    public static float lerp(float pDelta, float pStart, float pEnd) {
-        return pStart + pDelta * (pEnd - pStart);
     }
 
     public Vec3 getParticlePosition(Player player) {
@@ -604,10 +621,12 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         return new Vec3((double)(f3 * f4), (double)(-f5), (double)(f2 * f4));
     }
 
-    public void updateParticle(Player player, Particle particle) {
-        Vec3 pos = player.position();
-        float distFromFace = 1.5F;
-        Vec3 lookVec = player.getLookAngle().scale(distFromFace);
+    public PlayerStatus getStatusLocal() {
+        return selfPlayerStatus;
+    }
+
+    public PlayerStatus getStatusPrevLocal() {
+        return selfPlayerStatusPrev;
     }
 
     public PlayerStatus getStatusPrev(Player player) {
@@ -615,18 +634,13 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     }
 
     public PlayerStatus getStatusPrev(UUID uuid) {
+        return getStatusPrev(uuid, false);
+    }
+
+    public PlayerStatus getStatusPrev(UUID uuid, boolean local) {
+        if (local) return getStatusPrevLocal();
         checkPrev(uuid);
         return lookupPlayerToStatusPrev.get(uuid);
-    }
-
-    public void setGuiStatePrev(Player player, PlayerStatus.PlayerGuiState statusType) {
-        checkPrev(player.getUUID());
-        setGuiStatePrev(player.getUUID(), statusType);
-    }
-
-    public void setGuiStatePrev(UUID uuid, PlayerStatus.PlayerGuiState statusType) {
-        checkPrev(uuid);
-        lookupPlayerToStatusPrev.get(uuid).setPlayerGuiState(statusType);
     }
 
     public void checkPrev(UUID uuid) {
@@ -636,20 +650,22 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     }
 
     public void sendStatus(PlayerStatus.PlayerGuiState playerStatus) {
-        if (selfPlayerStatus.getPlayerGuiState() != playerStatus) {
+        if (getStatusLocal().getPlayerGuiState() != playerStatus) {
             CompoundTag data = new CompoundTag();
             data.putString(WatutNetworking.NBTPacketCommand, WatutNetworking.NBTPacketCommandUpdateStatusPlayer);
             data.putInt(WatutNetworking.NBTDataPlayerStatus, playerStatus.ordinal());
-            //data.putFloat(WatutNetworking.NBTDataPlayerTypingAmp, playerStatus);
+            Watut.dbg("sending status from client: " + playerStatus + " for " + Minecraft.getInstance().player.getUUID());
             WatutNetworking.HANDLER.sendTo(new PacketNBTFromClient(data), Minecraft.getInstance().player.connection.getConnection(), NetworkDirection.PLAY_TO_SERVER);
         }
-        selfPlayerStatus.setPlayerGuiState(playerStatus);
+        getStatusLocal().setPlayerGuiState(playerStatus);
     }
 
     public void sendMouse(Pair<Float, Float> pos, boolean pressed) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level.getNearestPlayer(mc.player.getX(), mc.player.getY(), mc.player.getZ(), mouseDataSendDist, (entity) -> entity != mc.player) == null) return;
         float x = pos.first;
         float y = pos.second;
-        if (selfPlayerStatus.getScreenPosPercentX() != x || selfPlayerStatus.getScreenPosPercentY() != y || selfPlayerStatus.isPressing() != pressed) {
+        if (getStatusLocal().getScreenPosPercentX() != x || getStatusLocal().getScreenPosPercentY() != y || getStatusLocal().isPressing() != pressed) {
             CompoundTag data = new CompoundTag();
             data.putString(WatutNetworking.NBTPacketCommand, WatutNetworking.NBTPacketCommandUpdateMousePlayer);
             data.putFloat(WatutNetworking.NBTDataPlayerMouseX, x);
@@ -658,9 +674,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
             WatutNetworking.HANDLER.sendTo(new PacketNBTFromClient(data), Minecraft.getInstance().player.connection.getConnection(), NetworkDirection.PLAY_TO_SERVER);
         }
-        selfPlayerStatus.setScreenPosPercentX(x);
-        selfPlayerStatus.setScreenPosPercentY(y);
-        selfPlayerStatus.setPressing(pressed);
+        getStatusLocal().setScreenPosPercentX(x);
+        getStatusLocal().setScreenPosPercentY(y);
+        getStatusLocal().setPressing(pressed);
     }
 
     public void sendTyping(PlayerStatus status) {
@@ -680,53 +696,31 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     }
 
     public void receiveStatus(UUID uuid, PlayerStatus.PlayerGuiState playerGuiState) {
-        PlayerInfo playerInfo = Minecraft.getInstance().getConnection().getPlayerInfo(uuid);
-        //Watut.dbg("got status on client: " + playerStatus + " for player name: " + playerInfo.getProfile().getName());
+        Watut.dbg("receive status " + playerGuiState + " for " + uuid);
         getStatus(uuid).setPlayerGuiState(playerGuiState);
-        //setPoseTarget(uuid);
-        //if were starting from NONE, reset data for proper lerp
-        //if (getStatusPrev(uuid).getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE && getStatus(uuid).getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE) {
         if (getStatus(uuid).getPlayerGuiState() != getStatusPrev(uuid).getPlayerGuiState()) {
             if (getStatusPrev(uuid).getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
                 getStatus(uuid).setLerpTarget(new Lerpables());
             }
             setPoseTarget(uuid, false);
-            //setHandsTarget(uuid);
-            //since were fully overriding the head position, this needs to happen
-            //for lerping back to neutral pos when exiting a different state
-            if (getStatusPrev(uuid).getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
-                //System.out.println("setup new prev head: " + getStatus(uuid).yRotHeadBeforeOverriding);
-                getStatus(uuid).getLerpPrev().head.yRot = getStatus(uuid).yRotHeadWhileOverriding;
-                getStatus(uuid).getLerpPrev().head.xRot = getStatus(uuid).xRotHeadWhileOverriding;
-            }/* else if (getStatus(uuid).getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
-                //make sure our previous are set to where the head was most recently when overrides are active
-                System.out.println("setup new head start position: " + getStatus(uuid).yRotHeadBeforeOverriding);
-                getStatus(uuid).getLerpTarget().head.xRot = getStatus(uuid).xRotHeadBeforeOverriding;
-                getStatus(uuid).getLerpTarget().head.yRot = getStatus(uuid).yRotHeadBeforeOverriding;
-            }*/
         }
     }
 
     public void receiveMouse(UUID uuid, float x, float y, boolean pressed) {
-        PlayerInfo playerInfo = Minecraft.getInstance().getConnection().getPlayerInfo(uuid);
-        //Watut.dbg("got moud on client: " + playerStatus + " for player name: " + playerInfo.getProfile().getName());
-        //Watut.dbg("x: " + x);
         boolean differentPress = getStatus(uuid).isPressing() != pressed;
         setMouse(uuid, x, y, pressed);
         setPoseTarget(uuid, differentPress);
-        //setHandsTarget(uuid);
     }
 
     public void receiveAny(UUID uuid, CompoundTag data) {
         PlayerStatus status = getStatus(uuid);
         if (data.contains(WatutNetworking.NBTDataPlayerTypingAmp)) status.setTypingAmplifier(data.getFloat(WatutNetworking.NBTDataPlayerTypingAmp));
-        if (data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) status.setIdleTicks(data.getInt(WatutNetworking.NBTDataPlayerIdleTicks));
-    }
-
-    /*public void setIfExists(PlayerStatus status, CompoundTag data, String key, Function function) {
-        if (data.contains(key)) {
-            function.apply(data.getFloat(key));
+        if (data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
+            status.setIdleTicks(data.getInt(WatutNetworking.NBTDataPlayerIdleTicks));
+            if (getStatusPrev(uuid).isIdle() != status.isIdle()) {
+                setPoseTarget(uuid, false);
+            }
         }
-    }*/
+    }
 
 }

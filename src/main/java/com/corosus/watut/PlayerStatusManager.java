@@ -12,6 +12,8 @@ public class PlayerStatusManager {
     //** DEBUG VAL **/
     protected boolean singleplayerTesting = false;
 
+    protected int mouseDataSendDist = 10;
+
     public void tickPlayer(Player player) {
         singleplayerTesting = false;
         if (player.level().isClientSide()) {
@@ -33,6 +35,11 @@ public class PlayerStatusManager {
     }
 
     public PlayerStatus getStatus(UUID uuid) {
+        return getStatus(uuid, false);
+    }
+
+    public PlayerStatus getStatus(UUID uuid, boolean local) {
+        if (local) return getStatusLocal();
         PlayerStatus status = lookupPlayerToStatus.get(uuid);
         if (status == null) {
             status = new PlayerStatus(PlayerStatus.PlayerGuiState.NONE);
@@ -41,11 +48,19 @@ public class PlayerStatusManager {
         return status;
     }
 
+    public PlayerStatus getStatusLocal() {
+        return null;
+    }
+
     public void setMouse(UUID uuid, float x, float y, boolean pressed) {
         PlayerStatus status = getStatus(uuid);
         status.setScreenPosPercentX(x);
         status.setScreenPosPercentY(y);
         status.setPressing(pressed);
+    }
+
+    public void playerLoggedIn(Player player) {
+
     }
 
 }

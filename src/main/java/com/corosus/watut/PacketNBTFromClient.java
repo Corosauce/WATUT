@@ -30,7 +30,7 @@ public class PacketNBTFromClient {
                     CompoundTag nbt = msg.nbt;
                     String packetCommand = nbt.getString(WatutNetworking.NBTPacketCommand);
 
-                    //Watut.dbg("packet command from client: " + packetCommand + " - ");
+                    Watut.dbg("packet command from client: " + packetCommand + " - ");
                     ServerPlayer playerEntity = ctx.get().getSender();
                     if (playerEntity != null) {
                         if (packetCommand.equals(WatutNetworking.NBTPacketCommandUpdateStatusPlayer)) {
