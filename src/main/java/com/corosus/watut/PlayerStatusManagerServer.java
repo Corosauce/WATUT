@@ -15,13 +15,11 @@ import java.util.UUID;
 public class PlayerStatusManagerServer extends PlayerStatusManager {
 
     public void receiveStatus(Player player, PlayerStatus.PlayerGuiState playerGuiState) {
-        //Watut.dbg("got status on server: " + playerStatus);
         getStatus(player).setPlayerGuiState(playerGuiState);
         sendStatusToClients(player, playerGuiState);
     }
 
     public void receiveMouse(Player player, float x, float y, boolean pressed) {
-        //Watut.dbg("got status on server: " + playerStatus);
         setMouse(player.getUUID(), x, y, pressed);
         sendMouseToClients(player, x, y, pressed);
     }
@@ -39,6 +37,8 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
             handleIdleState(player, data.getInt(WatutNetworking.NBTDataPlayerIdleTicks));
         }
         getStatus(player).getNbtCache().merge(data);
+        //dont cache idle state for the full reconnect packet, we want it 0 when a new player connects
+        getStatus(player).getNbtCache().putInt(WatutNetworking.NBTDataPlayerIdleTicks, 0);
         if (data.contains(WatutNetworking.NBTDataPlayerStatus) || data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
             WatutNetworking.HANDLER.send(PacketDistributor.ALL.noArg(), new PacketNBTFromServer(data));
         } else {
@@ -75,17 +75,9 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         data.putString(WatutNetworking.NBTPacketCommand, WatutNetworking.NBTPacketCommandUpdateStatusPlayer);
         data.putString(WatutNetworking.NBTDataPlayerUUID, player.getUUID().toString());
         data.putInt(WatutNetworking.NBTDataPlayerStatus, playerStatus.ordinal());
-        //WatutNetworking.HANDLER.sendTo(new PacketNBTFromClient(data), Minecraft.getInstance().player.connection.getConnection(), NetworkDirection.PLAY_TO_CLIENT);
         CompoundTag tag = getStatus(player).getNbtCache();
         tag.merge(data);
         WatutNetworking.HANDLER.send(PacketDistributor.ALL.noArg(), new PacketNBTFromServer(data));
-
-        /*if (entP == null) {
-
-            WeatherNetworking.HANDLER.send(PacketDistributor.DIMENSION.with(() -> getWorld().dimension()), new PacketNBTFromServer(data));
-        } else {
-            WeatherNetworking.HANDLER.sendTo(new PacketNBTFromServer(data), entP.connection.connection, NetworkDirection.PLAY_TO_CLIENT);
-        }*/
     }
 
     public void sendMouseToClients(Player player, float x, float y, boolean pressed) {
@@ -100,7 +92,6 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         WatutNetworking.HANDLER.send(PacketDistributor.NEAR.with(() ->
                 new PacketDistributor.TargetPoint(player.getX(), player.getY(), player.getZ(), mouseDataSendDist, player.level().dimension())),
                 new PacketNBTFromServer(data));
-        //WatutNetworking.HANDLER.send(PacketDistributor.DIMENSION.with(() -> player.level().dimension()), new PacketNBTFromServer(data));
     }
 
     @Override

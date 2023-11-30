@@ -97,6 +97,8 @@ public class PlayerStatus {
         if (particle != null) particle.remove();
         if (particleIdle != null) particleIdle.remove();
         particle = null;
+        particleIdle = null;
+        idleTicks = 0;
     }
 
     public boolean isLerping() {

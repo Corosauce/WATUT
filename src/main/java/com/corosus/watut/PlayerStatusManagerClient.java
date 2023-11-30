@@ -76,11 +76,13 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
         Level level = Minecraft.getInstance().level;
         if (lastLevel != level) {
-            Watut.dbg("resetting particles");
+            Watut.dbg("resetting player status");
             for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
-                entry.getValue().setParticle(null);
-                entry.getValue().setParticleIdle(null);
+                entry.getValue().remove();
             }
+            selfPlayerStatus.remove();
+            selfPlayerStatusPrev.remove();
+            lastActionTime = 0;
         }
         lastLevel = level;
     }
@@ -159,6 +161,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             status.setIdleTicks((int) ticksIdle);
             if (status.isIdle() != statusPrev.isIdle()) {
                 lastMinuteSentIdleStat = minutesIdle;
+                Watut.dbg("send idle: " + ticksIdle);
                 sendIdle(status);
             }
         }
@@ -200,6 +203,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             PlayerStatus status = getStatusLocal();
             if (status.isIdle()) {
                 status.setIdleTicks(0);
+                Watut.dbg("send idle: " + 0);
                 sendIdle(status);
             }
             lastActionTime = mc.player.level().getGameTime();

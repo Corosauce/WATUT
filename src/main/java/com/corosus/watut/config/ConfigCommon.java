@@ -6,7 +6,7 @@ import com.corosus.watut.Watut;
 
 public class ConfigCommon implements IConfigCategory {
 
-    public static boolean announceIdleStatesInChat = true;
+    public static boolean announceIdleStatesInChat = false;
     public static int ticksToMarkPlayerIdle = 20*60*5;
 
     @Override
