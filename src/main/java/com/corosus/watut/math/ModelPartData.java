@@ -15,8 +15,8 @@ public class ModelPartData {
     public float yScale = 1.0F;
     public float zScale = 1.0F;
 
-    public ModelPartData copyPartialLerp(PlayerStatus playerStatus, ModelPartData modelPartDataPrev) {
-        float partialTick = 0;
+    public ModelPartData copyPartialLerp(PlayerStatus playerStatus, ModelPartData modelPartDataPrev, float partialTick) {
+        //float partialTick = 0;
         ModelPartData modelPartData = new ModelPartData();
 
         modelPartData.x = Mth.lerp(playerStatus.getPartialLerp(partialTick), modelPartDataPrev.x, this.x);

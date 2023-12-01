@@ -23,6 +23,8 @@ import net.minecraft.client.particle.Particle;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySelector;
@@ -141,7 +143,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             sendStatus(PlayerStatus.PlayerGuiState.NONE);
         }
 
-        if (ConfigClient.sendMouseInfo && mc.screen != null && mc.level.getGameTime() % armMouseTickRate == 0) {
+        if (ConfigClient.sendMouseInfo && mc.screen != null && mc.level.getGameTime() % (armMouseTickRate) == 0) {
             PlayerStatus.PlayerGuiState playerGuiState = status.getPlayerGuiState();
             if (playerGuiState == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiState == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiState == PlayerStatus.PlayerGuiState.MISC) {
                 sendMouse(getMousePos(), status.isPressing());
@@ -179,7 +181,12 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     public void onMouse(InputEvent.MouseButton.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.player != null && mc.player.level() != null) {
-            if (ConfigClient.sendMouseInfo) sendMouse(getMousePos(), event.getAction() != 0);
+            if (ConfigClient.sendMouseInfo) {
+                PlayerStatus.PlayerGuiState playerGuiState = getStatus(mc.player).getPlayerGuiState();
+                if (playerGuiState == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiState == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiState == PlayerStatus.PlayerGuiState.MISC) {
+                    sendMouse(getMousePos(), event.getAction() != 0);
+                }
+            }
 
             if (mc.screen == null) {
                 onAction();
@@ -456,6 +463,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
             if (playerStatus.isLerping() || playerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE || playerStatus.isIdle()) {
                 float partialTick = pAgeInTicks - ((int)pAgeInTicks);
+                playerStatus.lastPartialTick = partialTick;
 
                 playerModel.rightArm.yRot += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().rightArm.yRot, playerStatus.getLerpTarget().rightArm.yRot);
                 playerModel.rightArm.xRot += Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().rightArm.xRot, playerStatus.getLerpTarget().rightArm.xRot);
@@ -520,9 +528,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         //Watut.dbg("setPoseTarget");
         PlayerStatus playerStatus = getStatus(uuid);
 
-        playerStatus.getLerpPrev().rightArm = playerStatus.getLerpTarget().rightArm.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().rightArm);
-        playerStatus.getLerpPrev().leftArm = playerStatus.getLerpTarget().leftArm.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().leftArm);
-        playerStatus.getLerpPrev().head = playerStatus.getLerpTarget().head.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().head);
+        playerStatus.getLerpPrev().rightArm = playerStatus.getLerpTarget().rightArm.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().rightArm, playerStatus.lastPartialTick);
+        playerStatus.getLerpPrev().leftArm = playerStatus.getLerpTarget().leftArm.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().leftArm, playerStatus.lastPartialTick);
+        playerStatus.getLerpPrev().head = playerStatus.getLerpTarget().head.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().head, playerStatus.lastPartialTick);
 
         //rightArm can become NaN for some reason???????
         if (Float.isNaN(playerStatus.getLerpPrev().rightArm.yRot)) {
@@ -540,7 +548,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         if (becauseMousePress) {
             playerStatus.setNewLerp(armMouseTickRate * 0.5F);
         } else {
-            playerStatus.setNewLerp(armMouseTickRate * 2F);
+            playerStatus.setNewLerp(armMouseTickRate * 1F);
         }
 
         if (pointing || typing) {
@@ -707,6 +715,14 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 getStatus(uuid).setLerpTarget(new Lerpables());
             }
             setPoseTarget(uuid, false);
+            Player player = Minecraft.getInstance().level.getPlayerByUUID(uuid);
+            if (player != null && ConfigClient.playScreenOpenSounds) {
+                PlayerStatus.PlayerGuiState playerGuiStatePrev = getStatusPrev(uuid).getPlayerGuiState();
+                if (playerGuiState == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiState == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiState == PlayerStatus.PlayerGuiState.MISC ||
+                        playerGuiStatePrev == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiStatePrev == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiStatePrev == PlayerStatus.PlayerGuiState.MISC) {
+                    player.level().playLocalSound(player.getOnPos(), SoundEvents.ARMOR_EQUIP_CHAIN, SoundSource.PLAYERS, 0.9F, 1F, false);
+                }
+            }
         }
     }
 
@@ -714,6 +730,13 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         boolean differentPress = getStatus(uuid).isPressing() != pressed;
         setMouse(uuid, x, y, pressed);
         setPoseTarget(uuid, differentPress);
+        if (pressed) {
+            Player player = Minecraft.getInstance().level.getPlayerByUUID(uuid);
+            if (player != null && ConfigClient.playMouseClickSounds) {
+                player.level().playLocalSound(player.getOnPos(), SoundEvents.CHICKEN_EGG, SoundSource.PLAYERS, 0.05F, 0.1F, false);
+            }
+        }
+
     }
 
     public void receiveAny(UUID uuid, CompoundTag data) {

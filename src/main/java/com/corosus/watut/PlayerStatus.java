@@ -60,6 +60,8 @@ public class PlayerStatus {
     public float lerpTicksPrev = 0;
     public float lerpTicksMax = 5;
 
+    public float lastPartialTick = 0;
+
     public float yRotHeadWhileOverriding = 0;
     public float xRotHeadWhileOverriding = 0;
 
