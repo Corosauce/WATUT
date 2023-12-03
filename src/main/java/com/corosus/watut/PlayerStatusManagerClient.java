@@ -36,6 +36,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.network.NetworkDirection;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -66,13 +67,15 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     public void tickGame(TickEvent.ClientTickEvent event) {
         animateTime++;
         if (animateTime == Integer.MAX_VALUE) animateTime = 0;
-        for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
-            PlayerStatus playerStatus = entry.getValue();
-            if (event.phase == TickEvent.Phase.START) {
-                playerStatus.setFlagForRemoval(true);
-            } else {
-                if (playerStatus.isFlagForRemoval()) {
+        if (Minecraft.getInstance().getConnection() != null) {
+            for (Iterator<Map.Entry<UUID, PlayerStatus>> it = lookupPlayerToStatus.entrySet().iterator(); it.hasNext(); ) {
+                Map.Entry<UUID, PlayerStatus> entry = it.next();
+                PlayerInfo playerInfo = Minecraft.getInstance().getConnection().getPlayerInfo(entry.getKey());
+                PlayerStatus playerStatus = entry.getValue();
+                if (playerInfo == null) {
+                    Watut.dbg("remove playerstatus for no longer existing player: " + entry.getKey());
                     playerStatus.remove();
+                    it.remove();
                 }
             }
         }
@@ -80,7 +83,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         if (lastLevel != level) {
             Watut.dbg("resetting player status");
             for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
-                entry.getValue().remove();
+                Watut.dbg("reset player particles for " + entry.getKey() + " hash: " + entry.getValue());
+                entry.getValue().resetParticles();
             }
             selfPlayerStatus.remove();
             selfPlayerStatusPrev.remove();
@@ -102,7 +106,6 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         getStatus(player.getUUID()).tick();
 
         PlayerStatus status = getStatus(player);
-        status.setFlagForRemoval(false);
 
         float adjRateTyping = 0.1F;
         if (status.getTypingAmplifierSmooth() < status.getTypingAmplifier() - adjRateTyping) {
@@ -150,32 +153,41 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             }
         }
 
+        boolean idleMonitoringReady = false;
+
         //init
-        if (lastActionTime == 0) {
-            lastActionTime = player.level().getGameTime();
+        if (lastActionTime <= 0) {
+            //oh boi another edge case, when teleporting between dimensions, gametime is ticking up from 0 for a bit until packets fix it, lets try 5 seconds
+            if (player.level().getGameTime() > 100) {
+                lastActionTime = player.level().getGameTime();
+                idleMonitoringReady = true;
+            }
+        } else {
+            idleMonitoringReady = true;
         }
 
         //idle detection
-        long ticksIdle = player.level().getGameTime() - lastActionTime;
-        statusPrev.setIdleTicks(status.getIdleTicks());
-        if (ConfigClient.sendIdleState && ticksIdle > ConfigCommon.ticksToMarkPlayerIdle) {
-            int minutesIdle = (int)(ticksIdle / 20 / 60);
-            status.setIdleTicks((int) ticksIdle);
-            if (status.isIdle() != statusPrev.isIdle()) {
-                lastMinuteSentIdleStat = minutesIdle;
-                Watut.dbg("send idle: " + ticksIdle);
-                sendIdle(status);
+        if (idleMonitoringReady) {
+            long ticksIdle = player.level().getGameTime() - lastActionTime;
+            if (statusPrev.getIdleTicks() != status.getIdleTicks()) {
+                statusPrev.setIdleTicks(status.getIdleTicks());
+            }
+            if (ConfigClient.sendIdleState && ticksIdle > ConfigCommon.ticksToMarkPlayerIdle) {
+                int minutesIdle = (int) (ticksIdle / 20 / 60);
+                //System.out.println("receive idle ticks from server: " + ticksIdle + " for " + player.getUUID());
+                status.setIdleTicks((int) ticksIdle);
+                if (status.isIdle() != statusPrev.isIdle()) {
+                    lastMinuteSentIdleStat = minutesIdle;
+                    Watut.dbg("send idle: " + ticksIdle + " - player.level().getGameTime() " + player.level().getGameTime() + " lastActionTime " + lastActionTime);
+                    sendIdle(status);
+                }
             }
         }
     }
 
     @Override
     public void disconnectPlayer(Player player) {
-        PlayerStatus status = getStatus(player);
-        if (status.getParticle() != null) {
-            status.getParticle().remove();
-            status.setParticle(null);
-        }
+
     }
 
     public void onMouse(InputEvent.MouseButton.Post event) {
@@ -418,7 +430,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             }
         }
         playerStatusPrev.setPlayerGuiState(playerStatus.getPlayerGuiState());
-        playerStatusPrev.setIdleTicks(playerStatus.getIdleTicks());
+        if (playerStatusPrev.getIdleTicks() != playerStatus.getIdleTicks()) {
+            playerStatusPrev.setIdleTicks(playerStatus.getIdleTicks());
+        }
     }
 
     public boolean renderPingIconHook(PlayerTabOverlay playerTabOverlay, GuiGraphics pGuiGraphics, int p_281809_, int p_282801_, int pY, PlayerInfo pPlayerInfo) {
@@ -708,7 +722,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     }
 
     public void receiveStatus(UUID uuid, PlayerStatus.PlayerGuiState playerGuiState) {
-        Watut.dbg("receive status " + playerGuiState + " for " + uuid);
+        Watut.dbg("receive status " + playerGuiState + " for " + uuid + " playerStatus hash: " + getStatus(uuid));
         getStatus(uuid).setPlayerGuiState(playerGuiState);
         if (getStatus(uuid).getPlayerGuiState() != getStatusPrev(uuid).getPlayerGuiState()) {
             if (getStatusPrev(uuid).getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
@@ -716,7 +730,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             }
             setPoseTarget(uuid, false);
             Player player = Minecraft.getInstance().level.getPlayerByUUID(uuid);
-            if (player != null && ConfigClient.playScreenOpenSounds) {
+            if (player != null && ConfigClient.playScreenOpenSounds && player != Minecraft.getInstance().player) {
                 PlayerStatus.PlayerGuiState playerGuiStatePrev = getStatusPrev(uuid).getPlayerGuiState();
                 if (playerGuiState == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiState == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiState == PlayerStatus.PlayerGuiState.MISC ||
                         playerGuiStatePrev == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiStatePrev == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiStatePrev == PlayerStatus.PlayerGuiState.MISC) {
@@ -732,7 +746,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         setPoseTarget(uuid, differentPress);
         if (pressed) {
             Player player = Minecraft.getInstance().level.getPlayerByUUID(uuid);
-            if (player != null && ConfigClient.playMouseClickSounds) {
+            if (player != null && ConfigClient.playMouseClickSounds && player != Minecraft.getInstance().player) {
+                Watut.dbg("play sound for " + uuid + " name " + player.getDisplayName().getString());
                 player.level().playLocalSound(player.getOnPos(), SoundEvents.CHICKEN_EGG, SoundSource.PLAYERS, 0.05F, 0.1F, false);
             }
         }
@@ -743,6 +758,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         PlayerStatus status = getStatus(uuid);
         if (data.contains(WatutNetworking.NBTDataPlayerTypingAmp)) status.setTypingAmplifier(data.getFloat(WatutNetworking.NBTDataPlayerTypingAmp));
         if (data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
+            Watut.dbg("receive idle ticks from server: " + data.getInt(WatutNetworking.NBTDataPlayerIdleTicks) + " for " + uuid + " playerStatus hash: " + status);
             status.setIdleTicks(data.getInt(WatutNetworking.NBTDataPlayerIdleTicks));
             if (getStatusPrev(uuid).isIdle() != status.isIdle()) {
                 setPoseTarget(uuid, false);

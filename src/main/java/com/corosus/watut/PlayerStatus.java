@@ -95,11 +95,19 @@ public class PlayerStatus {
         return Math.min(lerpPrev + ((lerp - lerpPrev) * partialTick), lerpTicksMax);
     }
 
+    public void resetParticles() {
+        if (particle != null) particle.remove();
+        if (particleIdle != null) particleIdle.remove();
+        particle = null;
+        particleIdle = null;
+    }
+
     public void remove() {
         if (particle != null) particle.remove();
         if (particleIdle != null) particleIdle.remove();
         particle = null;
         particleIdle = null;
+        Watut.dbg("remove trigger for " + this);
         idleTicks = 0;
     }
 

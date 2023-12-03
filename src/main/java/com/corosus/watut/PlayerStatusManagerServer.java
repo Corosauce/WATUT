@@ -37,8 +37,6 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
             handleIdleState(player, data.getInt(WatutNetworking.NBTDataPlayerIdleTicks));
         }
         getStatus(player).getNbtCache().merge(data);
-        //dont cache idle state for the full reconnect packet, we want it 0 when a new player connects
-        getStatus(player).getNbtCache().putInt(WatutNetworking.NBTDataPlayerIdleTicks, 0);
         if (data.contains(WatutNetworking.NBTDataPlayerStatus) || data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
             WatutNetworking.HANDLER.send(PacketDistributor.ALL.noArg(), new PacketNBTFromServer(data));
         } else {
