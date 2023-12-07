@@ -1,7 +1,6 @@
 package com.corosus.watut;
 
 import com.corosus.watut.config.ConfigClient;
-import com.corosus.watut.config.ConfigCommon;
 import com.corosus.watut.math.Lerpables;
 import com.corosus.watut.particle.ParticleAnimated;
 import com.corosus.watut.particle.ParticleRotating;
@@ -20,14 +19,12 @@ import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.particle.Particle;
-import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -39,7 +36,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Predicate;
 
 public class PlayerStatusManagerClient extends PlayerStatusManager {
 
@@ -172,7 +168,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             if (statusPrev.getIdleTicks() != status.getIdleTicks()) {
                 statusPrev.setIdleTicks(status.getIdleTicks());
             }
-            if (ConfigClient.sendIdleState && ticksIdle > ConfigCommon.ticksToMarkPlayerIdle) {
+            if (ConfigClient.sendIdleState && ticksIdle > ConfigClient.ticksToMarkPlayerIdle) {
                 int minutesIdle = (int) (ticksIdle / 20 / 60);
                 //System.out.println("receive idle ticks from server: " + ticksIdle + " for " + player.getUUID());
                 status.setIdleTicks((int) ticksIdle);
