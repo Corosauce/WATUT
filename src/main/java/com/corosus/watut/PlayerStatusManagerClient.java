@@ -449,8 +449,10 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     public void setupRotationsHook(EntityModel model, Entity pEntity, float pLimbSwing, float pLimbSwingAmount, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch) {
         Minecraft mc = Minecraft.getInstance();
-        boolean inOwnInventory = pEntity == mc.player && (mc.screen instanceof EffectRenderingInventoryScreen);
-        if (model instanceof PlayerModel && pEntity instanceof Player && ((!inOwnInventory && shouldAnimate((Player) pEntity)) || singleplayerTesting)) {
+        boolean inOwnInventory = pEntity == mc.player && (mc.screen instanceof EffectRenderingInventoryScreen) && pEntity.isAlive();
+        //boolean isRealPlayer = pEntity.tickCount > 10;
+        boolean isRealPlayer = pEntity.level().players().contains(pEntity);
+        if (model instanceof PlayerModel && pEntity instanceof Player && isRealPlayer && ((!inOwnInventory && shouldAnimate((Player) pEntity)) || singleplayerTesting)) {
             PlayerModel playerModel = (PlayerModel) model;
             Player player = (Player) pEntity;
             PlayerStatus playerStatus = getStatus(player);
