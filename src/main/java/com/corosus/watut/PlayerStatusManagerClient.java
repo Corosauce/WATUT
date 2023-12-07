@@ -1,6 +1,7 @@
 package com.corosus.watut;
 
 import com.corosus.watut.config.ConfigClient;
+import com.corosus.watut.config.ConfigCommon;
 import com.corosus.watut.math.Lerpables;
 import com.corosus.watut.particle.ParticleAnimated;
 import com.corosus.watut.particle.ParticleRotating;
@@ -52,7 +53,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     private long typingIdleTimeout = 60;
 
     private int armMouseTickRate = 5;
-    private long lastActionTime = 0;
+    //private long lastActionTime = 0;
+    //private int ticksSinceLastAction = 0;
     private int lastMinuteSentIdleStat = -1;
 
     private int typeRatePollCounter = 0;
@@ -70,7 +72,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 PlayerStatus playerStatus = entry.getValue();
                 if (playerInfo == null) {
                     Watut.dbg("remove playerstatus for no longer existing player: " + entry.getKey());
-                    playerStatus.remove();
+                    playerStatus.reset();
                     it.remove();
                 }
             }
@@ -82,9 +84,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 Watut.dbg("reset player particles for " + entry.getKey() + " hash: " + entry.getValue());
                 entry.getValue().resetParticles();
             }
-            selfPlayerStatus.remove();
-            selfPlayerStatusPrev.remove();
-            lastActionTime = 0;
+            selfPlayerStatus.reset();
+            selfPlayerStatusPrev.reset();
         }
         lastLevel = level;
     }
@@ -113,9 +114,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     public void tickLocalPlayerClient(Player player) {
         Minecraft mc = Minecraft.getInstance();
-        PlayerStatus status = getStatusLocal();
-        PlayerStatus statusPrev = getStatusPrevLocal();
-        if (ConfigClient.sendActiveGui && !status.isIdle()) {
+        PlayerStatus statusLocal = getStatusLocal();
+        PlayerStatus statusPrevLocal = getStatusPrevLocal();
+        if (ConfigClient.sendActiveGui && !statusLocal.isIdle()) {
             if (mc.screen instanceof ChatScreen) {
                 ChatScreen chat = (ChatScreen) mc.screen;
                 if (checkIfTyping(chat.input.getValue(), player)) {
@@ -143,13 +144,13 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
 
         if (ConfigClient.sendMouseInfo && mc.screen != null && mc.level.getGameTime() % (armMouseTickRate) == 0) {
-            PlayerStatus.PlayerGuiState playerGuiState = status.getPlayerGuiState();
+            PlayerStatus.PlayerGuiState playerGuiState = statusLocal.getPlayerGuiState();
             if (playerGuiState == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiState == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiState == PlayerStatus.PlayerGuiState.MISC) {
-                sendMouse(getMousePos(), status.isPressing());
+                sendMouse(getMousePos(), statusLocal.isPressing());
             }
         }
 
-        boolean idleMonitoringReady = false;
+        /*boolean idleMonitoringReady = false;
 
         //init
         if (lastActionTime <= 0) {
@@ -160,23 +161,23 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             }
         } else {
             idleMonitoringReady = true;
-        }
+        }*/
 
         //idle detection
-        if (idleMonitoringReady) {
-            long ticksIdle = player.level().getGameTime() - lastActionTime;
-            if (statusPrev.getIdleTicks() != status.getIdleTicks()) {
-                statusPrev.setIdleTicks(status.getIdleTicks());
-            }
-            if (ConfigClient.sendIdleState && ticksIdle > ConfigClient.ticksToMarkPlayerIdle) {
-                int minutesIdle = (int) (ticksIdle / 20 / 60);
-                //System.out.println("receive idle ticks from server: " + ticksIdle + " for " + player.getUUID());
-                status.setIdleTicks((int) ticksIdle);
-                if (status.isIdle() != statusPrev.isIdle()) {
-                    lastMinuteSentIdleStat = minutesIdle;
-                    Watut.dbg("send idle: " + ticksIdle + " - player.level().getGameTime() " + player.level().getGameTime() + " lastActionTime " + lastActionTime);
-                    sendIdle(status);
-                }
+        //long ticksIdle = ticksSinceLastAction;
+
+        if (statusPrevLocal.getTicksSinceLastAction() != statusLocal.getTicksSinceLastAction()) {
+            statusPrevLocal.setTicksSinceLastAction(statusLocal.getTicksSinceLastAction());
+        }
+
+        statusLocal.setTicksSinceLastAction(statusLocal.getTicksSinceLastAction()+1);
+        if (ConfigClient.sendIdleState && statusLocal.getTicksSinceLastAction() > ConfigCommon.ticksToMarkPlayerIdle) {
+            int minutesIdle = statusLocal.getTicksSinceLastAction() / 20 / 60;
+            //System.out.println("receive idle ticks from server: " + ticksIdle + " for " + player.getUUID());
+            if (statusLocal.isIdle() != statusPrevLocal.isIdle()) {
+                lastMinuteSentIdleStat = minutesIdle;
+                Watut.dbg("send idle getTicksSinceLastAction: " + statusLocal.getTicksSinceLastAction() + " - player.level().getGameTime() " + player.level().getGameTime());
+                sendIdle(statusLocal);
             }
         }
     }
@@ -215,13 +216,12 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         if (!ConfigClient.sendIdleState) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.player != null && mc.player.level() != null) {
-            PlayerStatus status = getStatusLocal();
-            if (status.isIdle()) {
-                status.setIdleTicks(0);
+            PlayerStatus statusLocal = getStatusLocal();
+            if (statusLocal.isIdle()) {
+                statusLocal.setTicksSinceLastAction(0);
                 Watut.dbg("send idle: " + 0);
-                sendIdle(status);
+                sendIdle(statusLocal);
             }
-            lastActionTime = mc.player.level().getGameTime();
         }
     }
 
@@ -426,8 +426,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             }
         }
         playerStatusPrev.setPlayerGuiState(playerStatus.getPlayerGuiState());
-        if (playerStatusPrev.getIdleTicks() != playerStatus.getIdleTicks()) {
-            playerStatusPrev.setIdleTicks(playerStatus.getIdleTicks());
+        if (playerStatusPrev.getTicksSinceLastAction() != playerStatus.getTicksSinceLastAction()) {
+            playerStatusPrev.setTicksSinceLastAction(playerStatus.getTicksSinceLastAction());
         }
     }
 
@@ -714,7 +714,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     public void sendIdle(PlayerStatus status) {
         CompoundTag data = new CompoundTag();
         data.putString(WatutNetworking.NBTPacketCommand, WatutNetworking.NBTPacketCommandUpdateStatusAny);
-        data.putInt(WatutNetworking.NBTDataPlayerIdleTicks, status.getIdleTicks());
+        data.putInt(WatutNetworking.NBTDataPlayerIdleTicks, status.getTicksSinceLastAction());
 
         WatutNetworking.HANDLER.sendTo(new PacketNBTFromClient(data), Minecraft.getInstance().player.connection.getConnection(), NetworkDirection.PLAY_TO_SERVER);
     }
@@ -757,7 +757,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         if (data.contains(WatutNetworking.NBTDataPlayerTypingAmp)) status.setTypingAmplifier(data.getFloat(WatutNetworking.NBTDataPlayerTypingAmp));
         if (data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
             Watut.dbg("receive idle ticks from server: " + data.getInt(WatutNetworking.NBTDataPlayerIdleTicks) + " for " + uuid + " playerStatus hash: " + status);
-            status.setIdleTicks(data.getInt(WatutNetworking.NBTDataPlayerIdleTicks));
+            status.setTicksSinceLastAction(data.getInt(WatutNetworking.NBTDataPlayerIdleTicks));
             if (getStatusPrev(uuid).isIdle() != status.isIdle()) {
                 setPoseTarget(uuid, false);
             }

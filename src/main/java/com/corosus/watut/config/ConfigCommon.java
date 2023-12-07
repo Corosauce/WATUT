@@ -1,5 +1,6 @@
 package com.corosus.watut.config;
 
+import com.corosus.modconfig.ConfigComment;
 import com.corosus.modconfig.IConfigCategory;
 import com.corosus.watut.Watut;
 
@@ -7,6 +8,9 @@ import com.corosus.watut.Watut;
 public class ConfigCommon implements IConfigCategory {
 
     public static boolean announceIdleStatesInChat = false;
+
+    @ConfigComment("Default 5 minutes")
+    public static int ticksToMarkPlayerIdle = 20*60*5;
 
     @Override
     public String getName() {

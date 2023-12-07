@@ -2,7 +2,6 @@ package com.corosus.watut;
 
 import com.corosus.watut.config.ConfigCommon;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
@@ -59,7 +58,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
                 }
             }
         }
-        status.setIdleTicks(idleTicks);
+        status.setTicksSinceLastAction(idleTicks);
     }
 
     public void broadcast(String msg) {

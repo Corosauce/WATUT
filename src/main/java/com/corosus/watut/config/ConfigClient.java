@@ -22,9 +22,6 @@ public class ConfigClient implements IConfigCategory {
     public static boolean playScreenOpenSounds = true;
     public static boolean playMouseClickSounds = true;
 
-    @ConfigComment("Default 5 minutes")
-    public static int ticksToMarkPlayerIdle = 20*60*5;
-
     @Override
     public String getName() {
         return "-client";

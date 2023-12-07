@@ -1,5 +1,6 @@
 package com.corosus.watut;
 
+import com.corosus.watut.config.ConfigCommon;
 import com.corosus.watut.math.Lerpables;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.nbt.CompoundTag;
@@ -38,7 +39,7 @@ public class PlayerStatus {
     private float screenPosPercentX = 0;
     private float screenPosPercentY = 0;
     private boolean isPressing = false;
-    private int idleTicks = 0;
+    private int ticksSinceLastAction = 0;
 
     //misc values used on either transmitting client or receiving client
     private Particle particle;
@@ -102,13 +103,10 @@ public class PlayerStatus {
         particleIdle = null;
     }
 
-    public void remove() {
-        if (particle != null) particle.remove();
-        if (particleIdle != null) particleIdle.remove();
-        particle = null;
-        particleIdle = null;
+    public void reset() {
+        resetParticles();
         Watut.dbg("remove trigger for " + this);
-        idleTicks = 0;
+        ticksSinceLastAction = 0;
     }
 
     public boolean isLerping() {
@@ -219,12 +217,12 @@ public class PlayerStatus {
         this.lastTypeStringForAmp = lastTypeStringForAmp;
     }
 
-    public int getIdleTicks() {
-        return idleTicks;
+    public int getTicksSinceLastAction() {
+        return ticksSinceLastAction;
     }
 
-    public void setIdleTicks(int idleTicks) {
-        this.idleTicks = idleTicks;
+    public void setTicksSinceLastAction(int ticksSinceLastAction) {
+        this.ticksSinceLastAction = ticksSinceLastAction;
     }
 
     public float getTypingAmplifierSmooth() {
@@ -252,7 +250,7 @@ public class PlayerStatus {
     }
 
     public boolean isIdle() {
-        return idleTicks > 0;
+        return ticksSinceLastAction > ConfigCommon.ticksToMarkPlayerIdle;
     }
 
     public CompoundTag getNbtCache() {
