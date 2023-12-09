@@ -18,6 +18,7 @@ public class PlayerStatus {
         CHAT_TYPING,
         INVENTORY,
         CRAFTING,
+        ESCAPE,
         MISC;
 
         private static final Map<Integer, PlayerGuiState> lookup = new HashMap<>();
@@ -40,6 +41,7 @@ public class PlayerStatus {
     private float screenPosPercentY = 0;
     private boolean isPressing = false;
     private int ticksSinceLastAction = 0;
+    private int ticksToMarkPlayerIdleSyncedForClient = 20*60*5;
 
     //misc values used on either transmitting client or receiving client
     private Particle particle;
@@ -250,7 +252,7 @@ public class PlayerStatus {
     }
 
     public boolean isIdle() {
-        return ticksSinceLastAction > ConfigCommon.ticksToMarkPlayerIdle;
+        return ticksSinceLastAction > ticksToMarkPlayerIdleSyncedForClient;
     }
 
     public CompoundTag getNbtCache() {
@@ -259,5 +261,13 @@ public class PlayerStatus {
 
     public void setNbtCache(CompoundTag nbtCache) {
         this.nbtCache = nbtCache;
+    }
+
+    public int getTicksToMarkPlayerIdleSyncedForClient() {
+        return ticksToMarkPlayerIdleSyncedForClient;
+    }
+
+    public void setTicksToMarkPlayerIdleSyncedForClient(int ticksToMarkPlayerIdleSyncedForClient) {
+        this.ticksToMarkPlayerIdleSyncedForClient = ticksToMarkPlayerIdleSyncedForClient;
     }
 }

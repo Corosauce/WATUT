@@ -18,6 +18,7 @@ public class ConfigClient implements IConfigCategory {
 
     public static boolean showIdleStatesInPlayerList = true;
     public static boolean showIdleStatesInPlayerAboveHead = true;
+    public static boolean showPlayerAnimations = true;
 
     public static boolean playScreenOpenSounds = true;
     public static boolean playMouseClickSounds = true;

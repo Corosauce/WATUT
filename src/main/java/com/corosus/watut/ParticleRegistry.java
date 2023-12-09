@@ -18,6 +18,7 @@ public class ParticleRegistry extends SpriteSourceProvider {
     public static SpriteInfo inventory;
     public static SpriteInfo chest;
     public static SpriteInfo crafting;
+    public static SpriteInfo escape;
     public static SpriteInfo chat_idle;
     public static SpriteInfo chat_typing;
     public static SpriteInfo idle;
@@ -28,6 +29,7 @@ public class ParticleRegistry extends SpriteSourceProvider {
         inventory = add("inventory_", 3, 0);
         chest = add("chest_", 3, 0);
         crafting = add("crafting_", 3, 0);
+        escape = add("escape_menu_", 3, 0);
         chat_idle = add("chat_idle_", 2, 6);
         chat_typing = add("chat_typing_", 6, 2);
         idle = add("idle");

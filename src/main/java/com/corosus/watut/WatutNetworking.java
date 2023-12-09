@@ -18,14 +18,12 @@ public class WatutNetworking {
     private static short lastID = 0;
     public static final ResourceLocation NETWORK_CHANNEL_ID_MAIN = new ResourceLocation(Watut.MODID, "main");
 
-    public static String NBTPacketCommand = "packetCommand";
-    public static String NBTPacketCommandUpdateStatusPlayer = "updateStatusPlayer";
-    public static String NBTPacketCommandUpdateMousePlayer = "updateMousePlayer";
-    public static String NBTPacketCommandUpdateStatusAny = "updateStatusAny";
     public static String NBTDataPlayerUUID = "playerUuid";
     public static String NBTDataPlayerStatus = "playerStatus";
     public static String NBTDataPlayerTypingAmp = "playerTypingAmp";
     public static String NBTDataPlayerIdleTicks = "playerIdleTicks";
+    //a bit of a heavy way to sync a server config to client, but itll do for now
+    public static String NBTDataPlayerTicksToGoIdle = "playerTicksToGoIdle";
     public static String NBTDataPlayerMouseX = "playerMouseX";
     public static String NBTDataPlayerMouseY = "playerMouseY";
     public static String NBTDataPlayerMousePressed = "playerMousePressed";

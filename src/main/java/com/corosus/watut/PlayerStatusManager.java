@@ -12,7 +12,7 @@ public class PlayerStatusManager {
     //** DEBUG VAL **/
     protected boolean singleplayerTesting = false;
 
-    protected int mouseDataSendDist = 10;
+    protected int nearbyPlayerDataSendDist = 10;
 
     public void tickPlayer(Player player) {
         singleplayerTesting = false;
@@ -22,11 +22,6 @@ public class PlayerStatusManager {
     }
 
     public void tickPlayerClient(Player player) {
-
-    }
-
-    /** Client only **/
-    public void disconnectPlayer(Player player) {
 
     }
 

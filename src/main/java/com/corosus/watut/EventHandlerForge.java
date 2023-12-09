@@ -43,7 +43,9 @@ public class EventHandlerForge {
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
     public void onGameTick(TickEvent.ClientTickEvent event) {
-        Watut.getPlayerStatusManagerClient().tickGame(event);
+        if (event.phase == TickEvent.Phase.END) {
+            Watut.getPlayerStatusManagerClient().tickGame(event);
+        }
     }
 
     @SubscribeEvent

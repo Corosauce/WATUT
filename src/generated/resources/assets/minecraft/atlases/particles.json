@@ -38,6 +38,18 @@
     },
     {
       "type": "minecraft:single",
+      "resource": "watut:particles/escape_menu_0"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/escape_menu_1"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/escape_menu_2"
+    },
+    {
+      "type": "minecraft:single",
       "resource": "watut:particles/chat_idle_0"
     },
     {
