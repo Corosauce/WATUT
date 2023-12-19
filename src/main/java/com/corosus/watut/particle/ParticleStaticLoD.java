@@ -2,8 +2,6 @@ package com.corosus.watut.particle;
 
 import com.corosus.watut.spritesets.SpriteSetPlayer;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.particle.SpriteSet;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 public class ParticleStaticLoD extends ParticleRotating {
 

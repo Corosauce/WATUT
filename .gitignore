@@ -16,13 +16,17 @@ out
 # gradle
 build
 .gradle
+libs
+logs
+
+# ignore build.gradle since we have 3 different versions
+build.gradle
 
 # other
 eclipse
 run
-run-data
 
-# Files from Forge MDK
-forge*changelog.txt
-
-libs_off
+# java
+*.class
+*.war
+*.ear

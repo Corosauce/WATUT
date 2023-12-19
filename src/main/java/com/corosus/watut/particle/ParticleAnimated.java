@@ -2,7 +2,6 @@ package com.corosus.watut.particle;
 
 import com.corosus.watut.spritesets.SpriteSetPlayer;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.particle.*;
 
 public class ParticleAnimated extends ParticleRotating {
 

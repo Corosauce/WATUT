@@ -31,7 +31,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.network.NetworkDirection;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -69,7 +68,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 PlayerInfo playerInfo = Minecraft.getInstance().getConnection().getPlayerInfo(entry.getKey());
                 PlayerStatus playerStatus = entry.getValue();
                 if (playerInfo == null) {
-                    Watut.dbg("remove playerstatus for no longer existing player: " + entry.getKey());
+                    WatutMod.dbg("remove playerstatus for no longer existing player: " + entry.getKey());
                     playerStatus.reset();
                     it.remove();
                 }
@@ -77,9 +76,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
         Level level = Minecraft.getInstance().level;
         if (lastLevel != level) {
-            Watut.dbg("resetting player status");
+            WatutMod.dbg("resetting player status");
             for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
-                Watut.dbg("reset player particles for " + entry.getKey() + " hash: " + entry.getValue());
+                WatutMod.dbg("reset player particles for " + entry.getKey() + " hash: " + entry.getValue());
                 entry.getValue().resetParticles();
             }
             selfPlayerStatus.reset();
@@ -161,7 +160,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             if (statusLocal.getTicksSinceLastAction() > statusLocal.getTicksToMarkPlayerIdleSyncedForClient()) {
                 //System.out.println("receive idle ticks from server: " + ticksIdle + " for " + player.getUUID());
                 if (statusLocal.isIdle() != statusPrevLocal.isIdle()) {
-                    Watut.dbg("send idle getTicksSinceLastAction: " + statusLocal.getTicksSinceLastAction() + " - " + statusPrevLocal.getTicksSinceLastAction());
+                    WatutMod.dbg("send idle getTicksSinceLastAction: " + statusLocal.getTicksSinceLastAction() + " - " + statusPrevLocal.getTicksSinceLastAction());
                     sendIdle(statusLocal);
                 }
             }
@@ -219,7 +218,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             PlayerStatus statusLocal = getStatusLocal();
             if (statusLocal.isIdle()) {
                 statusLocal.setTicksSinceLastAction(0);
-                Watut.dbg("send idle: " + 0);
+                WatutMod.dbg("send idle: " + 0);
                 sendIdle(statusLocal);
             } else {
                 statusLocal.setTicksSinceLastAction(0);
@@ -362,7 +361,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                         Minecraft.getInstance().particleEngine.add(particle);
                         particle.setQuadSize((float) quadSize);
 
-                        Watut.dbg("spawning idle particle for " + player.getUUID());
+                        WatutMod.dbg("spawning idle particle for " + player.getUUID());
                     }
                 }
             }
@@ -700,7 +699,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             CompoundTag data = new CompoundTag();
             data.putInt(WatutNetworking.NBTDataPlayerStatus, playerStatus.ordinal());
             //Watut.dbg("sending status from client: " + playerStatus + " for " + Minecraft.getInstance().player.getUUID());
-            WatutNetworking.HANDLER.sendTo(new PacketNBTFromClient(data), Minecraft.getInstance().player.connection.getConnection(), NetworkDirection.PLAY_TO_SERVER);
+            WatutNetworking.instance().clientSendToServer(data);
         }
         getStatusLocal().setPlayerGuiState(playerStatus);
     }
@@ -716,7 +715,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 data.putFloat(WatutNetworking.NBTDataPlayerMouseY, y);
                 data.putBoolean(WatutNetworking.NBTDataPlayerMousePressed, pressed);
 
-                WatutNetworking.HANDLER.sendTo(new PacketNBTFromClient(data), Minecraft.getInstance().player.connection.getConnection(), NetworkDirection.PLAY_TO_SERVER);
+                WatutNetworking.instance().clientSendToServer(data);
             }
         }
         getStatusLocal().setScreenPosPercentX(x);
@@ -728,14 +727,14 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         CompoundTag data = new CompoundTag();
         data.putFloat(WatutNetworking.NBTDataPlayerTypingAmp, status.getTypingAmplifier());
 
-        WatutNetworking.HANDLER.sendTo(new PacketNBTFromClient(data), Minecraft.getInstance().player.connection.getConnection(), NetworkDirection.PLAY_TO_SERVER);
+        WatutNetworking.instance().clientSendToServer(data);
     }
 
     public void sendIdle(PlayerStatus status) {
         CompoundTag data = new CompoundTag();
         data.putInt(WatutNetworking.NBTDataPlayerIdleTicks, status.getTicksSinceLastAction());
 
-        WatutNetworking.HANDLER.sendTo(new PacketNBTFromClient(data), Minecraft.getInstance().player.connection.getConnection(), NetworkDirection.PLAY_TO_SERVER);
+        WatutNetworking.instance().clientSendToServer(data);
     }
 
     public void receiveAny(UUID uuid, CompoundTag data) {
@@ -756,7 +755,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             if (pressed) {
                 Player player = Minecraft.getInstance().level.getPlayerByUUID(uuid);
                 if (player != null && ConfigClient.playMouseClickSounds && player != Minecraft.getInstance().player) {
-                    Watut.dbg("play sound for " + uuid + " name " + player.getDisplayName().getString());
+                    WatutMod.dbg("play sound for " + uuid + " name " + player.getDisplayName().getString());
                     player.level().playLocalSound(player.getOnPos(), SoundEvents.CHICKEN_EGG, SoundSource.PLAYERS, 0.05F, 0.1F, false);
                 }
             }
@@ -766,7 +765,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             PlayerStatus.PlayerGuiState playerGuiState = PlayerStatus.PlayerGuiState.get(data.getInt(WatutNetworking.NBTDataPlayerStatus));
             status.setPlayerGuiState(playerGuiState);
             if (status.getPlayerGuiState() != statusPrev.getPlayerGuiState()) {
-                Watut.dbg("New gui player state and new pose target set relating to: " + status.getPlayerGuiState() + " for " + uuid);
+                WatutMod.dbg("New gui player state and new pose target set relating to: " + status.getPlayerGuiState() + " for " + uuid);
                 if (statusPrev.getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
                     status.setLerpTarget(new Lerpables());
                 }
@@ -794,7 +793,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             getStatusLocal().setTicksToMarkPlayerIdleSyncedForClient(data.getInt(WatutNetworking.NBTDataPlayerTicksToGoIdle));
             getStatusPrevLocal().setTicksToMarkPlayerIdleSyncedForClient(data.getInt(WatutNetworking.NBTDataPlayerTicksToGoIdle));
             if (statusPrev.isIdle() != status.isIdle()) {
-                Watut.dbg("New idle player state and new pose target set relating to idle state: " + status.isIdle() + " for " + uuid);
+                WatutMod.dbg("New idle player state and new pose target set relating to idle state: " + status.isIdle() + " for " + uuid);
                 setPoseTarget(uuid, false);
             }
         }

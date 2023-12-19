@@ -1,9 +1,9 @@
-package com.corosus.watut;
+package com.corosus.coroutil.loader.forge;
 
-import net.minecraft.client.Minecraft;
+import com.corosus.watut.WatutMod;
+import com.corosus.watut.WatutNetworking;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.UUID;
@@ -31,7 +31,7 @@ public class PacketNBTFromServer {
                 try {
                     CompoundTag nbt = msg.nbt;
                     UUID uuid = UUID.fromString(nbt.getString(WatutNetworking.NBTDataPlayerUUID));
-                    Watut.getPlayerStatusManagerClient().receiveAny(uuid, nbt);
+                    WatutMod.getPlayerStatusManagerClient().receiveAny(uuid, nbt);
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }

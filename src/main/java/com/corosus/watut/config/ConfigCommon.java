@@ -1,8 +1,8 @@
 package com.corosus.watut.config;
 
-import com.corosus.modconfig.ConfigComment;
-import com.corosus.modconfig.IConfigCategory;
-import com.corosus.watut.Watut;
+import com.corosus.coroutil.common.core.modconfig.ConfigComment;
+import com.corosus.coroutil.common.core.modconfig.IConfigCategory;
+import com.corosus.watut.WatutMod;
 
 
 public class ConfigCommon implements IConfigCategory {
@@ -19,17 +19,17 @@ public class ConfigCommon implements IConfigCategory {
 
     @Override
     public String getRegistryName() {
-        return Watut.MODID + getName();
+        return WatutMod.MODID + getName();
     }
 
     @Override
     public String getConfigFileName() {
-        return Watut.MODID + getName();
+        return WatutMod.MODID + getName();
     }
 
     @Override
     public String getCategory() {
-        return Watut.MODID + ": " + getName();
+        return WatutMod.MODID + ": " + getName();
     }
 
     @Override

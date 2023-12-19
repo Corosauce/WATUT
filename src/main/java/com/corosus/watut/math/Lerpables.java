@@ -9,16 +9,4 @@ public class Lerpables {
     public ModelPartData rightLeg = new ModelPartData();
     public ModelPartData leftLeg = new ModelPartData();
 
-    /*public Lerpables copy() {
-        Lerpables lerpables = new Lerpables();
-
-        lerpables.head = lerpables.head.copy();
-        lerpables.body = lerpables.body.copy();
-        lerpables.rightArm = lerpables.rightArm.copy();
-        lerpables.leftArm = lerpables.leftArm.copy();
-        lerpables.rightLeg = lerpables.rightLeg.copy();
-        lerpables.leftLeg = lerpables.leftLeg.copy();
-        return lerpables;
-    }*/
-
 }

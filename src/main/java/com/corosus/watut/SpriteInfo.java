@@ -1,5 +1,6 @@
 package com.corosus.watut;
 
+import com.corosus.coroutil.loader.forge.ParticleDataGen;
 import com.corosus.watut.spritesets.SpriteSetPlayer;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -29,13 +30,13 @@ public class SpriteInfo {
 
     public ResourceLocation getResLocationName(int index) {
         if (isSpriteSet()) {
-            return new ResourceLocation(Watut.MODID + ":particles/" + name + index);
+            return new ResourceLocation(WatutMod.MODID + ":particles/" + name + index);
         } else {
-            return new ResourceLocation(Watut.MODID + ":particles/" + name);
+            return new ResourceLocation(WatutMod.MODID + ":particles/" + name);
         }
     }
 
-    public void registerSprites(ParticleRegistry registry) {
+    public void registerSprites(ParticleDataGen registry) {
         if (isSpriteSet()) {
             for (int i = 0; i < spriteSetPlayer.getFrames(); i++) {
                 registry.addSprite(getResLocationName(i));

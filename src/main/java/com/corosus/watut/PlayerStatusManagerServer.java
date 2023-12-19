@@ -50,17 +50,15 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         getStatus(player).getNbtCache().merge(data);
 
         if (data.contains(WatutNetworking.NBTDataPlayerStatus) || data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
-            WatutNetworking.HANDLER.send(PacketDistributor.ALL.noArg(), new PacketNBTFromServer(data));
+            WatutNetworking.instance().serverSendToClientAll(data);
         } else {
-            WatutNetworking.HANDLER.send(PacketDistributor.NEAR.with(() ->
-                            new PacketDistributor.TargetPoint(player.getX(), player.getY(), player.getZ(), nearbyPlayerDataSendDist, player.level().dimension())),
-                    new PacketNBTFromServer(data));
+            WatutNetworking.instance().serverSendToClientNear(data, player.position(), nearbyPlayerDataSendDist, player.level().dimension());
         }
     }
 
     public void handleIdleState(Player player, int idleTicks) {
         PlayerStatus status = getStatus(player);
-        if (ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayerCount() > 1 || singleplayerTesting) {
+        if (WatutMod.instance().getPlayerList().getPlayerCount() > 1 || singleplayerTesting) {
             if (idleTicks > ConfigCommon.ticksToMarkPlayerIdle) {
                 if (!status.isIdle()) {
                     broadcast(player.getDisplayName().getString() + " has gone idle");
@@ -76,7 +74,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
 
     public void broadcast(String msg) {
         if (ConfigCommon.announceIdleStatesInChat) {
-            ServerLifecycleHooks.getCurrentServer().getPlayerList().broadcastSystemMessage(Component.literal(msg), false);
+            WatutMod.instance().getPlayerList().broadcastSystemMessage(Component.literal(msg), false);
         }
     }
 
@@ -84,14 +82,12 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     public void playerLoggedIn(Player player) {
         super.playerLoggedIn(player);
 
-        Watut.dbg("player loggedin");
+        WatutMod.dbg("player loggedin");
         if (player instanceof ServerPlayer) {
             for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
-                Watut.dbg("sending update all packet for " + entry.getKey().toString() + " to " + player.getDisplayName().getString() + " with status " + PlayerStatus.PlayerGuiState.get(entry.getValue().getNbtCache().getInt(WatutNetworking.NBTDataPlayerStatus)));
-                WatutNetworking.HANDLER.send(PacketDistributor.PLAYER.with(() -> (ServerPlayer) player), new PacketNBTFromServer(entry.getValue().getNbtCache()));
+                WatutMod.dbg("sending update all packet for " + entry.getKey().toString() + " to " + player.getDisplayName().getString() + " with status " + PlayerStatus.PlayerGuiState.get(entry.getValue().getNbtCache().getInt(WatutNetworking.NBTDataPlayerStatus)));
+
             }
         }
-
-
     }
 }

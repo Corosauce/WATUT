@@ -1,0 +1,5 @@
+accessWidener	v2	named
+accessible field net/minecraft/client/gui/screens/ChatScreen input Lnet/minecraft/client/gui/components/EditBox;
+accessible field net/minecraft/client/particle/ParticleEngine textureAtlas Lnet/minecraft/client/renderer/texture/TextureAtlas;
+accessible field net/minecraft/client/renderer/texture/TextureAtlas width I
+accessible field net/minecraft/client/renderer/texture/TextureAtlas height I

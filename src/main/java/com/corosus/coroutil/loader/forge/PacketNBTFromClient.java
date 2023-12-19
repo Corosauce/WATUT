@@ -1,5 +1,6 @@
-package com.corosus.watut;
+package com.corosus.coroutil.loader.forge;
 
+import com.corosus.watut.WatutMod;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -30,7 +31,7 @@ public class PacketNBTFromClient {
                     CompoundTag nbt = msg.nbt;
                     ServerPlayer playerEntity = ctx.get().getSender();
                     if (playerEntity != null) {
-                        Watut.getPlayerStatusManagerServer().receiveAny(playerEntity, nbt);
+                        WatutMod.getPlayerStatusManagerServer().receiveAny(playerEntity, nbt);
                     }
                 } catch (Exception ex) {
                     ex.printStackTrace();

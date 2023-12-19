@@ -1,6 +1,5 @@
 package com.corosus.watut;
 
-import com.corosus.watut.config.ConfigCommon;
 import com.corosus.watut.math.Lerpables;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.nbt.CompoundTag;
@@ -107,7 +106,7 @@ public class PlayerStatus {
 
     public void reset() {
         resetParticles();
-        Watut.dbg("remove trigger for " + this);
+        WatutMod.dbg("remove trigger for " + this);
         ticksSinceLastAction = 0;
     }
 

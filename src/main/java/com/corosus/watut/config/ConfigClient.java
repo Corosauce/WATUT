@@ -1,8 +1,6 @@
 package com.corosus.watut.config;
 
-import com.corosus.modconfig.ConfigComment;
-import com.corosus.modconfig.IConfigCategory;
-import com.corosus.watut.Watut;
+import com.corosus.watut.WatutMod;
 
 
 public class ConfigClient implements IConfigCategory {
@@ -30,17 +28,17 @@ public class ConfigClient implements IConfigCategory {
 
     @Override
     public String getRegistryName() {
-        return Watut.MODID + getName();
+        return WatutMod.MODID + getName();
     }
 
     @Override
     public String getConfigFileName() {
-        return Watut.MODID + getName();
+        return WatutMod.MODID + getName();
     }
 
     @Override
     public String getCategory() {
-        return Watut.MODID + ": " + getName();
+        return WatutMod.MODID + ": " + getName();
     }
 
     @Override

@@ -1,19 +1,9 @@
 package com.corosus.watut;
 
-import net.minecraft.client.renderer.texture.TextureAtlas;
-import net.minecraft.client.renderer.texture.atlas.sources.SingleFile;
-import net.minecraft.data.PackOutput;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.client.event.TextureStitchEvent;
-import net.minecraftforge.common.data.ExistingFileHelper;
-import net.minecraftforge.common.data.SpriteSourceProvider;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
-public class ParticleRegistry extends SpriteSourceProvider {
+public class ParticleRegistry {
 
     public static SpriteInfo inventory;
     public static SpriteInfo chest;
@@ -22,8 +12,7 @@ public class ParticleRegistry extends SpriteSourceProvider {
     public static SpriteInfo chat_idle;
     public static SpriteInfo chat_typing;
     public static SpriteInfo idle;
-
-    private static List<SpriteInfo> particles = new ArrayList<>();
+    public static List<SpriteInfo> particles = new ArrayList<>();
 
     static {
         inventory = add("inventory_", 3, 0);
@@ -44,32 +33,4 @@ public class ParticleRegistry extends SpriteSourceProvider {
         particles.add(spriteInfo);
         return spriteInfo;
     }
-
-    public ParticleRegistry(PackOutput output, ExistingFileHelper fileHelper)
-    {
-        super(output, fileHelper, Watut.MODID);
-    }
-
-    @Override
-    protected void addSources()
-    {
-        for (SpriteInfo info : particles) {
-            info.registerSprites(this);
-        }
-    }
-
-    public void addSprite(ResourceLocation res) {
-        atlas(SpriteSourceProvider.PARTICLES_ATLAS).addSource(new SingleFile(res, Optional.empty()));
-    }
-
-    @SubscribeEvent
-    public static void getRegisteredParticles(TextureStitchEvent.Post event) {
-
-        if (!event.getAtlas().location().equals(TextureAtlas.LOCATION_PARTICLES)) return;
-
-        for (SpriteInfo info : particles) {
-            info.setupSprites(event.getAtlas());
-        }
-    }
-
 }
