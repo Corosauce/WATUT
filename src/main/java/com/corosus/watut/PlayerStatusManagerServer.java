@@ -5,8 +5,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.server.ServerLifecycleHooks;
 
 import java.util.Map;
 import java.util.UUID;
@@ -52,7 +50,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         if (data.contains(WatutNetworking.NBTDataPlayerStatus) || data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
             WatutNetworking.instance().serverSendToClientAll(data);
         } else {
-            WatutNetworking.instance().serverSendToClientNear(data, player.position(), nearbyPlayerDataSendDist, player.level().dimension());
+            WatutNetworking.instance().serverSendToClientNear(data, player.position(), nearbyPlayerDataSendDist, player.level());
         }
     }
 
@@ -82,11 +80,11 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     public void playerLoggedIn(Player player) {
         super.playerLoggedIn(player);
 
-        WatutMod.dbg("player loggedin");
+        WatutMod.dbg("player logged in");
         if (player instanceof ServerPlayer) {
             for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
                 WatutMod.dbg("sending update all packet for " + entry.getKey().toString() + " to " + player.getDisplayName().getString() + " with status " + PlayerStatus.PlayerGuiState.get(entry.getValue().getNbtCache().getInt(WatutNetworking.NBTDataPlayerStatus)));
-
+                WatutNetworking.instance().serverSendToClientPlayer(entry.getValue().getNbtCache(), player);
             }
         }
     }

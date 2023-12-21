@@ -12,14 +12,14 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "com.corosus.coroutil.loader.fabric.WatutModFabric"
+      "com.corosus.watut.loader.fabric.WatutModFabric"
     ],
     "client": [
-      "com.corosus.coroutil.loader.fabric.ConfigModFabricClient"
+      "com.corosus.watut.loader.fabric.WatutModFabricClient"
     ]
   },
   "mixins": [
-    "${mod_id}.mixins.json"
+    "${mod_id}_fabric.mixins.json"
   ],
   "accessWidener": "${mod_id}.accesswidener",
   "depends": {

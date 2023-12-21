@@ -24,6 +24,9 @@ public abstract class ParticleRotating extends TextureSheetParticle {
     public float prevRotationRoll;
     public float rotationRoll;
 
+    //removes particle once hits 0, other things should reset this to keep it spawned
+    public int despawnCountdown = 40;
+
 
     public static ParticleRenderType PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL = new ParticleRenderType() {
         public void begin(BufferBuilder p_107455_, TextureManager p_107456_) {
@@ -44,6 +47,19 @@ public abstract class ParticleRotating extends TextureSheetParticle {
             return "PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL";
         }
     };
+
+    @Override
+    public void tick() {
+        super.tick();
+        despawnCountdown--;
+        if (despawnCountdown <= 0) {
+            remove();
+        }
+    }
+
+    public void keepAlive() {
+        despawnCountdown = 40;
+    }
 
     public ParticleRotating(ClientLevel pLevel, double pX, double pY, double pZ) {
         super(pLevel, pX, pY, pZ);

@@ -6,6 +6,8 @@ plugins {
 version = project.mod_version
 group = project.maven_group
 
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
 repositories {
 	// Add repositories to retrieve artifacts from in here.
 	// You should only use this when depending on other mods because
@@ -50,7 +52,7 @@ dependencies {
 	})
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
-	implementation 'com.corosus.coroutil:coroutil-fabric:1.20.1-1.3.3'
+	modImplementation 'com.corosus.coroutil:coroutil-fabric:1.20.1-1.3.3'
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"

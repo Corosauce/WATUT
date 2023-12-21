@@ -1,5 +1,7 @@
 package com.corosus.watut;
 
+import net.minecraft.client.renderer.texture.TextureAtlas;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,5 +34,12 @@ public class ParticleRegistry {
         SpriteInfo spriteInfo = new SpriteInfo(name, frames, tickDelay);
         particles.add(spriteInfo);
         return spriteInfo;
+    }
+
+    public static void textureAtlasUpload(TextureAtlas textureAtlas) {
+        if (!textureAtlas.location().equals(TextureAtlas.LOCATION_PARTICLES)) return;
+        for (SpriteInfo info : ParticleRegistry.particles) {
+            info.setupSprites(textureAtlas);
+        }
     }
 }

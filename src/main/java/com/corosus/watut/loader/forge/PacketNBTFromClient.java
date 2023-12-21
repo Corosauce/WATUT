@@ -1,4 +1,4 @@
-package com.corosus.coroutil.loader.forge;
+package com.corosus.watut.loader.forge;
 
 import com.corosus.watut.WatutMod;
 import net.minecraft.nbt.CompoundTag;

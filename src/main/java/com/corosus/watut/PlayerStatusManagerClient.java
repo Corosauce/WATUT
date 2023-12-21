@@ -2,10 +2,7 @@ package com.corosus.watut;
 
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.math.Lerpables;
-import com.corosus.watut.particle.ParticleAnimated;
-import com.corosus.watut.particle.ParticleRotating;
-import com.corosus.watut.particle.ParticleStatic;
-import com.corosus.watut.particle.ParticleStaticLoD;
+import com.corosus.watut.particle.*;
 import com.ibm.icu.impl.Pair;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.client.Minecraft;
@@ -19,6 +16,7 @@ import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.particle.BubbleParticle;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.nbt.CompoundTag;
@@ -29,8 +27,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.client.event.InputEvent;
-import net.minecraftforge.event.TickEvent;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -59,9 +55,15 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     private Level lastLevel;
 
-    public void tickGame(TickEvent.ClientTickEvent event) {
+    private boolean wasMousePressed = false;
+    private int mousePressedCountdown = 0;
+
+    public void tickGame() {
         steadyTickCounter++;
         if (steadyTickCounter == Integer.MAX_VALUE) steadyTickCounter = 0;
+        Level level = Minecraft.getInstance().level;
+
+        //reset any players data that disconnected
         if (Minecraft.getInstance().getConnection() != null) {
             for (Iterator<Map.Entry<UUID, PlayerStatus>> it = lookupPlayerToStatus.entrySet().iterator(); it.hasNext(); ) {
                 Map.Entry<UUID, PlayerStatus> entry = it.next();
@@ -72,9 +74,18 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     playerStatus.reset();
                     it.remove();
                 }
+
+                //reset players particles when dimension travelled / not in current world (avoid stuck particles), keep their other data though
+                if (level.getPlayerByUUID(entry.getKey()) == null) {
+                    if (playerStatus.getParticle() != null || playerStatus.getParticleIdle() != null) {
+                        WatutMod.dbg("remove player particles for player outside dimension: " + entry.getKey());
+                        playerStatus.resetParticles();
+                    }
+                }
             }
         }
-        Level level = Minecraft.getInstance().level;
+
+        //reset all particles when self dimension travelled
         if (lastLevel != level) {
             WatutMod.dbg("resetting player status");
             for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
@@ -168,6 +179,16 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             statusLocal.setTicksSinceLastAction(0);
         }
 
+        //System.out.println("wasMousePressed " + wasMousePressed);
+
+        if (!wasMousePressed && mousePressedCountdown > 0) {
+            System.out.println("mousePressedCountdown: " + mousePressedCountdown);
+            mousePressedCountdown--;
+            if (mousePressedCountdown == 0) {
+                sendMouse(getMousePos(), false);
+            }
+        }
+
         tickSyncing(player);
     }
 
@@ -185,24 +206,30 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
     }
 
-    public void onMouse(InputEvent.MouseButton.Post event) {
+    public void onMouse(boolean pressedAnything) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.player != null && mc.player.level() != null) {
             PlayerStatus.PlayerGuiState playerGuiState = getStatus(mc.player).getPlayerGuiState();
             if (ConfigClient.sendMouseInfo) {
                 if (playerGuiState == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiState == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiState == PlayerStatus.PlayerGuiState.MISC) {
-                    sendMouse(getMousePos(), event.getAction() != 0);
+                    if (pressedAnything) {
+                        mousePressedCountdown = 3;
+                        wasMousePressed = true;
+                    } else {
+                        wasMousePressed = false;
+                    }
+                    sendMouse(getMousePos(), mousePressedCountdown > 0);
                 }
             }
 
             //this wont trigger if theyre already idle, might be a good thing, just prevent idle, dont bring back from idle
-            if (mc.screen == null || (event.getAction() != 0 && (playerGuiState == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiState == PlayerStatus.PlayerGuiState.CRAFTING))) {
+            if (mc.screen == null || (pressedAnything && (playerGuiState == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiState == PlayerStatus.PlayerGuiState.CRAFTING))) {
                 onAction();
             }
         }
     }
 
-    public void onKey(InputEvent.Key event) {
+    public void onKey() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.player != null && mc.player.level() != null) {
             if (mc.screen == null || mc.screen instanceof ChatScreen) {
@@ -287,6 +314,17 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         return false;
     }
 
+    public void onGuiRender() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen instanceof ChatScreen && mc.getConnection() != null) {
+            ChatScreen chat = (ChatScreen) mc.screen;
+            GuiGraphics guigraphics = new GuiGraphics(mc, mc.renderBuffers().bufferSource());
+            int height = chat.height + 26;
+            guigraphics.drawString(mc.font, WatutMod.getPlayerStatusManagerClient().getTypingPlayers(), 2, height - 50, 16777215);
+            guigraphics.flush();
+        }
+    }
+
     public String getTypingPlayers() {
         Minecraft mc = Minecraft.getInstance();
         String str = "";
@@ -350,6 +388,16 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             }
         }
 
+        if (playerStatus.getParticle() != null && !playerStatus.getParticle().isAlive()) {
+            playerStatus.getParticle().remove();
+            playerStatus.setParticle(null);
+        }
+
+        if (playerStatus.getParticleIdle() != null && !playerStatus.getParticleIdle().isAlive()) {
+            playerStatus.getParticleIdle().remove();
+            playerStatus.setParticleIdle(null);
+        }
+
         double quadSize = 0.3F + Math.sin((stableTime / 10F) % 360) * 0.01F;
 
         if (shouldAnimate(player)) {
@@ -392,10 +440,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         if (playerStatus.getParticleIdle() != null) {
             ParticleStatic particle = (ParticleStatic)playerStatus.getParticleIdle();
-            if (!particle.isAlive()) {
-                playerStatus.getParticleIdle().remove();
-                playerStatus.setParticleIdle(null);
-            } else {
+            if (particle.isAlive()) {
+                particle.keepAlive();
                 particle.setPos(player.position().x, player.position().y + idleY, player.position().z);
                 particle.setPosPrev(player.position().x, player.position().y + idleY, player.position().z);
                 particle.setParticleSpeed(0, 0, 0);
@@ -408,12 +454,10 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             }
         }
 
-        if (playerStatus.getParticle() != null) {
+        if (playerStatus.getParticle() != null && playerStatus.getParticle() instanceof ParticleRotating) {
             ParticleRotating particle = (ParticleRotating)playerStatus.getParticle();
-            if (!particle.isAlive()) {
-                playerStatus.getParticle().remove();
-                playerStatus.setParticle(null);
-            } else {
+            if (particle.isAlive()) {
+                particle.keepAlive();
                 Vec3 posParticle = getParticlePosition(player);
                 particle.setPos(posParticle.x, posParticle.y, posParticle.z);
                 particle.setParticleSpeed(0, 0, 0);
@@ -437,7 +481,6 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 particle.prevRotationYaw = particle.rotationYaw;
                 particle.rotationPitch = 20;
                 particle.prevRotationPitch = particle.rotationPitch;
-
             }
         }
 

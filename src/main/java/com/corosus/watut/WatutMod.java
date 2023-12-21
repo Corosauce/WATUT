@@ -1,8 +1,7 @@
 package com.corosus.watut;
 
 import com.corosus.coroutil.common.core.modconfig.ConfigMod;
-import com.corosus.coroutil.loader.forge.ParticleDataGen;
-import com.corosus.modconfig.ConfigMod;
+import com.corosus.coroutil.common.core.modconfig.CoroConfigRegistry;
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigCommon;
 import net.minecraft.server.players.PlayerList;
@@ -32,16 +31,23 @@ public abstract class WatutMod
         return playerStatusManagerServer;
     }
 
-    public WatutMod()
-    {
+    public WatutMod() {
         instance = this;
-        ConfigMod.addConfigFile(MODID, new ConfigCommon());
-        ConfigMod.addConfigFile(MODID, new ConfigClient());
+        /*while (ConfigMod.instance() == null) {
+            System.out.println("WAITING FOR COROUTIL TO LOAD MAYBE DO THIS DIFFERENTLY AAAAAAAAAAAAAA");
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }*/
+        CoroConfigRegistry.instance().addConfigFile(MODID, new ConfigCommon());
+        CoroConfigRegistry.instance().addConfigFile(MODID, new ConfigClient());
     }
 
     public abstract PlayerList getPlayerList();
 
     public static void dbg(Object obj) {
-        //System.out.println("" + obj);
+        System.out.println("" + obj);
     }
 }

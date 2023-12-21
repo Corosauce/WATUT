@@ -1,7 +1,9 @@
-package com.corosus.watut;
+package com.corosus.watut.loader.forge;
 
-import com.corosus.coroutil.loader.forge.PacketNBTFromClient;
-import com.corosus.coroutil.loader.forge.PacketNBTFromServer;
+import com.corosus.watut.WatutMod;
+import com.corosus.watut.WatutNetworking;
+import com.corosus.watut.loader.forge.PacketNBTFromClient;
+import com.corosus.watut.loader.forge.PacketNBTFromServer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -67,9 +69,9 @@ public class WatutNetworkingForge extends WatutNetworking {
     }
 
     @Override
-    public void serverSendToClientNear(CompoundTag data, Vec3 pos, double dist, ResourceKey<Level> dimension) {
+    public void serverSendToClientNear(CompoundTag data, Vec3 pos, double dist, Level level) {
         HANDLER.send(PacketDistributor.NEAR.with(() ->
-                        new PacketDistributor.TargetPoint(pos.x, pos.y, pos.z, dist, dimension)),
+                        new PacketDistributor.TargetPoint(pos.x, pos.y, pos.z, dist, level.dimension())),
                 new PacketNBTFromServer(data));
     }
 }

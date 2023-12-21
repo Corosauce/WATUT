@@ -1,8 +1,6 @@
-package com.corosus.coroutil.loader.forge;
+package com.corosus.watut.loader.forge;
 
 import com.corosus.watut.WatutMod;
-import com.corosus.watut.WatutNetworking;
-import com.corosus.watut.WatutNetworkingForge;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.PackOutput;
 import net.minecraft.server.players.PlayerList;

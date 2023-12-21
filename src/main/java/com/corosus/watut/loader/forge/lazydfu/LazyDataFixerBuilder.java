@@ -1,4 +1,4 @@
-package com.corosus.coroutil.loader.forge.lazydfu;
+package com.corosus.watut.loader.forge.lazydfu;
 
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFixer;

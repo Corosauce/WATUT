@@ -29,7 +29,7 @@ public abstract class WatutNetworking {
         return instance;
     }
 
-    WatutNetworking() {
+    public WatutNetworking() {
         instance = this;
     }
 
@@ -39,7 +39,7 @@ public abstract class WatutNetworking {
 
     public abstract void serverSendToClientPlayer(CompoundTag data, Player player);
 
-    public abstract void serverSendToClientNear(CompoundTag data, Vec3 pos, double dist, ResourceKey<Level> dimension);
+    public abstract void serverSendToClientNear(CompoundTag data, Vec3 pos, double dist, Level level);
 
 }
 

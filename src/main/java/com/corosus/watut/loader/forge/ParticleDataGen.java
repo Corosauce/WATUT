@@ -1,4 +1,4 @@
-package com.corosus.coroutil.loader.forge;
+package com.corosus.watut.loader.forge;
 
 import com.corosus.watut.ParticleRegistry;
 import com.corosus.watut.SpriteInfo;
@@ -25,7 +25,7 @@ public class ParticleDataGen extends SpriteSourceProvider {
     protected void addSources()
     {
         for (SpriteInfo info : ParticleRegistry.particles) {
-            info.registerSprites(this);
+            registerSprites(info, this);
         }
     }
 
@@ -33,13 +33,13 @@ public class ParticleDataGen extends SpriteSourceProvider {
         atlas(SpriteSourceProvider.PARTICLES_ATLAS).addSource(new SingleFile(res, Optional.empty()));
     }
 
-    @SubscribeEvent
-    public static void getRegisteredParticles(TextureStitchEvent.Post event) {
-
-        if (!event.getAtlas().location().equals(TextureAtlas.LOCATION_PARTICLES)) return;
-
-        for (SpriteInfo info : ParticleRegistry.particles) {
-            info.setupSprites(event.getAtlas());
+    public void registerSprites(SpriteInfo info, ParticleDataGen registry) {
+        if (info.isSpriteSet()) {
+            for (int i = 0; i < info.getSpriteSet().getFrames(); i++) {
+                registry.addSprite(info.getResLocationName(i));
+            }
+        } else {
+            registry.addSprite(info.getResLocationName());
         }
     }
 

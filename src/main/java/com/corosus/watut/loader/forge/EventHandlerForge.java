@@ -1,9 +1,12 @@
-package com.corosus.coroutil.loader.forge;
+package com.corosus.watut.loader.forge;
 
+import com.corosus.watut.ParticleRegistry;
+import com.corosus.watut.SpriteInfo;
 import com.corosus.watut.WatutMod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;
@@ -19,26 +22,19 @@ public class EventHandlerForge {
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
     public void guiRender(RenderGuiEvent.Post event) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.screen instanceof ChatScreen && mc.getConnection() != null) {
-            ChatScreen chat = (ChatScreen) mc.screen;
-            GuiGraphics guigraphics = new GuiGraphics(mc, mc.renderBuffers().bufferSource());
-            int height = chat.height + 26;
-            guigraphics.drawString(mc.font, WatutMod.getPlayerStatusManagerClient().getTypingPlayers(), 2, height - 50, 16777215);
-            guigraphics.flush();
-        }
+        WatutMod.getPlayerStatusManagerClient().onGuiRender();
     }
 
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
     public void onMouse(InputEvent.MouseButton.Post event) {
-        WatutMod.getPlayerStatusManagerClient().onMouse(event);
+        WatutMod.getPlayerStatusManagerClient().onMouse(event.getAction() != 0);
     }
 
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
-    public void onMouse(InputEvent.Key event) {
-        WatutMod.getPlayerStatusManagerClient().onKey(event);
+    public void onKey(InputEvent.Key event) {
+        WatutMod.getPlayerStatusManagerClient().onKey();
     }
 
     @SubscribeEvent
@@ -63,5 +59,10 @@ public class EventHandlerForge {
     @SubscribeEvent
     public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
         WatutMod.getPlayerStatusManagerServer().playerLoggedIn(event.getEntity());
+    }
+
+    @SubscribeEvent
+    public static void getRegisteredParticles(TextureStitchEvent.Post event) {
+        ParticleRegistry.textureAtlasUpload(event.getAtlas());
     }
 }

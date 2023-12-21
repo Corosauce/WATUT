@@ -1,4 +1,4 @@
-package com.corosus.coroutil.loader.forge.lazydfu.mixin;
+package com.corosus.watut.loader.forge.lazydfu.mixin;
 
 import net.minecraft.util.datafix.DataFixers;
 import org.spongepowered.asm.mixin.Mixin;

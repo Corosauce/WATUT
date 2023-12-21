@@ -1,0 +1,23 @@
+{
+  "required": false,
+  "package": "com.corosus.watut.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "watut.refmap.json",
+  "client": [
+    "client.SetupRotationsInject",
+    "client.RenderPingIconInject",
+    "client.GuiRender",
+    "client.KeyboardHandlerKeyPress",
+    "client.MinecraftTick",
+    "client.MouseHandlerOnPress",
+    "client.TextureAtlasUpload"
+  ],
+  "mixins": [
+    "PlayerLoggedIn",
+    "PlayerTick"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  },
+  "minVersion": "0.8"
+}
