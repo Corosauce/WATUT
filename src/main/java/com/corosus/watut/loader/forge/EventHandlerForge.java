@@ -11,6 +11,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RenderGuiEvent;
+import net.minecraftforge.client.event.TextureStitchEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -41,7 +42,7 @@ public class EventHandlerForge {
     @OnlyIn(Dist.CLIENT)
     public void onGameTick(TickEvent.ClientTickEvent event) {
         if (event.phase == TickEvent.Phase.END) {
-            WatutMod.getPlayerStatusManagerClient().tickGame(event);
+            WatutMod.getPlayerStatusManagerClient().tickGame();
         }
     }
 
@@ -61,7 +62,7 @@ public class EventHandlerForge {
         WatutMod.getPlayerStatusManagerServer().playerLoggedIn(event.getEntity());
     }
 
-    @SubscribeEvent
+
     public static void getRegisteredParticles(TextureStitchEvent.Post event) {
         ParticleRegistry.textureAtlasUpload(event.getAtlas());
     }

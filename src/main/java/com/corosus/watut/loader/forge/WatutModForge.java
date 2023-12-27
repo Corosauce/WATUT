@@ -14,6 +14,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.server.ServerLifecycleHooks;
 
 @Mod(WatutModForge.MODID)
 public class WatutModForge extends WatutMod {
@@ -27,7 +28,7 @@ public class WatutModForge extends WatutMod {
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new EventHandlerForge());
         if (FMLEnvironment.dist.isClient()) {
-            modEventBus.addListener(ParticleDataGen::getRegisteredParticles);
+            modEventBus.addListener(EventHandlerForge::getRegisteredParticles);
         }
     }
 

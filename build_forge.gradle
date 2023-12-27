@@ -128,14 +128,17 @@ repositories {
     // ForgeGradle automatically adds the Forge maven and Maven Central for you
 
     // If you have mod jar dependencies in ./libs, you can declare them as a repository like so:
-    // flatDir {
-    //     dir 'libs'
-    // }
+    flatDir {
+        dir 'libs'
+    }
 }
+
+apply plugin: 'org.spongepowered.mixin'
 
 //Uncomment if using mixins (Mixin edits are found in 3 places)
 mixin {
     add sourceSets.main, "${project.mod_id}.refmap.json"
+    config '${project.mod_id}.mixins.json'
 }
 
 dependencies {
@@ -146,6 +149,8 @@ dependencies {
 
 	//Uncomment if using mixins (Mixin edits are found in 3 places)
 	annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    implementation fg.deobf('com.corosus.coroutil:coroutil-forge:1.20.1-1.3.4')
 
     // Real mod deobf dependency examples - these get remapped to your current mappings
     // implementation fg.deobf("com.tterrag.registrate:Registrate:MC${mc_version}-${registrate_version}") // Adds registrate as a dependency

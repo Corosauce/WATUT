@@ -2,7 +2,6 @@ package com.corosus.watut.loader.fabric;
 
 import com.corosus.watut.WatutMod;
 import com.corosus.watut.WatutNetworking;
-import com.corosus.watut.WatutNetworkingFabric;
 import com.corosus.watut.particle.ParticleRotating;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;

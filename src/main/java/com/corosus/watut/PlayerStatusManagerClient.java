@@ -182,7 +182,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         //System.out.println("wasMousePressed " + wasMousePressed);
 
         if (!wasMousePressed && mousePressedCountdown > 0) {
-            System.out.println("mousePressedCountdown: " + mousePressedCountdown);
+            //System.out.println("mousePressedCountdown: " + mousePressedCountdown);
             mousePressedCountdown--;
             if (mousePressedCountdown == 0) {
                 sendMouse(getMousePos(), false);

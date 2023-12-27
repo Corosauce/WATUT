@@ -1,5 +1,7 @@
-package com.corosus.watut;
+package com.corosus.watut.loader.fabric;
 
+import com.corosus.watut.WatutMod;
+import com.corosus.watut.WatutNetworking;
 import com.corosus.watut.loader.fabric.WatutModFabric;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
