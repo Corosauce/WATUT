@@ -48,6 +48,6 @@ public abstract class WatutMod
     public abstract PlayerList getPlayerList();
 
     public static void dbg(Object obj) {
-        System.out.println("" + obj);
+        //System.out.println("" + obj);
     }
 }

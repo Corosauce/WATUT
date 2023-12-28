@@ -795,7 +795,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             boolean differentPress = status.isPressing() != pressed;
             setMouse(uuid, x, y, pressed);
             setPoseTarget(uuid, differentPress);
-            if (pressed) {
+            if (pressed && differentPress) {
                 Player player = Minecraft.getInstance().level.getPlayerByUUID(uuid);
                 if (player != null && ConfigClient.playMouseClickSounds && player != Minecraft.getInstance().player) {
                     WatutMod.dbg("play sound for " + uuid + " name " + player.getDisplayName().getString());
