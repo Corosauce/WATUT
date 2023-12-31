@@ -1,7 +1,6 @@
 package com.corosus.watut;
 
-import com.corosus.coroutil.common.core.modconfig.ConfigMod;
-import com.corosus.coroutil.common.core.modconfig.CoroConfigRegistry;
+import com.corosus.modconfig.CoroConfigRegistry;
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigCommon;
 import net.minecraft.server.players.PlayerList;
@@ -33,14 +32,6 @@ public abstract class WatutMod
 
     public WatutMod() {
         instance = this;
-        /*while (ConfigMod.instance() == null) {
-            System.out.println("WAITING FOR COROUTIL TO LOAD MAYBE DO THIS DIFFERENTLY AAAAAAAAAAAAAA");
-            try {
-                Thread.sleep(100L);
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
-            }
-        }*/
         CoroConfigRegistry.instance().addConfigFile(MODID, new ConfigCommon());
         CoroConfigRegistry.instance().addConfigFile(MODID, new ConfigClient());
     }

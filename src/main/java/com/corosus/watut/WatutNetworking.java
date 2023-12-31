@@ -9,10 +9,6 @@ import net.minecraft.world.phys.Vec3;
 
 public abstract class WatutNetworking {
 
-    private static final String PROTOCOL_VERSION = Integer.toString(4);
-    private static short lastID = 0;
-    public static final ResourceLocation NETWORK_CHANNEL_ID_MAIN = new ResourceLocation(WatutMod.MODID, "main");
-
     public static String NBTDataPlayerUUID = "playerUuid";
     public static String NBTDataPlayerStatus = "playerStatus";
     public static String NBTDataPlayerTypingAmp = "playerTypingAmp";

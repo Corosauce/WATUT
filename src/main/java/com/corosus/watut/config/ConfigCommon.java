@@ -1,7 +1,7 @@
 package com.corosus.watut.config;
 
-import com.corosus.coroutil.common.core.modconfig.ConfigComment;
-import com.corosus.coroutil.common.core.modconfig.IConfigCategory;
+import com.corosus.modconfig.ConfigComment;
+import com.corosus.modconfig.IConfigCategory;
 import com.corosus.watut.WatutMod;
 
 
