@@ -50,7 +50,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         if (data.contains(WatutNetworking.NBTDataPlayerStatus) || data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
             WatutNetworking.instance().serverSendToClientAll(data);
         } else {
-            WatutNetworking.instance().serverSendToClientNear(data, player.position(), nearbyPlayerDataSendDist, player.level());
+            WatutNetworking.instance().serverSendToClientNear(data, player.position(), nearbyPlayerDataSendDist, player.level);
         }
     }
 

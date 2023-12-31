@@ -1,12 +1,7 @@
 package com.corosus.watut.loader.forge;
 
 import com.corosus.watut.ParticleRegistry;
-import com.corosus.watut.SpriteInfo;
 import com.corosus.watut.WatutMod;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.ChatScreen;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;
@@ -49,7 +44,7 @@ public class EventHandlerForge {
     @SubscribeEvent
     public void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase == TickEvent.Phase.END) {
-            if (event.player.level().isClientSide()) {
+            if (event.player.level.isClientSide()) {
                 WatutMod.getPlayerStatusManagerClient().tickPlayer(event.player);
             } else {
                 WatutMod.getPlayerStatusManagerServer().tickPlayer(event.player);

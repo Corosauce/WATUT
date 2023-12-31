@@ -5,8 +5,10 @@ import com.corosus.watut.math.Lerpables;
 import com.corosus.watut.particle.*;
 import com.ibm.icu.impl.Pair;
 import com.mojang.authlib.GameProfile;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.PauseScreen;
@@ -208,7 +210,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     public void onMouse(boolean pressedAnything) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level != null && mc.player != null && mc.player.level() != null) {
+        if (mc.level != null && mc.player != null && mc.player.level != null) {
             PlayerStatus.PlayerGuiState playerGuiState = getStatus(mc.player).getPlayerGuiState();
             if (ConfigClient.sendMouseInfo) {
                 if (playerGuiState == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiState == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiState == PlayerStatus.PlayerGuiState.MISC) {
@@ -231,7 +233,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     public void onKey() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level != null && mc.player != null && mc.player.level() != null) {
+        if (mc.level != null && mc.player != null && mc.player.level != null) {
             if (mc.screen == null || mc.screen instanceof ChatScreen) {
                 onAction();
             }
@@ -241,7 +243,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     public void onAction() {
         if (!ConfigClient.sendIdleState) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level != null && mc.player != null && mc.player.level() != null) {
+        if (mc.level != null && mc.player != null && mc.player.level != null) {
             PlayerStatus statusLocal = getStatusLocal();
             if (statusLocal.isIdle()) {
                 statusLocal.setTicksSinceLastAction(0);
@@ -278,7 +280,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             if (!input.startsWith("/")) {
                 if (!input.equals(statusLocal.getLastTypeString())) {
                     statusLocal.setLastTypeString(input);
-                    statusLocal.setLastTypeTime(player.level().getGameTime());
+                    statusLocal.setLastTypeTime(player.level.getGameTime());
                 }
 
                 if (typeRatePollCounter >= 10) {
@@ -286,7 +288,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     int lengthPrev = statusLocal.getLastTypeStringForAmp().length();
                     if (!input.equals(statusLocal.getLastTypeStringForAmp())) {
                         statusLocal.setLastTypeStringForAmp(input);
-                        statusLocal.setLastTypeTimeForAmp(player.level().getGameTime());
+                        statusLocal.setLastTypeTimeForAmp(player.level.getGameTime());
                         int length = input.length();
                         int newDiff = length - lengthPrev;
                         //cap amp to 8
@@ -308,7 +310,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             statusLocal.setLastTypeDiff(0);
             return false;
         }
-        if (statusLocal.getLastTypeTime() + typingIdleTimeout >= player.level().getGameTime()) {
+        if (statusLocal.getLastTypeTime() + typingIdleTimeout >= player.level.getGameTime()) {
             return true;
         }
         return false;
@@ -318,10 +320,11 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen instanceof ChatScreen && mc.getConnection() != null) {
             ChatScreen chat = (ChatScreen) mc.screen;
-            GuiGraphics guigraphics = new GuiGraphics(mc, mc.renderBuffers().bufferSource());
+            //GuiGraphics guigraphics = new GuiGraphics(mc, mc.renderBuffers().bufferSource());
             int height = chat.height + 26;
-            guigraphics.drawString(mc.font, WatutMod.getPlayerStatusManagerClient().getTypingPlayers(), 2, height - 50, 16777215);
-            guigraphics.flush();
+            //guigraphics.drawString(mc.font, WatutMod.getPlayerStatusManagerClient().getTypingPlayers(), 2, height - 50, 16777215);
+            GuiComponent.drawString(new PoseStack(), mc.font, WatutMod.getPlayerStatusManagerClient().getTypingPlayers(), 2, height - 50, 16777215);
+            //guigraphics.flush();
         }
     }
 
@@ -403,7 +406,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         if (shouldAnimate(player)) {
             if (idleParticleChangeOrGone) {
                 if (ConfigClient.showIdleStatesInPlayerAboveHead && playerStatus.isIdle()) {
-                    ParticleRotating particle = new ParticleStatic((ClientLevel) player.level(), player.position().x, player.position().y + idleY, player.position().z, ParticleRegistry.idle.getSprite());
+                    ParticleRotating particle = new ParticleStatic((ClientLevel) player.level, player.position().x, player.position().y + idleY, player.position().z, ParticleRegistry.idle.getSprite());
                     if (particle != null) {
                         playerStatus.setParticleIdle(particle);
                         Minecraft.getInstance().particleEngine.add(particle);
@@ -417,17 +420,17 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 Particle particle = null;
                 Vec3 posParticle = getParticlePosition(player);
                 if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_OPEN) {
-                    particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_idle.getSpriteSet());
+                    particle = new ParticleAnimated((ClientLevel) player.level, posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_idle.getSpriteSet());
                 } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_TYPING) {
-                    particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_typing.getSpriteSet());
+                    particle = new ParticleAnimated((ClientLevel) player.level, posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_typing.getSpriteSet());
                 } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.INVENTORY) {
-                    particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.inventory.getSpriteSet());
+                    particle = new ParticleStaticLoD((ClientLevel) player.level, posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.inventory.getSpriteSet());
                 } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CRAFTING) {
-                    particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.crafting.getSpriteSet());
+                    particle = new ParticleStaticLoD((ClientLevel) player.level, posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.crafting.getSpriteSet());
                 } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.ESCAPE) {
-                    particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.escape.getSpriteSet());
+                    particle = new ParticleStaticLoD((ClientLevel) player.level, posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.escape.getSpriteSet());
                 } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.MISC) {
-                    particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chest.getSpriteSet());
+                    particle = new ParticleStaticLoD((ClientLevel) player.level, posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chest.getSpriteSet());
                 }
                 if (particle != null) {
                     playerStatus.setParticle(particle);
@@ -490,17 +493,19 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
     }
 
-    public boolean renderPingIconHook(PlayerTabOverlay playerTabOverlay, GuiGraphics pGuiGraphics, int p_281809_, int p_282801_, int pY, PlayerInfo pPlayerInfo) {
+    public boolean renderPingIconHook(PlayerTabOverlay playerTabOverlay, PoseStack poseStack, int p_281809_, int p_282801_, int pY, PlayerInfo pPlayerInfo) {
         if (Minecraft.getInstance().particleEngine == null || pPlayerInfo == null || pPlayerInfo.getProfile() == null || !ConfigClient.showIdleStatesInPlayerList) return false;
         PlayerStatus playerStatus = getStatus(pPlayerInfo.getProfile().getId());
         if (playerStatus.isIdle()) {
-            pGuiGraphics.pose().pushPose();
-            pGuiGraphics.pose().translate(0.0F, 0.0F, 101F);
+            poseStack.pushPose();
+            poseStack.translate(0.0F, 0.0F, 101F);
             TextureAtlasSprite sprite = ParticleRegistry.idle.getSprite();
             int x = (int) (Minecraft.getInstance().particleEngine.textureAtlas.width * sprite.getU0());
             int y = (int) (Minecraft.getInstance().particleEngine.textureAtlas.height * sprite.getV0());
-            pGuiGraphics.blit(sprite.atlasLocation(), p_282801_ + p_281809_ - 11, pY, x, y, 10, 8, Minecraft.getInstance().particleEngine.textureAtlas.width, Minecraft.getInstance().particleEngine.textureAtlas.height);
-            pGuiGraphics.pose().popPose();
+            //pGuiGraphics.blit(sprite.atlasLocation(), p_282801_ + p_281809_ - 11, pY, x, y, 10, 8, Minecraft.getInstance().particleEngine.textureAtlas.width, Minecraft.getInstance().particleEngine.textureAtlas.height);
+            RenderSystem.setShaderTexture(0, sprite.atlasLocation());
+            GuiComponent.blit(poseStack, p_282801_ + p_281809_ - 11, pY, x, y, 10, 8, Minecraft.getInstance().particleEngine.textureAtlas.width, Minecraft.getInstance().particleEngine.textureAtlas.height);
+            poseStack.popPose();
             return true;
         }
         return false;
@@ -511,7 +516,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         Minecraft mc = Minecraft.getInstance();
         boolean inOwnInventory = pEntity == mc.player && (mc.screen instanceof EffectRenderingInventoryScreen) && pEntity.isAlive();
         //boolean isRealPlayer = pEntity.tickCount > 10;
-        boolean isRealPlayer = pEntity.level().players().contains(pEntity);
+        boolean isRealPlayer = pEntity.level.players().contains(pEntity);
         if (model instanceof PlayerModel playerModel && pEntity instanceof Player player && isRealPlayer && ((!inOwnInventory && shouldAnimate((Player) pEntity)) || singleplayerTesting)) {
             PlayerStatus playerStatus = getStatus(player);
             //try to filter out paper model, could use a better context clue, this is using a quirk of rotation not getting wrapped
@@ -520,7 +525,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 if (playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
                     playerStatus.yRotHeadBeforeOverriding = playerModel.head.yRot;
                     playerStatus.xRotHeadBeforeOverriding = playerModel.head.xRot;
-                    if (player.level().getGameTime() % 5 == 0) {
+                    if (player.level.getGameTime() % 5 == 0) {
                         //Watut.dbg("setting head data for " + playerStatus.yRotHeadBeforeOverriding);
                     }
                 } else {
@@ -551,7 +556,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 float yRotDiff = playerStatus.getLerpTarget().head.yRot - playerStatus.getLerpPrev().head.yRot;
                 if (Math.abs(yRotDiff) < Math.PI / 2) {
                     playerModel.head.yRot = Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().head.yRot, playerStatus.getLerpTarget().head.yRot);
-                    if (player.level().getGameTime() % 5 == 0) {
+                    if (player.level.getGameTime() % 5 == 0) {
                         //Watut.dbg("yRot: " + playerModel.head.yRot);
                     }
                 }
@@ -799,7 +804,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 Player player = Minecraft.getInstance().level.getPlayerByUUID(uuid);
                 if (player != null && ConfigClient.playMouseClickSounds && player != Minecraft.getInstance().player) {
                     WatutMod.dbg("play sound for " + uuid + " name " + player.getDisplayName().getString());
-                    player.level().playLocalSound(player.getOnPos(), SoundEvents.CHICKEN_EGG, SoundSource.PLAYERS, 0.05F, 0.1F, false);
+                    player.level.playLocalSound(player.getOnPos(), SoundEvents.CHICKEN_EGG, SoundSource.PLAYERS, 0.05F, 0.1F, false);
                 }
             }
         }
@@ -822,7 +827,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     PlayerStatus.PlayerGuiState playerGuiStatePrev = statusPrev.getPlayerGuiState();
                     if (playerGuiState == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiState == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiState == PlayerStatus.PlayerGuiState.MISC ||
                             playerGuiStatePrev == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiStatePrev == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiStatePrev == PlayerStatus.PlayerGuiState.MISC) {
-                        player.level().playLocalSound(player.getOnPos(), SoundEvents.ARMOR_EQUIP_CHAIN, SoundSource.PLAYERS, 0.9F, 1F, false);
+                        player.level.playLocalSound(player.getOnPos(), SoundEvents.ARMOR_EQUIP_CHAIN, SoundSource.PLAYERS, 0.9F, 1F, false);
                     }
                 }
             }

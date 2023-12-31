@@ -142,7 +142,7 @@ apply plugin: 'org.spongepowered.mixin'
 //Uncomment if using mixins (Mixin edits are found in 3 places)
 mixin {
     add sourceSets.main, "${project.mod_id}.refmap.json"
-    config '${project.mod_id}.mixins.json'
+    config "${project.mod_id}.mixins.json"
 }
 
 dependencies {

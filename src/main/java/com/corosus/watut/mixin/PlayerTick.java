@@ -13,7 +13,7 @@ public abstract class PlayerTick {
     @Inject(method = "tick", at = @At("TAIL"))
     private void tick(CallbackInfo info) {
         Player player = (Player)(Object)this;
-        if (player.level().isClientSide()) {
+        if (player.level.isClientSide()) {
             WatutMod.getPlayerStatusManagerClient().tickPlayer(player);
         } else {
             WatutMod.getPlayerStatusManagerServer().tickPlayer(player);
