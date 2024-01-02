@@ -10,7 +10,8 @@
     "client.KeyboardHandlerKeyPress",
     "client.MinecraftTick",
     "client.MouseHandlerOnPress",
-    "client.TextureAtlasUpload"
+    "client.TextureAtlasUpload",
+    "client.TextureAtlasPrepareToStitch"
   ],
   "mixins": [
     "PlayerLoggedIn",

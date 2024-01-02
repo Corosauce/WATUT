@@ -5,7 +5,6 @@ import com.corosus.watut.WatutMod;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;
-import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.client.event.TextureStitchEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -17,19 +16,21 @@ public class EventHandlerForge {
 
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
-    public void guiRender(RenderGuiEvent.Post event) {
-        WatutMod.getPlayerStatusManagerClient().onGuiRender();
+    public void guiRender(TickEvent.RenderTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            WatutMod.getPlayerStatusManagerClient().onGuiRender();
+        }
     }
 
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
-    public void onMouse(InputEvent.MouseButton.Post event) {
+    public void onMouse(InputEvent.RawMouseEvent event) {
         WatutMod.getPlayerStatusManagerClient().onMouse(event.getAction() != 0);
     }
 
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
-    public void onKey(InputEvent.Key event) {
+    public void onKey(InputEvent.KeyInputEvent event) {
         WatutMod.getPlayerStatusManagerClient().onKey();
     }
 
@@ -54,9 +55,12 @@ public class EventHandlerForge {
 
     @SubscribeEvent
     public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
-        WatutMod.getPlayerStatusManagerServer().playerLoggedIn(event.getEntity());
+        WatutMod.getPlayerStatusManagerServer().playerLoggedIn(event.getPlayer());
     }
 
+    public static void preRegisterParticles(TextureStitchEvent.Pre event) {
+        ParticleRegistry.textureAtlasUpload(event.getAtlas());
+    }
 
     public static void getRegisteredParticles(TextureStitchEvent.Post event) {
         ParticleRegistry.textureAtlasUpload(event.getAtlas());

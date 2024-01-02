@@ -5,7 +5,8 @@
   "refmap": "watut.refmap.json",
   "client": [
     "client.SetupRotationsInject",
-    "client.RenderPingIconInject"
+    "client.RenderPingIconInject",
+    "client.TextureAtlasPrepareToStitch"
   ],
   "injectors": {
     "defaultRequire": 0

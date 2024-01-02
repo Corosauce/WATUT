@@ -1,9 +1,11 @@
 package com.corosus.watut;
 
 import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class ParticleRegistry {
 
@@ -34,6 +36,13 @@ public class ParticleRegistry {
         SpriteInfo spriteInfo = new SpriteInfo(name, frames, tickDelay);
         particles.add(spriteInfo);
         return spriteInfo;
+    }
+
+    public static void textureAtlasPrepareToSitch(TextureAtlas textureAtlas, Set<ResourceLocation> sprites) {
+        if (!textureAtlas.location().equals(TextureAtlas.LOCATION_PARTICLES)) return;
+        for (SpriteInfo info : ParticleRegistry.particles) {
+            info.textureAtlasPrepareToSitch(textureAtlas, sprites);
+        }
     }
 
     public static void textureAtlasUpload(TextureAtlas textureAtlas) {

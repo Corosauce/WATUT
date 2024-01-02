@@ -2,9 +2,9 @@ package com.corosus.watut.spritesets;
 
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.util.RandomSource;
 
 import java.util.List;
+import java.util.Random;
 
 public class SpriteSetPlayer implements SpriteSet {
 
@@ -28,7 +28,7 @@ public class SpriteSetPlayer implements SpriteSet {
     }
 
     @Override
-    public TextureAtlasSprite get(RandomSource pRandom) {
+    public TextureAtlasSprite get(Random pRandom) {
         return list.get(0);
     }
 

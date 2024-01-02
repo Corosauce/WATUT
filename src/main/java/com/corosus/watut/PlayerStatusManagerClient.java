@@ -22,6 +22,7 @@ import net.minecraft.client.particle.BubbleParticle;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
@@ -500,11 +501,15 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             poseStack.pushPose();
             poseStack.translate(0.0F, 0.0F, 101F);
             TextureAtlasSprite sprite = ParticleRegistry.idle.getSprite();
-            int x = (int) (Minecraft.getInstance().particleEngine.textureAtlas.width * sprite.getU0());
-            int y = (int) (Minecraft.getInstance().particleEngine.textureAtlas.height * sprite.getV0());
+            //TODO: 1.18 just do a custom gui location and width and height is what your image is
+            /*int x = (int) (Minecraft.getInstance().particleEngine.textureAtlas.width * sprite.getU0());
+            int y = (int) (Minecraft.getInstance().particleEngine.textureAtlas.height * sprite.getV0());*/
+            int x = 0;
+            int y = 0;
+            ResourceLocation IDLE_TEXTURE = new ResourceLocation(WatutMod.MODID, "textures/particles/idle.png");
             //pGuiGraphics.blit(sprite.atlasLocation(), p_282801_ + p_281809_ - 11, pY, x, y, 10, 8, Minecraft.getInstance().particleEngine.textureAtlas.width, Minecraft.getInstance().particleEngine.textureAtlas.height);
-            RenderSystem.setShaderTexture(0, sprite.atlasLocation());
-            GuiComponent.blit(poseStack, p_282801_ + p_281809_ - 11, pY, x, y, 10, 8, Minecraft.getInstance().particleEngine.textureAtlas.width, Minecraft.getInstance().particleEngine.textureAtlas.height);
+            RenderSystem.setShaderTexture(0, IDLE_TEXTURE);
+            GuiComponent.blit(poseStack, p_282801_ + p_281809_ - 11, pY, x, y, 10, 8, sprite.getWidth(), sprite.getHeight());
             poseStack.popPose();
             return true;
         }
@@ -513,6 +518,17 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     public void setupRotationsHook(EntityModel model, Entity pEntity, float pLimbSwing, float pLimbSwingAmount, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch) {
         if (!ConfigClient.showPlayerAnimations) return;
+
+        if (model instanceof PlayerModel playerModel) {
+            //not a very cross mod compatible way, but this is here to stop other players head idle swaying when at least 1 player rendering is idle nearby
+            //edit: i think id rather risk this bug then cause more mod incompats, for now
+            /*playerModel.head.xRot = 0;
+            playerModel.head.zRot = 0;
+
+            playerModel.hat.xRot = playerModel.head.xRot;
+            playerModel.hat.zRot = playerModel.head.zRot;*/
+        }
+
         Minecraft mc = Minecraft.getInstance();
         boolean inOwnInventory = pEntity == mc.player && (mc.screen instanceof EffectRenderingInventoryScreen) && pEntity.isAlive();
         //boolean isRealPlayer = pEntity.tickCount > 10;
@@ -573,9 +589,6 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 playerModel.leftSleeve.yRot = playerModel.leftArm.yRot;
                 playerModel.leftSleeve.xRot = playerModel.leftArm.xRot;
 
-                playerModel.hat.xRot = playerModel.head.xRot;
-                playerModel.hat.yRot = playerModel.head.yRot;
-
                 if (playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_TYPING) {
                     float amp = playerStatus.getTypingAmplifierSmooth();
                     float typeAngle = (float) ((Math.toRadians(Math.sin((pAgeInTicks * 1F) % 360) * 15 * amp)));
@@ -592,10 +605,11 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     playerModel.head.xRot += angle2;
                     playerModel.head.zRot += angle;
                 }
+
+                playerModel.hat.xRot = playerModel.head.xRot;
+                playerModel.hat.yRot = playerModel.head.yRot;
+                playerModel.hat.zRot = playerModel.head.zRot;
             }
-            playerModel.hat.xRot = playerModel.head.xRot;
-            playerModel.hat.yRot = playerModel.head.yRot;
-            playerModel.hat.zRot = playerModel.head.zRot;
         }
     }
 
@@ -804,7 +818,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 Player player = Minecraft.getInstance().level.getPlayerByUUID(uuid);
                 if (player != null && ConfigClient.playMouseClickSounds && player != Minecraft.getInstance().player) {
                     WatutMod.dbg("play sound for " + uuid + " name " + player.getDisplayName().getString());
-                    player.level.playLocalSound(player.getOnPos(), SoundEvents.CHICKEN_EGG, SoundSource.PLAYERS, 0.05F, 0.1F, false);
+                    player.level.playLocalSound(player.getOnPos().getX(), player.getOnPos().getY(), player.getOnPos().getZ(), SoundEvents.CHICKEN_EGG, SoundSource.PLAYERS, 0.05F, 0.1F, false);
                 }
             }
         }
@@ -827,7 +841,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     PlayerStatus.PlayerGuiState playerGuiStatePrev = statusPrev.getPlayerGuiState();
                     if (playerGuiState == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiState == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiState == PlayerStatus.PlayerGuiState.MISC ||
                             playerGuiStatePrev == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiStatePrev == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiStatePrev == PlayerStatus.PlayerGuiState.MISC) {
-                        player.level.playLocalSound(player.getOnPos(), SoundEvents.ARMOR_EQUIP_CHAIN, SoundSource.PLAYERS, 0.9F, 1F, false);
+                        player.level.playLocalSound(player.getOnPos().getX(), player.getOnPos().getY(), player.getOnPos().getZ(), SoundEvents.ARMOR_EQUIP_CHAIN, SoundSource.PLAYERS, 0.9F, 1F, false);
                     }
                 }
             }

@@ -2,7 +2,9 @@ package com.corosus.watut;
 
 import com.corosus.watut.config.ConfigCommon;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 
@@ -72,7 +74,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
 
     public void broadcast(String msg) {
         if (ConfigCommon.announceIdleStatesInChat) {
-            WatutMod.instance().getPlayerList().broadcastSystemMessage(Component.literal(msg), false);
+            WatutMod.instance().getPlayerList().broadcastMessage(new TextComponent(msg), ChatType.CHAT, new UUID(0, 0));
         }
     }
 

@@ -7,6 +7,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class SpriteInfo {
 
@@ -32,6 +33,16 @@ public class SpriteInfo {
             return new ResourceLocation(WatutMod.MODID + ":particles/" + name + index);
         } else {
             return new ResourceLocation(WatutMod.MODID + ":particles/" + name);
+        }
+    }
+
+    public void textureAtlasPrepareToSitch(TextureAtlas textureAtlas, Set<ResourceLocation> sprites) {
+        if (isSpriteSet()) {
+            for (int i = 0; i < spriteSetPlayer.getFrames(); i++) {
+                sprites.add(getResLocationName(i));
+            }
+        } else {
+            sprites.add(getResLocationName());
         }
     }
 
