@@ -61,6 +61,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     private boolean wasMousePressed = false;
     private int mousePressedCountdown = 0;
 
+    ResourceLocation IDLE_TEXTURE = new ResourceLocation(WatutMod.MODID, "textures/particles/idle.png");
+
     public void tickGame() {
         steadyTickCounter++;
         if (steadyTickCounter == Integer.MAX_VALUE) steadyTickCounter = 0;
@@ -448,7 +450,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 particle.keepAlive();
                 particle.setPos(player.position().x, player.position().y + idleY, player.position().z);
                 particle.setPosPrev(player.position().x, player.position().y + idleY, player.position().z);
-                particle.setParticleSpeed(0, 0, 0);
+                particle.xd = 0;
+                particle.yd = 0;
+                particle.zd = 0;
                 particle.rotationYaw = -player.yBodyRot + 180;
                 particle.prevRotationYaw = particle.rotationYaw;
                 particle.rotationRoll = cos * 5;
@@ -464,7 +468,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 particle.keepAlive();
                 Vec3 posParticle = getParticlePosition(player);
                 particle.setPos(posParticle.x, posParticle.y, posParticle.z);
-                particle.setParticleSpeed(0, 0, 0);
+                particle.xd = 0;
+                particle.yd = 0;
+                particle.zd = 0;
 
                 if (particle instanceof ParticleStaticLoD) {
                     particle.setQuadSize((float) quadSize);
@@ -506,9 +512,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             int y = (int) (Minecraft.getInstance().particleEngine.textureAtlas.height * sprite.getV0());*/
             int x = 0;
             int y = 0;
-            ResourceLocation IDLE_TEXTURE = new ResourceLocation(WatutMod.MODID, "textures/particles/idle.png");
             //pGuiGraphics.blit(sprite.atlasLocation(), p_282801_ + p_281809_ - 11, pY, x, y, 10, 8, Minecraft.getInstance().particleEngine.textureAtlas.width, Minecraft.getInstance().particleEngine.textureAtlas.height);
-            RenderSystem.setShaderTexture(0, IDLE_TEXTURE);
+            //RenderSystem.setShaderTexture(0, IDLE_TEXTURE);
+            Minecraft.getInstance().getTextureManager().bind(IDLE_TEXTURE);
             GuiComponent.blit(poseStack, p_282801_ + p_281809_ - 11, pY, x, y, 10, 8, sprite.getWidth(), sprite.getHeight());
             poseStack.popPose();
             return true;
@@ -519,7 +525,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     public void setupRotationsHook(EntityModel model, Entity pEntity, float pLimbSwing, float pLimbSwingAmount, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch) {
         if (!ConfigClient.showPlayerAnimations) return;
 
-        if (model instanceof PlayerModel playerModel) {
+        if (model instanceof PlayerModel) {
+            PlayerModel playerModel = (PlayerModel) model;
             //not a very cross mod compatible way, but this is here to stop other players head idle swaying when at least 1 player rendering is idle nearby
             //edit: i think id rather risk this bug then cause more mod incompats, for now
             /*playerModel.head.xRot = 0;
@@ -533,7 +540,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         boolean inOwnInventory = pEntity == mc.player && (mc.screen instanceof EffectRenderingInventoryScreen) && pEntity.isAlive();
         //boolean isRealPlayer = pEntity.tickCount > 10;
         boolean isRealPlayer = pEntity.level.players().contains(pEntity);
-        if (model instanceof PlayerModel playerModel && pEntity instanceof Player player && isRealPlayer && ((!inOwnInventory && shouldAnimate((Player) pEntity)) || singleplayerTesting)) {
+        if (model instanceof PlayerModel && pEntity instanceof Player && isRealPlayer && ((!inOwnInventory && shouldAnimate((Player) pEntity)) || singleplayerTesting)) {
+            PlayerModel playerModel = (PlayerModel) model;
+            Player player = (Player) pEntity;
             PlayerStatus playerStatus = getStatus(player);
             //try to filter out paper model, could use a better context clue, this is using a quirk of rotation not getting wrapped
             boolean contextIsInventoryPaperDoll = playerModel.head.yRot > Math.PI;
@@ -711,7 +720,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     }
 
     public Vec3 getBodyAngle(Player player) {
-        return this.calculateViewVector(player.getXRot(), player.yBodyRot);
+        return this.calculateViewVector(player.xRot, player.yBodyRot);
     }
 
     public Vec3 calculateViewVector(float pXRot, float pYRot) {
@@ -818,7 +827,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 Player player = Minecraft.getInstance().level.getPlayerByUUID(uuid);
                 if (player != null && ConfigClient.playMouseClickSounds && player != Minecraft.getInstance().player) {
                     WatutMod.dbg("play sound for " + uuid + " name " + player.getDisplayName().getString());
-                    player.level.playLocalSound(player.getOnPos().getX(), player.getOnPos().getY(), player.getOnPos().getZ(), SoundEvents.CHICKEN_EGG, SoundSource.PLAYERS, 0.05F, 0.1F, false);
+                    player.level.playLocalSound(player.position().x, player.position().y, player.position().z, SoundEvents.CHICKEN_EGG, SoundSource.PLAYERS, 0.05F, 0.1F, false);
                 }
             }
         }
@@ -841,7 +850,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     PlayerStatus.PlayerGuiState playerGuiStatePrev = statusPrev.getPlayerGuiState();
                     if (playerGuiState == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiState == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiState == PlayerStatus.PlayerGuiState.MISC ||
                             playerGuiStatePrev == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiStatePrev == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiStatePrev == PlayerStatus.PlayerGuiState.MISC) {
-                        player.level.playLocalSound(player.getOnPos().getX(), player.getOnPos().getY(), player.getOnPos().getZ(), SoundEvents.ARMOR_EQUIP_CHAIN, SoundSource.PLAYERS, 0.9F, 1F, false);
+                        player.level.playLocalSound(player.position().x, player.position().y, player.position().z, SoundEvents.ARMOR_EQUIP_CHAIN, SoundSource.PLAYERS, 0.9F, 1F, false);
                     }
                 }
             }

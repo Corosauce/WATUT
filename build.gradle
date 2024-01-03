@@ -61,7 +61,7 @@ dependencies {
 
 	//include(modImplementation("ForgeConfigAPIPort:ForgeConfigAPIPort:v8.0.0-1.20.1-Fabric"))
 	//using https://www.curseforge.com/minecraft/mc-mods/forge-config-api-port-fabric/files/4583000
-	include(modImplementation("curse.maven:forge-config-api-port-fabric-547434:3913319"))
+	include(modImplementation("curse.maven:forge-config-api-port-fabric-547434:3943246"))
 	//include(modImplementation("fuzs.forgeconfigapiport:forgeconfigapiport-fabric:v8.0.0-1.20.1-Fabric"))
 }
 
@@ -99,7 +99,7 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach {
 	// Minecraft 1.18 (1.18-pre2) upwards uses Java 17.
-	it.options.release = 17
+	it.options.release = 8
 }
 
 java {
@@ -108,8 +108,8 @@ java {
 	// If you remove this line, sources will not be generated.
 	//withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_17
-	targetCompatibility = JavaVersion.VERSION_17
+	sourceCompatibility = JavaVersion.VERSION_1_8
+	targetCompatibility = JavaVersion.VERSION_1_8
 }
 
 jar {

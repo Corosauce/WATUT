@@ -30,11 +30,12 @@ public abstract class ParticleRotating extends TextureSheetParticle {
     public static ParticleRenderType PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL = new ParticleRenderType() {
         public void begin(BufferBuilder p_107455_, TextureManager p_107456_) {
             RenderSystem.depthMask(true);
-            RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
+            //RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
+            p_107456_.bind(TextureAtlas.LOCATION_PARTICLES);
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             RenderSystem.disableCull();
-            p_107455_.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+            p_107455_.begin(7, DefaultVertexFormat.PARTICLE);
         }
 
         public void end(Tesselator p_107458_) {
