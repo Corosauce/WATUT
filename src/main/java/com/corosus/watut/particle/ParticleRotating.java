@@ -50,7 +50,6 @@ public abstract class ParticleRotating extends TextureSheetParticle {
 
     @Override
     public void tick() {
-        super.tick();
         despawnCountdown--;
         if (despawnCountdown <= 0) {
             remove();
