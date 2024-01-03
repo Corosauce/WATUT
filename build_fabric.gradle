@@ -51,6 +51,8 @@ dependencies {
 		it.officialMojangMappings { nameSyntheticMembers = false }
 	})
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	modImplementation "com.electronwill.night-config_core:core:3.6.5"
+	modImplementation "com.electronwill.night-config_toml:toml:3.6.5"
 
 	modImplementation "com.corosus.coroutil:coroutil-fabric:${project.minecraft_version}-${project.coroutil_version}"
 
