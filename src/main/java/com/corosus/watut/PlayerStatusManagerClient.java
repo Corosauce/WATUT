@@ -61,6 +61,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     private boolean wasMousePressed = false;
     private int mousePressedCountdown = 0;
 
+    ResourceLocation IDLE_TEXTURE = new ResourceLocation(WatutMod.MODID, "textures/particles/idle.png");
+
     public void tickGame() {
         steadyTickCounter++;
         if (steadyTickCounter == Integer.MAX_VALUE) steadyTickCounter = 0;
@@ -506,7 +508,6 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             int y = (int) (Minecraft.getInstance().particleEngine.textureAtlas.height * sprite.getV0());*/
             int x = 0;
             int y = 0;
-            ResourceLocation IDLE_TEXTURE = new ResourceLocation(WatutMod.MODID, "textures/particles/idle.png");
             //pGuiGraphics.blit(sprite.atlasLocation(), p_282801_ + p_281809_ - 11, pY, x, y, 10, 8, Minecraft.getInstance().particleEngine.textureAtlas.width, Minecraft.getInstance().particleEngine.textureAtlas.height);
             RenderSystem.setShaderTexture(0, IDLE_TEXTURE);
             GuiComponent.blit(poseStack, p_282801_ + p_281809_ - 11, pY, x, y, 10, 8, sprite.getWidth(), sprite.getHeight());
