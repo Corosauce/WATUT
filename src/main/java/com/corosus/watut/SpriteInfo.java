@@ -1,9 +1,10 @@
 package com.corosus.watut;
 
 import com.corosus.watut.spritesets.SpriteSetPlayer;
-import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.AtlasTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.util.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +37,7 @@ public class SpriteInfo {
         }
     }
 
-    public void textureAtlasPrepareToSitch(TextureAtlas textureAtlas, Set<ResourceLocation> sprites) {
+    public void textureAtlasPrepareToSitch(AtlasTexture textureAtlas, Set<ResourceLocation> sprites) {
         if (isSpriteSet()) {
             for (int i = 0; i < spriteSetPlayer.getFrames(); i++) {
                 sprites.add(getResLocationName(i));
@@ -46,7 +47,7 @@ public class SpriteInfo {
         }
     }
 
-    public void setupSprites(TextureAtlas textureAtlas) {
+    public void setupSprites(AtlasTexture textureAtlas) {
         if (isSpriteSet()) {
             List<TextureAtlasSprite> list = new ArrayList<>();
             for (int i = 0; i < spriteSetPlayer.getFrames(); i++) {

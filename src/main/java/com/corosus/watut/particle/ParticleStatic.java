@@ -1,11 +1,11 @@
 package com.corosus.watut.particle;
 
-import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.world.ClientWorld;
 
 public class ParticleStatic extends ParticleRotating {
 
-    public ParticleStatic(ClientLevel pLevel, double pX, double pY, double pZ, TextureAtlasSprite sprite) {
+    public ParticleStatic(ClientWorld pLevel, double pX, double pY, double pZ, TextureAtlasSprite sprite) {
         super(pLevel, pX, pY, pZ);
         this.sprite = sprite;
         this.lifetime = Integer.MAX_VALUE;

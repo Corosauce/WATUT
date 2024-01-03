@@ -1,14 +1,14 @@
 package com.corosus.watut.loader.forge;
 
 import com.corosus.watut.WatutMod;
-import net.minecraft.server.players.PlayerList;
+import net.minecraft.server.management.PlayerList;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
-import net.minecraftforge.server.ServerLifecycleHooks;
+import net.minecraftforge.fml.server.ServerLifecycleHooks;
 
 @Mod(WatutModForge.MODID)
 public class WatutModForge extends WatutMod {

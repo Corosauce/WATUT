@@ -1,6 +1,6 @@
 package com.corosus.watut;
 
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.entity.player.PlayerEntity;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -14,18 +14,18 @@ public class PlayerStatusManager {
 
     protected int nearbyPlayerDataSendDist = 10;
 
-    public void tickPlayer(Player player) {
+    public void tickPlayer(PlayerEntity player) {
         singleplayerTesting = false;
         if (player.level.isClientSide()) {
             tickPlayerClient(player);
         }
     }
 
-    public void tickPlayerClient(Player player) {
+    public void tickPlayerClient(PlayerEntity player) {
 
     }
 
-    public PlayerStatus getStatus(Player player) {
+    public PlayerStatus getStatus(PlayerEntity player) {
         return getStatus(player.getUUID());
     }
 
@@ -54,7 +54,7 @@ public class PlayerStatusManager {
         status.setPressing(pressed);
     }
 
-    public void playerLoggedIn(Player player) {
+    public void playerLoggedIn(PlayerEntity player) {
 
     }
 

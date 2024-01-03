@@ -1,13 +1,13 @@
 package com.corosus.watut.particle;
 
 import com.corosus.watut.spritesets.SpriteSetPlayer;
-import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.world.ClientWorld;
 
 public class ParticleAnimated extends ParticleRotating {
 
     private final SpriteSetPlayer sprites;
 
-    public ParticleAnimated(ClientLevel pLevel, double pX, double pY, double pZ, SpriteSetPlayer pSprites) {
+    public ParticleAnimated(ClientWorld pLevel, double pX, double pY, double pZ, SpriteSetPlayer pSprites) {
         super(pLevel, pX, pY, pZ);
         this.sprites = pSprites;
         this.lifetime = Integer.MAX_VALUE;

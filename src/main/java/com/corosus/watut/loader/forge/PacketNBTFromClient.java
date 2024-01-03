@@ -1,25 +1,25 @@
 package com.corosus.watut.loader.forge;
 
 import com.corosus.watut.WatutMod;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.network.PacketBuffer;
+import net.minecraftforge.fml.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
 public class PacketNBTFromClient {
-    private final CompoundTag nbt;
+    private final CompoundNBT nbt;
 
-    public PacketNBTFromClient(CompoundTag nbt) {
+    public PacketNBTFromClient(CompoundNBT nbt) {
         this.nbt = nbt;
     }
 
-    public static void encode(PacketNBTFromClient msg, FriendlyByteBuf buffer) {
+    public static void encode(PacketNBTFromClient msg, PacketBuffer buffer) {
         buffer.writeNbt(msg.nbt);
     }
 
-    public static PacketNBTFromClient decode(FriendlyByteBuf buffer) {
+    public static PacketNBTFromClient decode(PacketBuffer buffer) {
         return new PacketNBTFromClient(buffer.readNbt());
     }
 
@@ -28,8 +28,8 @@ public class PacketNBTFromClient {
 
             ctx.get().enqueueWork(() -> {
                 try {
-                    CompoundTag nbt = msg.nbt;
-                    ServerPlayer playerEntity = ctx.get().getSender();
+                    CompoundNBT nbt = msg.nbt;
+                    ServerPlayerEntity playerEntity = ctx.get().getSender();
                     if (playerEntity != null) {
                         WatutMod.getPlayerStatusManagerServer().receiveAny(playerEntity, nbt);
                     }

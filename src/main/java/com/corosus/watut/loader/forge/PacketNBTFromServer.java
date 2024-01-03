@@ -2,25 +2,25 @@ package com.corosus.watut.loader.forge;
 
 import com.corosus.watut.WatutMod;
 import com.corosus.watut.WatutNetworking;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.network.PacketBuffer;
+import net.minecraftforge.fml.network.NetworkEvent;
 
 import java.util.UUID;
 import java.util.function.Supplier;
 
 public class PacketNBTFromServer {
-    private final CompoundTag nbt;
+    private final CompoundNBT nbt;
 
-    public PacketNBTFromServer(CompoundTag nbt) {
+    public PacketNBTFromServer(CompoundNBT nbt) {
         this.nbt = nbt;
     }
 
-    public static void encode(PacketNBTFromServer msg, FriendlyByteBuf buffer) {
+    public static void encode(PacketNBTFromServer msg, PacketBuffer buffer) {
         buffer.writeNbt(msg.nbt);
     }
 
-    public static PacketNBTFromServer decode(FriendlyByteBuf buffer) {
+    public static PacketNBTFromServer decode(PacketBuffer buffer) {
         return new PacketNBTFromServer(buffer.readNbt());
     }
 
@@ -29,7 +29,7 @@ public class PacketNBTFromServer {
 
             ctx.get().enqueueWork(() -> {
                 try {
-                    CompoundTag nbt = msg.nbt;
+                    CompoundNBT nbt = msg.nbt;
                     UUID uuid = UUID.fromString(nbt.getString(WatutNetworking.NBTDataPlayerUUID));
                     WatutMod.getPlayerStatusManagerClient().receiveAny(uuid, nbt);
                 } catch (Exception ex) {

@@ -1,11 +1,9 @@
 package com.corosus.watut;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.World;
 
 public abstract class WatutNetworking {
 
@@ -29,13 +27,13 @@ public abstract class WatutNetworking {
         instance = this;
     }
 
-    public abstract void clientSendToServer(CompoundTag data);
+    public abstract void clientSendToServer(CompoundNBT data);
 
-    public abstract void serverSendToClientAll(CompoundTag data);
+    public abstract void serverSendToClientAll(CompoundNBT data);
 
-    public abstract void serverSendToClientPlayer(CompoundTag data, Player player);
+    public abstract void serverSendToClientPlayer(CompoundNBT data, PlayerEntity player);
 
-    public abstract void serverSendToClientNear(CompoundTag data, Vec3 pos, double dist, Level level);
+    public abstract void serverSendToClientNear(CompoundNBT data, Vector3d pos, double dist, World level);
 
 }
 

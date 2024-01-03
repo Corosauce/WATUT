@@ -58,11 +58,7 @@ public class EventHandlerForge {
         WatutMod.getPlayerStatusManagerServer().playerLoggedIn(event.getPlayer());
     }
 
-    public static void preRegisterParticles(TextureStitchEvent.Pre event) {
-        ParticleRegistry.textureAtlasUpload(event.getAtlas());
-    }
-
     public static void getRegisteredParticles(TextureStitchEvent.Post event) {
-        ParticleRegistry.textureAtlasUpload(event.getAtlas());
+        ParticleRegistry.textureAtlasUpload(event.getMap());
     }
 }

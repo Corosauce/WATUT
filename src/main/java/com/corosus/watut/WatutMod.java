@@ -3,7 +3,7 @@ package com.corosus.watut;
 import com.corosus.modconfig.CoroConfigRegistry;
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigCommon;
-import net.minecraft.server.players.PlayerList;
+import net.minecraft.server.management.PlayerList;
 
 public abstract class WatutMod
 {

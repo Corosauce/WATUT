@@ -2,22 +2,19 @@ package com.corosus.watut.loader.forge;
 
 import com.corosus.watut.WatutMod;
 import com.corosus.watut.WatutNetworking;
-import com.corosus.watut.loader.forge.PacketNBTFromClient;
-import com.corosus.watut.loader.forge.PacketNBTFromServer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkDirection;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.network.simple.SimpleChannel;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.network.PacketBuffer;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.World;
+import net.minecraftforge.fml.network.NetworkDirection;
+import net.minecraftforge.fml.network.NetworkEvent;
+import net.minecraftforge.fml.network.NetworkRegistry;
+import net.minecraftforge.fml.network.PacketDistributor;
+import net.minecraftforge.fml.network.simple.SimpleChannel;
 
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -46,7 +43,7 @@ public class WatutNetworkingForge extends WatutNetworking {
         registerMessage(PacketNBTFromClient.class, PacketNBTFromClient::encode, PacketNBTFromClient::decode, PacketNBTFromClient.Handler::handle, NetworkDirection.PLAY_TO_SERVER);
     }
 
-    private static <MSG> void registerMessage(Class<MSG> messageType, BiConsumer<MSG, FriendlyByteBuf> encoder, Function<FriendlyByteBuf, MSG> decoder, BiConsumer<MSG, Supplier<NetworkEvent.Context>> messageConsumer, NetworkDirection networkDirection) {
+    private static <MSG> void registerMessage(Class<MSG> messageType, BiConsumer<MSG, PacketBuffer> encoder, Function<PacketBuffer, MSG> decoder, BiConsumer<MSG, Supplier<NetworkEvent.Context>> messageConsumer, NetworkDirection networkDirection) {
         HANDLER.registerMessage(lastID, messageType, encoder, decoder, messageConsumer, Optional.ofNullable(networkDirection));
         lastID++;
         if (lastID > 0xFF)
@@ -54,22 +51,22 @@ public class WatutNetworkingForge extends WatutNetworking {
     }
 
     @Override
-    public void clientSendToServer(CompoundTag data) {
+    public void clientSendToServer(CompoundNBT data) {
         HANDLER.sendTo(new PacketNBTFromClient(data), Minecraft.getInstance().player.connection.getConnection(), NetworkDirection.PLAY_TO_SERVER);
     }
 
     @Override
-    public void serverSendToClientAll(CompoundTag data) {
+    public void serverSendToClientAll(CompoundNBT data) {
         HANDLER.send(PacketDistributor.ALL.noArg(), new PacketNBTFromServer(data));
     }
 
     @Override
-    public void serverSendToClientPlayer(CompoundTag data, Player player) {
-        HANDLER.send(PacketDistributor.PLAYER.with(() -> (ServerPlayer) player), new PacketNBTFromServer(data));
+    public void serverSendToClientPlayer(CompoundNBT data, PlayerEntity player) {
+        HANDLER.send(PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player), new PacketNBTFromServer(data));
     }
 
     @Override
-    public void serverSendToClientNear(CompoundTag data, Vec3 pos, double dist, Level level) {
+    public void serverSendToClientNear(CompoundNBT data, Vector3d pos, double dist, World level) {
         HANDLER.send(PacketDistributor.NEAR.with(() ->
                         new PacketDistributor.TargetPoint(pos.x, pos.y, pos.z, dist, level.dimension())),
                 new PacketNBTFromServer(data));

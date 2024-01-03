@@ -1,12 +1,12 @@
 package com.corosus.watut.spritesets;
 
-import net.minecraft.client.particle.SpriteSet;
+import net.minecraft.client.particle.IAnimatedSprite;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 import java.util.List;
 import java.util.Random;
 
-public class SpriteSetPlayer implements SpriteSet {
+public class SpriteSetPlayer implements IAnimatedSprite {
 
     private int tickDelay;
     private int frames;

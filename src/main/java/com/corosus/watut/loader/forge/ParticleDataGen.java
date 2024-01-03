@@ -3,7 +3,6 @@ package com.corosus.watut.loader.forge;
 import com.corosus.watut.ParticleRegistry;
 import com.corosus.watut.SpriteInfo;
 import com.corosus.watut.WatutMod;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.data.ExistingFileHelper;
 
 import java.util.Optional;

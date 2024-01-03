@@ -1,12 +1,11 @@
 package com.corosus.watut;
 
 import com.corosus.watut.config.ConfigCommon;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.ChatType;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.util.text.ChatType;
+import net.minecraft.util.text.StringTextComponent;
 
 import java.util.Map;
 import java.util.UUID;
@@ -14,7 +13,7 @@ import java.util.UUID;
 public class PlayerStatusManagerServer extends PlayerStatusManager {
 
     @Override
-    public void tickPlayer(Player player) {
+    public void tickPlayer(PlayerEntity player) {
         getStatus(player).setTicksToMarkPlayerIdleSyncedForClient(ConfigCommon.ticksToMarkPlayerIdle);
         super.tickPlayer(player);
     }
@@ -25,7 +24,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
      * @param player
      * @param data
      */
-    public void receiveAny(Player player, CompoundTag data) {
+    public void receiveAny(PlayerEntity player, CompoundNBT data) {
         data.putString(WatutNetworking.NBTDataPlayerUUID, player.getUUID().toString());
 
         if (data.contains(WatutNetworking.NBTDataPlayerStatus)) {
@@ -56,7 +55,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         }
     }
 
-    public void handleIdleState(Player player, int idleTicks) {
+    public void handleIdleState(PlayerEntity player, int idleTicks) {
         PlayerStatus status = getStatus(player);
         if (WatutMod.instance().getPlayerList().getPlayerCount() > 1 || singleplayerTesting) {
             if (idleTicks > ConfigCommon.ticksToMarkPlayerIdle) {
@@ -74,16 +73,16 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
 
     public void broadcast(String msg) {
         if (ConfigCommon.announceIdleStatesInChat) {
-            WatutMod.instance().getPlayerList().broadcastMessage(new TextComponent(msg), ChatType.CHAT, new UUID(0, 0));
+            WatutMod.instance().getPlayerList().broadcastMessage(new StringTextComponent(msg), ChatType.CHAT, new UUID(0, 0));
         }
     }
 
     @Override
-    public void playerLoggedIn(Player player) {
+    public void playerLoggedIn(PlayerEntity player) {
         super.playerLoggedIn(player);
 
         WatutMod.dbg("player logged in");
-        if (player instanceof ServerPlayer) {
+        if (player instanceof ServerPlayerEntity) {
             for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
                 WatutMod.dbg("sending update all packet for " + entry.getKey().toString() + " to " + player.getDisplayName().getString() + " with status " + PlayerStatus.PlayerGuiState.get(entry.getValue().getNbtCache().getInt(WatutNetworking.NBTDataPlayerStatus)));
                 WatutNetworking.instance().serverSendToClientPlayer(entry.getValue().getNbtCache(), player);
