@@ -7,4 +7,4 @@ assignees: ''
 
 ---
 
-no
+![no](https://github.com/Corosauce/WATUT/blob/1.20/.github/ISSUE_TEMPLATE/dont.jpg)
