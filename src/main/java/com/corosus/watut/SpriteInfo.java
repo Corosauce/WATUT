@@ -39,9 +39,11 @@ public class SpriteInfo {
     public void textureAtlasPrepareToSitch(TextureAtlas textureAtlas, Set<ResourceLocation> sprites) {
         if (isSpriteSet()) {
             for (int i = 0; i < spriteSetPlayer.getFrames(); i++) {
+                //System.out.println("textureAtlasPrepareToSitch " + getResLocationName(i));
                 sprites.add(getResLocationName(i));
             }
         } else {
+            //System.out.println("textureAtlasPrepareToSitch " + getResLocationName());
             sprites.add(getResLocationName());
         }
     }

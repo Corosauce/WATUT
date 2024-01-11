@@ -22,8 +22,6 @@ public abstract class TextureAtlasPrepareToStitch {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/util/profiling/ProfilerFiller;popPush(Ljava/lang/String;)V", ordinal = 0),
             locals = LocalCapture.CAPTURE_FAILEXCEPTION)
     private void prepareToStitch(ResourceManager p_118308_, Stream<ResourceLocation> p_118309_, ProfilerFiller p_118310_, int p_118311_, CallbackInfoReturnable<TextureAtlas.Preparations> cir, Set<ResourceLocation> set) {
-        //System.out.println("HOOOOOOOOOOOK");
-        //System.out.println(set.size());
         ParticleRegistry.textureAtlasPrepareToSitch((TextureAtlas)(Object)this, set);
     }
 }
