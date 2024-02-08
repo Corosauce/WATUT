@@ -10,13 +10,13 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.PauseScreen;
+import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CraftingScreen;
 import net.minecraft.client.gui.screens.inventory.EffectRenderingInventoryScreen;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
-import net.minecraft.client.particle.BubbleParticle;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.nbt.CompoundTag;
@@ -139,7 +139,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 sendStatus(PlayerStatus.PlayerGuiState.CRAFTING);
             } else if (mc.screen instanceof PauseScreen) {
                 sendStatus(PlayerStatus.PlayerGuiState.ESCAPE);
-            } else if (mc.screen != null) {
+            } else if (mc.screen instanceof ContainerScreen) {
+                sendStatus(PlayerStatus.PlayerGuiState.MISC);
+            } else if (mc.screen != null && ConfigClient.showPlayerActiveGuiIfNotExactMatch) {
                 sendStatus(PlayerStatus.PlayerGuiState.MISC);
             } else if (mc.screen == null) {
                 sendStatus(PlayerStatus.PlayerGuiState.NONE);
@@ -320,7 +322,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             ChatScreen chat = (ChatScreen) mc.screen;
             GuiGraphics guigraphics = new GuiGraphics(mc, mc.renderBuffers().bufferSource());
             int height = chat.height + 26;
-            guigraphics.drawString(mc.font, WatutMod.getPlayerStatusManagerClient().getTypingPlayers(), 2, height - 50, 16777215);
+            guigraphics.drawString(mc.font, WatutMod.getPlayerStatusManagerClient().getTypingPlayers(), 2 + ConfigClient.renderTypingStatusRelativePosition_X, height - 50 + ConfigClient.renderTypingStatusRelativePosition_Y, 16777215);
             guigraphics.flush();
         }
     }
@@ -350,8 +352,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             anim += ".";
         }
 
-        if (playersLengthStr > 50) {
-            str = "Several people are typing" + anim;
+        if (playersLengthStr > ConfigClient.renderTypingCharacterLimit) {
+            str = ConfigClient.renderTypingMultipleTyping + anim;
         } else if (str.length() > 2) {
             str = str.substring(0, str.length() - 2) + " is typing" + anim;
         }
@@ -416,18 +418,24 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             if (statusParticleChangeOrGone) {
                 Particle particle = null;
                 Vec3 posParticle = getParticlePosition(player);
-                if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_OPEN) {
-                    particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_idle.getSpriteSet());
-                } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_TYPING) {
-                    particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_typing.getSpriteSet());
-                } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.INVENTORY) {
-                    particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.inventory.getSpriteSet());
-                } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CRAFTING) {
-                    particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.crafting.getSpriteSet());
-                } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.ESCAPE) {
-                    particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.escape.getSpriteSet());
-                } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.MISC) {
-                    particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chest.getSpriteSet());
+
+                if (ConfigClient.showPlayerActiveChatGui) {
+                    if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_OPEN) {
+                        particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_idle.getSpriteSet());
+                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_TYPING) {
+                        particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_typing.getSpriteSet());
+                    }
+                }
+                if (ConfigClient.showPlayerActiveNonChatGui) {
+                    if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.INVENTORY) {
+                        particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.inventory.getSpriteSet());
+                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CRAFTING) {
+                        particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.crafting.getSpriteSet());
+                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.ESCAPE) {
+                        particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.escape.getSpriteSet());
+                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.MISC) {
+                        particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chest.getSpriteSet());
+                    }
                 }
                 if (particle != null) {
                     playerStatus.setParticle(particle);
@@ -571,7 +579,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 playerModel.hat.xRot = playerModel.head.xRot;
                 playerModel.hat.yRot = playerModel.head.yRot;
 
-                if (playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_TYPING) {
+                if (ConfigClient.showPlayerAnimation_Typing && playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_TYPING) {
                     float amp = playerStatus.getTypingAmplifierSmooth();
                     float typeAngle = (float) ((Math.toRadians(Math.sin((pAgeInTicks * 1F) % 360) * 15 * amp)));
                     float typeAngle2 = (float) ((Math.toRadians(-Math.sin((pAgeInTicks * 1F) % 360) * 15 * amp)));
@@ -581,7 +589,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     playerModel.leftSleeve.xRot -= typeAngle2;
                 }
 
-                if (playerStatus.isIdle()) {
+                if (ConfigClient.showPlayerAnimation_Idle && playerStatus.isIdle()) {
                     float angle = (float) ((Math.toRadians(Math.sin((pAgeInTicks * 0.05F) % 360) * 15)));
                     float angle2 = (float) ((Math.toRadians(Math.cos((pAgeInTicks * 0.05F) % 360) * 7)));
                     playerModel.head.xRot += angle2;
@@ -616,6 +624,12 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.MISC ||
                 playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.ESCAPE;
         boolean typing = playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_TYPING;
+        boolean idle = playerStatus.isIdle();
+
+        if (!ConfigClient.showPlayerAnimation_Gui) pointing = false;
+        if (!ConfigClient.showPlayerAnimation_Gui_PointingClicking) pointing = false;
+        if (!ConfigClient.showPlayerAnimation_Typing) typing = false;
+        if (!ConfigClient.showPlayerAnimation_Idle) idle = false;
 
         if (becauseMousePress) {
             playerStatus.setNewLerp(armMouseTickRate * 0.5F);
@@ -664,13 +678,13 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
 
         //reset to neutral
-        if (!pointing && !typing && !playerStatus.isIdle()) {
+        if (!pointing && !typing && !idle) {
             playerStatus.setLerpTarget(new Lerpables());
             playerStatus.getLerpTarget().head.xRot = playerStatus.xRotHeadBeforeOverriding;
             playerStatus.getLerpTarget().head.yRot = playerStatus.yRotHeadBeforeOverriding;
         }
 
-        if (playerStatus.isIdle()) {
+        if (idle) {
             playerStatus.getLerpTarget().head.xRot = (float) Math.toRadians(70);
             playerStatus.setNewLerp(40);
         }
