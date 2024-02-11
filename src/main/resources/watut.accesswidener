@@ -6,3 +6,6 @@ accessible field net/minecraft/client/renderer/texture/TextureAtlas height I
 accessible method net/minecraft/client/gui/components/PlayerTabOverlay renderPingIcon (Lnet/minecraft/client/gui/GuiGraphics;IIILnet/minecraft/client/multiplayer/PlayerInfo;)V
 accessible field net/minecraft/client/particle/ParticleEngine RENDER_ORDER Ljava/util/List;
 transitive-mutable field net/minecraft/client/particle/ParticleEngine RENDER_ORDER Ljava/util/List;
+accessible field net/minecraft/client/gui/screens/inventory/BookEditScreen pageEdit Lnet/minecraft/client/gui/font/TextFieldHelper;
+accessible field net/minecraft/client/gui/screens/inventory/AbstractSignEditScreen signField Lnet/minecraft/client/gui/font/TextFieldHelper;
+accessible field net/minecraft/client/gui/font/TextFieldHelper getMessageFn Ljava/util/function/Supplier;

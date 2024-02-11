@@ -1,8 +1,6 @@
 package com.corosus.watut;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -10,7 +8,8 @@ import net.minecraft.world.phys.Vec3;
 public abstract class WatutNetworking {
 
     public static String NBTDataPlayerUUID = "playerUuid";
-    public static String NBTDataPlayerStatus = "playerStatus";
+    public static String NBTDataPlayerGuiStatus = "playerGuiStatus";
+    public static String NBTDataPlayerChatStatus = "playerChatStatus";
     public static String NBTDataPlayerTypingAmp = "playerTypingAmp";
     public static String NBTDataPlayerIdleTicks = "playerIdleTicks";
     //a bit of a heavy way to sync a server config to client, but itll do for now

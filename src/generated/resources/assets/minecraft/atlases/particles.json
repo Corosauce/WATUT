@@ -83,6 +83,62 @@
     {
       "type": "minecraft:single",
       "resource": "watut:particles/idle"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/sign"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/book"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/enchanting_table"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/anvil"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/beacon"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/brewing_stand"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/dispenser"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/furnace"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/grindstone"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/hopper"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/horse"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/loom"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/villager"
+    },
+    {
+      "type": "minecraft:single",
+      "resource": "watut:particles/command_block"
     }
   ]
 }

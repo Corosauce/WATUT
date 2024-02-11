@@ -1,12 +1,7 @@
 package com.corosus.watut.loader.forge;
 
 import com.corosus.watut.ParticleRegistry;
-import com.corosus.watut.SpriteInfo;
 import com.corosus.watut.WatutMod;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.ChatScreen;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;

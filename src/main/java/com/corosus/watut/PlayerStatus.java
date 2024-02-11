@@ -4,28 +4,75 @@ import com.corosus.watut.math.Lerpables;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.nbt.CompoundTag;
 
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class PlayerStatus {
 
     public enum PlayerGuiState {
 
         NONE,
-        CHAT_OPEN,
-        CHAT_TYPING,
+        CHAT_SCREEN,
         INVENTORY,
         CRAFTING,
         ESCAPE,
+        EDIT_SIGN,
+        EDIT_BOOK,
+        CHEST,
+        ENCHANTING_TABLE,
+        ANVIL,
+        BEACON,
+        BREWING_STAND,
+        DISPENSER,
+        FURNACE,
+        GRINDSTONE,
+        HOPPER,
+        HORSE,
+        LOOM,
+        VILLAGER,
+        COMMAND_BLOCK,
         MISC;
 
         private static final Map<Integer, PlayerGuiState> lookup = new HashMap<>();
+        private static final List<PlayerGuiState> listPointingGuis = new ArrayList<>();
+        private static final List<PlayerGuiState> listTypingGuis = new ArrayList<>();
+        private static final List<PlayerGuiState> listSoundMakerGuis = new ArrayList<>();
 
         static {
             for (PlayerGuiState e : EnumSet.allOf(PlayerGuiState.class)) {
                 lookup.put(e.ordinal(), e);
+                listPointingGuis.add(e);
+                listSoundMakerGuis.add(e);
             }
+            listPointingGuis.remove(NONE);
+            listPointingGuis.remove(CHAT_SCREEN);
+            listPointingGuis.remove(EDIT_BOOK);
+            listPointingGuis.remove(EDIT_SIGN);
+            listPointingGuis.remove(COMMAND_BLOCK);
+
+            listTypingGuis.add(CHAT_SCREEN);
+            listTypingGuis.add(EDIT_BOOK);
+            listTypingGuis.add(EDIT_SIGN);
+            listTypingGuis.add(COMMAND_BLOCK);
+
+            listSoundMakerGuis.remove(NONE);
+            listSoundMakerGuis.remove(CHAT_SCREEN);
+            listSoundMakerGuis.remove(CHEST);
+        }
+
+        public static boolean isPointingGui(PlayerGuiState playerGuiState) {
+            return listPointingGuis.contains(playerGuiState);
+        }
+
+        public static boolean isTypingGui(PlayerGuiState playerGuiState) {
+            return listTypingGuis.contains(playerGuiState);
+        }
+
+        public static boolean canPreventIdleInGui(PlayerGuiState playerGuiState) {
+            return listPointingGuis.contains(playerGuiState);
+        }
+
+        public static boolean isSoundMakerGui(PlayerGuiState playerGuiState) {
+            return listSoundMakerGuis.contains(playerGuiState);
         }
 
         public static PlayerGuiState get(int intValue) {
@@ -33,8 +80,28 @@ public class PlayerStatus {
         }
     }
 
+    public enum PlayerChatState {
+
+        NONE,
+        CHAT_FOCUSED,
+        CHAT_TYPING;
+
+        private static final Map<Integer, PlayerChatState> lookup = new HashMap<>();
+
+        static {
+            for (PlayerChatState e : EnumSet.allOf(PlayerChatState.class)) {
+                lookup.put(e.ordinal(), e);
+            }
+        }
+
+        public static PlayerChatState get(int intValue) {
+            return lookup.get(intValue);
+        }
+    }
+
     //synced values
     private PlayerGuiState playerGuiState;
+    private PlayerChatState playerChatState;
     private float typingAmplifier = 1F;
     private float screenPosPercentX = 0;
     private float screenPosPercentY = 0;
@@ -268,5 +335,13 @@ public class PlayerStatus {
 
     public void setTicksToMarkPlayerIdleSyncedForClient(int ticksToMarkPlayerIdleSyncedForClient) {
         this.ticksToMarkPlayerIdleSyncedForClient = ticksToMarkPlayerIdleSyncedForClient;
+    }
+
+    public PlayerChatState getPlayerChatState() {
+        return playerChatState;
+    }
+
+    public void setPlayerChatState(PlayerChatState playerChatState) {
+        this.playerChatState = playerChatState;
     }
 }
