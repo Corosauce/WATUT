@@ -26,9 +26,14 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     public void receiveAny(Player player, CompoundTag data) {
         data.putString(WatutNetworking.NBTDataPlayerUUID, player.getUUID().toString());
 
-        if (data.contains(WatutNetworking.NBTDataPlayerStatus)) {
-            PlayerStatus.PlayerGuiState playerGuiState = PlayerStatus.PlayerGuiState.get(data.getInt(WatutNetworking.NBTDataPlayerStatus));
+        if (data.contains(WatutNetworking.NBTDataPlayerGuiStatus)) {
+            PlayerStatus.PlayerGuiState playerGuiState = PlayerStatus.PlayerGuiState.get(data.getInt(WatutNetworking.NBTDataPlayerGuiStatus));
             getStatus(player).setPlayerGuiState(playerGuiState);
+        }
+
+        if (data.contains(WatutNetworking.NBTDataPlayerChatStatus)) {
+            PlayerStatus.PlayerChatState state = PlayerStatus.PlayerChatState.get(data.getInt(WatutNetworking.NBTDataPlayerChatStatus));
+            getStatus(player).setPlayerChatState(state);
         }
 
         if (data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
@@ -47,7 +52,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         //update active snapshot with latest data
         getStatus(player).getNbtCache().merge(data);
 
-        if (data.contains(WatutNetworking.NBTDataPlayerStatus) || data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
+        if (data.contains(WatutNetworking.NBTDataPlayerGuiStatus) || data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
             WatutNetworking.instance().serverSendToClientAll(data);
         } else {
             WatutNetworking.instance().serverSendToClientNear(data, player.position(), nearbyPlayerDataSendDist, player.level());
@@ -83,7 +88,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         WatutMod.dbg("player logged in");
         if (player instanceof ServerPlayer) {
             for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
-                WatutMod.dbg("sending update all packet for " + entry.getKey().toString() + " to " + player.getDisplayName().getString() + " with status " + PlayerStatus.PlayerGuiState.get(entry.getValue().getNbtCache().getInt(WatutNetworking.NBTDataPlayerStatus)));
+                WatutMod.dbg("sending update all packet for " + entry.getKey().toString() + " to " + player.getDisplayName().getString() + " with status " + PlayerStatus.PlayerGuiState.get(entry.getValue().getNbtCache().getInt(WatutNetworking.NBTDataPlayerGuiStatus)));
                 WatutNetworking.instance().serverSendToClientPlayer(entry.getValue().getNbtCache(), player);
             }
         }

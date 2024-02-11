@@ -8,6 +8,10 @@ public class ParticleStaticLoD extends ParticleRotating {
     private final SpriteSetPlayer sprites;
 
     public ParticleStaticLoD(ClientLevel pLevel, double pX, double pY, double pZ, SpriteSetPlayer pSprites) {
+        this(pLevel, pX, pY, pZ, pSprites, 1F);
+    }
+
+    public ParticleStaticLoD(ClientLevel pLevel, double pX, double pY, double pZ, SpriteSetPlayer pSprites, float brightness) {
         super(pLevel, pX, pY, pZ);
         this.sprites = pSprites;
         this.lifetime = Integer.MAX_VALUE;
@@ -18,6 +22,7 @@ public class ParticleStaticLoD extends ParticleRotating {
         this.yd = 0;
         this.zd = 0;
         this.setParticleFromDistanceToCamera(0);
+        this.setColor(this.getColorRed() * brightness, this.getColorGreen() * brightness, this.getColorBlue() * brightness);
     }
 
     public void setSize(float pWidth, float pHeight) {

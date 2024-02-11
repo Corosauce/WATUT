@@ -56,6 +56,18 @@ public abstract class ParticleRotating extends TextureSheetParticle {
         }
     }
 
+    public float getColorRed() {
+        return rCol;
+    }
+
+    public float getColorGreen() {
+        return gCol;
+    }
+
+    public float getColorBlue() {
+        return bCol;
+    }
+
     public void keepAlive() {
         despawnCountdown = 40;
     }
