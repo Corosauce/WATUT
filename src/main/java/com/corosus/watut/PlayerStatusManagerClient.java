@@ -352,7 +352,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         typeRatePollCounter++;
         if (input.length() > 0) {
-            System.out.println(input + " - " + statusLocal.getTypingAmplifier());
+            //System.out.println(input + " - " + statusLocal.getTypingAmplifier());
             if (!input.startsWith("/")) {
                 if (!input.equals(statusLocal.getLastTypeString())) {
                     statusLocal.setLastTypeString(input);
