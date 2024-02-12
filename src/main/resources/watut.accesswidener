@@ -9,3 +9,4 @@ transitive-mutable field net/minecraft/client/particle/ParticleEngine RENDER_ORD
 accessible field net/minecraft/client/gui/screens/inventory/BookEditScreen pageEdit Lnet/minecraft/client/gui/font/TextFieldHelper;
 accessible field net/minecraft/client/gui/screens/inventory/AbstractSignEditScreen signField Lnet/minecraft/client/gui/font/TextFieldHelper;
 accessible field net/minecraft/client/gui/font/TextFieldHelper getMessageFn Ljava/util/function/Supplier;
+accessible field net/minecraft/client/gui/screens/inventory/AbstractCommandBlockEditScreen commandEdit Lnet/minecraft/client/gui/components/EditBox;
