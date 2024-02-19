@@ -7,88 +7,53 @@ import com.mojang.math.Axis;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.ParticleRenderType;
-import net.minecraft.client.particle.TextureSheetParticle;
-import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-public abstract class ParticleRotating extends TextureSheetParticle {
+public class ParticleDynamic extends ParticleRotating {
 
-    public boolean useCustomRotation = true;
-    public float prevRotationYaw;
-    public float rotationYaw;
-    public float prevRotationPitch;
-    public float rotationPitch;
-    public float prevRotationRoll;
-    public float rotationRoll;
-
-    //removes particle once hits 0, other things should reset this to keep it spawned
-    public int despawnCountdown = 40;
-
-
-    public static ParticleRenderType PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL = new ParticleRenderType() {
-        public void begin(BufferBuilder p_107455_, TextureManager p_107456_) {
-            RenderSystem.depthMask(true);
-            RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
-            //RenderSystem.bindTexture(ScreenCapturing.mainRenderTarget.getColorTextureId());
-            //RenderSystem._setShaderTexture(0, ScreenCapturing.mainRenderTarget.getColorTextureId());
-            RenderSystem.enableBlend();
-            RenderSystem.defaultBlendFunc();
-            RenderSystem.disableCull();
-            p_107455_.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
-        }
-
-        public void end(Tesselator p_107458_) {
-            p_107458_.end();
-            RenderSystem.enableCull();
-        }
-
-        public String toString() {
-            return "PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL";
-        }
-    };
-
-    @Override
-    public void tick() {
-        despawnCountdown--;
-        if (despawnCountdown <= 0) {
-            remove();
-        }
-    }
-
-    public float getColorRed() {
-        return rCol;
-    }
-
-    public float getColorGreen() {
-        return gCol;
-    }
-
-    public float getColorBlue() {
-        return bCol;
-    }
-
-    public void keepAlive() {
-        despawnCountdown = 40;
-    }
-
-    public ParticleRotating(ClientLevel pLevel, double pX, double pY, double pZ) {
-        super(pLevel, pX, pY, pZ);
-    }
-
-    public void setQuadSize(float size) {
-        this.quadSize = size;
-    }
-
-    public void setAlpha(float alpha) {
-        this.alpha = alpha;
-    }
+    public ParticleRenderType particleRenderType;
 
     public ParticleRenderType getRenderType() {
-        return PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL;
+        return particleRenderType;
+    }
+
+
+    public ParticleDynamic(ClientLevel pLevel, double pX, double pY, double pZ, ParticleRenderType particleRenderType) {
+        this(pLevel, pX, pY, pZ, particleRenderType, 1F);
+    }
+
+    public ParticleDynamic(ClientLevel pLevel, double pX, double pY, double pZ, ParticleRenderType particleRenderType, float brightness) {
+        super(pLevel, pX, pY, pZ);
+        this.particleRenderType = particleRenderType;
+        this.lifetime = Integer.MAX_VALUE;
+        this.gravity = 0.0F;
+        this.setSize(0.2F, 0.2F);
+        this.quadSize = 0.5F;
+        this.xd = 0;
+        this.yd = 0;
+        this.zd = 0;
+        this.setColor(this.getColorRed() * brightness, this.getColorGreen() * brightness, this.getColorBlue() * brightness);
+    }
+
+    public void setSize(float pWidth, float pHeight) {
+        super.setSize(pWidth, pHeight);
+    }
+
+    public void tick() {
+        super.tick();
+        this.xo = this.x;
+        this.yo = this.y;
+        this.zo = this.z;
+        if (this.age++ >= this.lifetime) {
+            this.remove();
+        } else {
+            this.move(this.xd, this.yd, this.zd);
+        }
     }
 
     public void render(VertexConsumer pBuffer, Camera pRenderInfo, float pPartialTicks) {
@@ -111,20 +76,32 @@ public abstract class ParticleRotating extends TextureSheetParticle {
             }
         }
 
-        Vector3f[] avector3f = new Vector3f[]{new Vector3f(-1.0F, -1.0F, 0.0F), new Vector3f(-1.0F, 1.0F, 0.0F), new Vector3f(1.0F, 1.0F, 0.0F), new Vector3f(1.0F, -1.0F, 0.0F)};
+        //Vector3f[] avector3f = new Vector3f[]{new Vector3f(-1.0F, -1.0F, 0.0F), new Vector3f(-1.0F, 1.0F, 0.0F), new Vector3f(1.0F, 1.0F, 0.0F), new Vector3f(1.0F, -1.0F, 0.0F)};
+        float aspectRatio = 1920F/1080F;
+        float height = 1F / aspectRatio;
+        Vector3f[] avector3f = new Vector3f[]{
+                new Vector3f(-1.0F, height, 0.0F),
+                new Vector3f(-1.0F, -height, 0.0F),
+                new Vector3f(1.0F, -height, 0.0F),
+                new Vector3f(1.0F, height, 0.0F)};
         float f3 = this.getQuadSize(pPartialTicks);
 
         for(int i = 0; i < 4; ++i) {
             Vector3f vector3f = avector3f[i];
             vector3f.rotate(quaternion);
-            vector3f.mul(f3);
+            vector3f.mul(f3 * 3F);
             vector3f.add(f, f1, f2);
         }
 
-        float u0 = this.getU0();
+        /*float u0 = this.getU0();
         float u1 = this.getU1();
         float v0 = this.getV0();
-        float v1 = this.getV1();
+        float v1 = this.getV1();*/
+
+        float u0 = 0;
+        float u1 = 1;
+        float v0 = 0;
+        float v1 = 1;
 
         int j = this.getLightColor(pPartialTicks);
         pBuffer.vertex(avector3f[0].x(), avector3f[0].y(), avector3f[0].z()).uv(u1, v1).color(this.rCol, this.gCol, this.bCol, this.alpha).uv2(j).endVertex();
@@ -133,9 +110,4 @@ public abstract class ParticleRotating extends TextureSheetParticle {
         pBuffer.vertex(avector3f[3].x(), avector3f[3].y(), avector3f[3].z()).uv(u0, v1).color(this.rCol, this.gCol, this.bCol, this.alpha).uv2(j).endVertex();
     }
 
-    public void setPosPrev(double pX, double pY, double pZ) {
-        this.xo = pX;
-        this.yo = pY;
-        this.zo = pZ;
-    }
 }

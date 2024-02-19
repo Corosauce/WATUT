@@ -1,5 +1,7 @@
 package com.corosus.watut;
 
+import com.corosus.watut.client.screen.RenderCall;
+import com.corosus.watut.client.screen.RenderCallType;
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.math.Lerpables;
 import com.corosus.watut.particle.*;
@@ -18,6 +20,8 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
@@ -26,10 +30,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class PlayerStatusManagerClient extends PlayerStatusManager {
 
@@ -55,6 +56,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     private boolean wasMousePressed = false;
     private int mousePressedCountdown = 0;
+
+
 
     public void tickGame() {
         steadyTickCounter++;
@@ -501,6 +504,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     if (PlayerStatus.PlayerGuiState.isTypingGui(this.getStatus(player).getPlayerGuiState())) {
                         if (this.getStatus(player).getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_FOCUSED) {
                             particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_idle.getSpriteSet());
+                            /*if (playerStatus.getScreenData().getParticleRenderType() != null) {
+                                particle = new ParticleDynamic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, playerStatus.getScreenData().getParticleRenderType(), 0.7F);
+                            }*/
                         } else if (this.getStatus(player).getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_TYPING) {
                             particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_typing.getSpriteSet());
                         }
@@ -511,68 +517,80 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     float brightness = 0.7F;
                     int subSizeX = 0;
                     int subSizeY = 0;
-                    if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.INVENTORY) {
-                        particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.inventory.getSpriteSet());
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CRAFTING) {
-                        particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.crafting.getSpriteSet());
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.ESCAPE) {
-                        particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.escape.getSpriteSet());
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHEST) {
-                        particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chest.getSpriteSet());
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.EDIT_BOOK) {
-                        particle = new ParticleStatic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.book.getSprite(), 0.7F);
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.EDIT_SIGN) {
-                        particle = new ParticleStatic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.sign.getSprite(), 0.7F);
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.ENCHANTING_TABLE) {
-                        sprite = ParticleRegistry.enchanting_table.getSprite();
-                        subSizeX = 176;
-                        subSizeY = 166;
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.ANVIL) {
-                        sprite = ParticleRegistry.anvil.getSprite();
-                        subSizeX = 176;
-                        subSizeY = 166;
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.BEACON) {
-                        sprite = ParticleRegistry.beacon.getSprite();
-                        subSizeX = 231;
-                        subSizeY = 219;
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.BREWING_STAND) {
-                        sprite = ParticleRegistry.brewing_stand.getSprite();
-                        subSizeX = 176;
-                        subSizeY = 166;
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.DISPENSER) {
-                        sprite = ParticleRegistry.dispenser.getSprite();
-                        subSizeX = 176;
-                        subSizeY = 166;
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.FURNACE) {
-                        sprite = ParticleRegistry.furnace.getSprite();
-                        subSizeX = 176;
-                        subSizeY = 166;
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.GRINDSTONE) {
-                        sprite = ParticleRegistry.grindstone.getSprite();
-                        subSizeX = 176;
-                        subSizeY = 166;
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.HOPPER) {
-                        sprite = ParticleRegistry.hopper.getSprite();
-                        subSizeX = 176;
-                        subSizeY = 134;
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.HORSE) {
-                        sprite = ParticleRegistry.horse.getSprite();
-                        subSizeX = 176;
-                        subSizeY = 166;
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.LOOM) {
-                        sprite = ParticleRegistry.loom.getSprite();
-                        subSizeX = 176;
-                        subSizeY = 166;
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.VILLAGER) {
-                        sprite = ParticleRegistry.villager.getSprite();
-                        subSizeX = 277;
-                        subSizeY = 167;
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.COMMAND_BLOCK) {
-                        sprite = ParticleRegistry.command_block.getSprite();
-                        subSizeX = 308;
-                        subSizeY = 213;
-                    } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.MISC && ConfigClient.showPlayerActiveGuiIfNotExactMatch) {
-                        particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chest.getSpriteSet());
+                    boolean newRender = true;
+                    if (newRender) {
+                        if (this.getStatus(player).getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && this.getStatus(player).getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
+                            if (playerStatus.getScreenData().getParticleRenderType() != null) {
+                                particle = new ParticleDynamic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, playerStatus.getScreenData().getParticleRenderType(), 0.7F);
+                            }
+                        }
+                    } else {
+                        if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.INVENTORY) {
+                            particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.inventory.getSpriteSet());
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CRAFTING) {
+                            particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.crafting.getSpriteSet());
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.ESCAPE) {
+                            particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.escape.getSpriteSet());
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHEST) {
+                            particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chest.getSpriteSet());
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.EDIT_BOOK) {
+                            //particle = new ParticleStatic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.book.getSprite(), 0.7F);
+                            if (playerStatus.getScreenData().getParticleRenderType() != null) {
+                                particle = new ParticleDynamic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, playerStatus.getScreenData().getParticleRenderType(), 0.7F);
+                            }
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.EDIT_SIGN) {
+                            particle = new ParticleStatic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.sign.getSprite(), 0.7F);
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.ENCHANTING_TABLE) {
+                            sprite = ParticleRegistry.enchanting_table.getSprite();
+                            subSizeX = 176;
+                            subSizeY = 166;
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.ANVIL) {
+                            sprite = ParticleRegistry.anvil.getSprite();
+                            subSizeX = 176;
+                            subSizeY = 166;
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.BEACON) {
+                            sprite = ParticleRegistry.beacon.getSprite();
+                            subSizeX = 231;
+                            subSizeY = 219;
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.BREWING_STAND) {
+                            sprite = ParticleRegistry.brewing_stand.getSprite();
+                            subSizeX = 176;
+                            subSizeY = 166;
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.DISPENSER) {
+                            sprite = ParticleRegistry.dispenser.getSprite();
+                            subSizeX = 176;
+                            subSizeY = 166;
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.FURNACE) {
+                            sprite = ParticleRegistry.furnace.getSprite();
+                            subSizeX = 176;
+                            subSizeY = 166;
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.GRINDSTONE) {
+                            sprite = ParticleRegistry.grindstone.getSprite();
+                            subSizeX = 176;
+                            subSizeY = 166;
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.HOPPER) {
+                            sprite = ParticleRegistry.hopper.getSprite();
+                            subSizeX = 176;
+                            subSizeY = 134;
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.HORSE) {
+                            sprite = ParticleRegistry.horse.getSprite();
+                            subSizeX = 176;
+                            subSizeY = 166;
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.LOOM) {
+                            sprite = ParticleRegistry.loom.getSprite();
+                            subSizeX = 176;
+                            subSizeY = 166;
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.VILLAGER) {
+                            sprite = ParticleRegistry.villager.getSprite();
+                            subSizeX = 277;
+                            subSizeY = 167;
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.COMMAND_BLOCK) {
+                            sprite = ParticleRegistry.command_block.getSprite();
+                            subSizeX = 308;
+                            subSizeY = 213;
+                        } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.MISC && ConfigClient.showPlayerActiveGuiIfNotExactMatch) {
+                            particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chest.getSpriteSet());
+                        }
                     }
 
                     if (sprite != null) {
@@ -641,6 +659,45 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         playerStatusPrev.setPlayerChatState(playerStatus.getPlayerChatState());
         if (playerStatusPrev.getTicksSinceLastAction() != playerStatus.getTicksSinceLastAction()) {
             playerStatusPrev.setTicksSinceLastAction(playerStatus.getTicksSinceLastAction());
+        }
+    }
+
+    public void hookStartScreenRender() {
+        PlayerStatus playerStatusLocal = getStatusLocal();
+
+        if (playerStatusLocal.getLastScreenCaptured() != playerStatusLocal.getPlayerGuiState() || (Minecraft.getInstance().level != null && Minecraft.getInstance().level.getGameTime() % 10 == 0)) {
+            playerStatusLocal.setLastScreenCaptured(playerStatusLocal.getPlayerGuiState());
+            if (playerStatusLocal.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && playerStatusLocal.getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
+                playerStatusLocal.getScreenData().startCapture();
+            }
+        }
+    }
+
+    public void hookStopScreenRender() {
+        PlayerStatus playerStatusLocal = getStatusLocal();
+        if (playerStatusLocal.getScreenData().isCapturing()) {
+            playerStatusLocal.getScreenData().stopCapture();
+
+            sendScreenRenderData(playerStatusLocal);
+        }
+    }
+
+    public void hookInnerBlit(ResourceLocation pAtlasLocation, int pX1, int pX2, int pY1, int pY2, int pBlitOffset, float pMinU, float pMaxU, float pMinV, float pMaxV) {
+        PlayerStatus playerStatusLocal = getStatusLocal();
+        if (playerStatusLocal.getScreenData().isCapturing()) {
+            RenderCall renderCall = new RenderCall(RenderCallType.INNER_BLIT);
+            renderCall.innerBlit(pAtlasLocation, pX1, pX2, pY1, pY2, pBlitOffset, pMinU, pMaxU, pMinV, pMaxV);
+            playerStatusLocal.getScreenData().addRenderCall(renderCall);
+        }
+
+    }
+
+    public void hookInnerBlit(ResourceLocation pAtlasLocation, int pX1, int pX2, int pY1, int pY2, int pBlitOffset, float pMinU, float pMaxU, float pMinV, float pMaxV, float pRed, float pGreen, float pBlue, float pAlpha) {
+        PlayerStatus playerStatusLocal = getStatusLocal();
+        if (playerStatusLocal.getScreenData().isCapturing()) {
+            RenderCall renderCall = new RenderCall(RenderCallType.INNER_BLIT2);
+            renderCall.innerBlit(pAtlasLocation, pX1, pX2, pY1, pY2, pBlitOffset, pMinU, pMaxU, pMinV, pMaxV, pRed, pGreen, pBlue, pAlpha);
+            playerStatusLocal.getScreenData().addRenderCall(renderCall);
         }
     }
 
@@ -935,6 +992,41 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         getStatusLocal().setPressing(pressed);
     }
 
+    public void sendScreenRenderData(PlayerStatus status) {
+        CompoundTag data = new CompoundTag();
+        CompoundTag nbtRenderCalls = new CompoundTag();
+
+        int renderCallIndex = 0;
+        for (RenderCall renderCall : status.getScreenData().getListRenderCalls()) {
+            CompoundTag nbtRenderCall = new CompoundTag();
+            CompoundTag nbtParams = new CompoundTag();
+            int paramIndex = 0;
+            for (Object object : renderCall.getListParams()) {
+                if (object instanceof ResourceLocation) {
+                    nbtParams.putString("param_" + paramIndex, ((ResourceLocation)object).toString());
+                } else if (object instanceof Integer) {
+                    nbtParams.putInt("param_" + paramIndex, (Integer) object);
+                } else if (object instanceof Float) {
+                    nbtParams.putFloat("param_" + paramIndex, (Float) object);
+                }
+                paramIndex++;
+            }
+            nbtRenderCall.put("params", nbtParams);
+            nbtRenderCall.putInt("renderCallType", renderCall.getRenderCallType().ordinal());
+
+            nbtRenderCalls.put("renderCall_" + renderCallIndex, nbtRenderCall);
+            renderCallIndex++;
+
+            System.out.println("client pack sent params: " + renderCall.getListParams());
+        }
+
+        data.put(WatutNetworking.NBTDataPlayerScreenRenderCalls, nbtRenderCalls);
+
+        System.out.println("send screen data");
+
+        WatutNetworking.instance().clientSendToServer(data);
+    }
+
     public void sendTyping(PlayerStatus status) {
         CompoundTag data = new CompoundTag();
         data.putFloat(WatutNetworking.NBTDataPlayerTypingAmp, status.getTypingAmplifier());
@@ -1020,6 +1112,45 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 WatutMod.dbg("New idle player state and new pose target set relating to idle state: " + status.isIdle() + " for " + uuid);
                 setPoseTarget(uuid, false);
             }
+        }
+
+        if (data.contains(WatutNetworking.NBTDataPlayerScreenRenderCalls)) {
+            status.getScreenData().getListRenderCalls().clear();
+            System.out.println("receiving screen data");
+            CompoundTag nbtRenderCalls = data.getCompound(WatutNetworking.NBTDataPlayerScreenRenderCalls);
+            int renderCallIndex = 0;
+            while (true) {
+                if (nbtRenderCalls.contains("renderCall_" + renderCallIndex)) {
+                    CompoundTag nbtRenderCall = nbtRenderCalls.getCompound("renderCall_" + renderCallIndex);
+                    RenderCallType renderCallType = RenderCallType.get(nbtRenderCall.getInt("renderCallType"));
+                    CompoundTag params = nbtRenderCall.getCompound("params");
+                    int paramIndex = 0;
+                    List<Object> listParams = new ArrayList<>();
+                    while (true) {
+                        if (params.contains("param_" + paramIndex)) {
+                            if (params.getTagType("param_" + paramIndex) == Tag.TAG_STRING) {
+                                listParams.add(new ResourceLocation(params.getString("param_" + paramIndex)));
+                            } else if (params.getTagType("param_" + paramIndex) == Tag.TAG_INT) {
+                                listParams.add(params.getInt("param_" + paramIndex));
+                            } else if (params.getTagType("param_" + paramIndex) == Tag.TAG_FLOAT) {
+                                listParams.add(params.getFloat("param_" + paramIndex));
+                            }
+                        } else {
+                            break;
+                        }
+                        paramIndex++;
+                    }
+                    RenderCall renderCall = new RenderCall(renderCallType);
+                    renderCall.getListParams().addAll(listParams);
+                    status.getScreenData().addRenderCall(renderCall);
+                    System.out.println("client pack received params: " + listParams.size());
+                } else {
+                    break;
+                }
+                renderCallIndex++;
+            }
+            status.getScreenData().markNeedsNewRender(true);
+            System.out.println("received screen data");
         }
     }
 

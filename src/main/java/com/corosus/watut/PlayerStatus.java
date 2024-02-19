@@ -1,7 +1,16 @@
 package com.corosus.watut;
 
+import com.corosus.watut.client.ScreenCapturing;
+import com.corosus.watut.client.screen.ScreenData;
 import com.corosus.watut.math.Lerpables;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.particle.Particle;
+import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.nbt.CompoundTag;
 
 import java.util.*;
@@ -128,12 +137,10 @@ public class PlayerStatus {
     //for partial ticks
     public float lerpTicksPrev = 0;
     public float lerpTicksMax = 5;
-
     public float lastPartialTick = 0;
 
     public float yRotHeadWhileOverriding = 0;
     public float xRotHeadWhileOverriding = 0;
-
     public float yRotHeadBeforeOverriding = 0;
     public float xRotHeadBeforeOverriding = 0;
 
@@ -141,8 +148,12 @@ public class PlayerStatus {
 
     private CompoundTag nbtCache = new CompoundTag();
 
+    private ScreenData screenData = new ScreenData();
+    private PlayerGuiState lastScreenCaptured = PlayerGuiState.NONE;
+
     public PlayerStatus(PlayerGuiState playerGuiState) {
         this.playerGuiState = playerGuiState;
+        this.screenData.init();
     }
 
     public void tick() {
@@ -343,5 +354,21 @@ public class PlayerStatus {
 
     public void setPlayerChatState(PlayerChatState playerChatState) {
         this.playerChatState = playerChatState;
+    }
+
+    public ScreenData getScreenData() {
+        return screenData;
+    }
+
+    public void setScreenData(ScreenData screenData) {
+        this.screenData = screenData;
+    }
+
+    public PlayerGuiState getLastScreenCaptured() {
+        return lastScreenCaptured;
+    }
+
+    public void setLastScreenCaptured(PlayerGuiState lastScreenCaptured) {
+        this.lastScreenCaptured = lastScreenCaptured;
     }
 }

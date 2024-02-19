@@ -135,6 +135,9 @@ repositories {
     flatDir {
         dir 'libs'
     }
+    maven {
+        url "https://cursemaven.com"
+    }
 }
 
 apply plugin: 'org.spongepowered.mixin'
@@ -153,6 +156,8 @@ dependencies {
 
 	//Uncomment if using mixins (Mixin edits are found in 3 places)
 	annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+    implementation fg.deobf("curse.maven:jei-238222:5101366")
+    implementation fg.deobf("curse.maven:farmers-delight-398521:5051242")
 
     implementation fg.deobf("com.corosus.coroutil:coroutil-forge:${project.minecraft_version}-${project.coroutil_version}")
 

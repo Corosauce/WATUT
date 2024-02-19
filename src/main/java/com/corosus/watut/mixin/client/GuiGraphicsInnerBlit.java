@@ -1,10 +1,7 @@
 package com.corosus.watut.mixin.client;
 
-import com.corosus.watut.ParticleRegistry;
-import com.corosus.watut.client.ScreenCapturing;
+import com.corosus.watut.WatutMod;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.texture.SpriteLoader;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -15,12 +12,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class GuiGraphicsInnerBlit {
 
     @Inject(method = "innerBlit(Lnet/minecraft/resources/ResourceLocation;IIIIIFFFF)V", at = @At("TAIL"))
-    private void innerBlit(ResourceLocation p_283461_, int p_281399_, int p_283222_, int p_283615_, int p_283430_, int p_281729_, float p_283247_, float p_282598_, float p_282883_, float p_283017_, CallbackInfo ci) {
-        ScreenCapturing.innerBlit(p_283461_, p_281399_, p_283222_, p_283615_, p_283430_, p_281729_, p_283247_, p_282598_, p_282883_, p_283017_);
+    private void innerBlit(ResourceLocation pAtlasLocation, int pX1, int pX2, int pY1, int pY2, int pBlitOffset, float pMinU, float pMaxU, float pMinV, float pMaxV, CallbackInfo ci) {
+        //ScreenCapturing.innerBlit(pAtlasLocation, pX1, pX2, pY1, pY2, pBlitOffset, pMinU, pMaxU, pMinV, pMaxV);
+        WatutMod.getPlayerStatusManagerClient().hookInnerBlit(pAtlasLocation, pX1, pX2, pY1, pY2, pBlitOffset, pMinU, pMaxU, pMinV, pMaxV);
     }
 
     @Inject(method = "innerBlit(Lnet/minecraft/resources/ResourceLocation;IIIIIFFFFFFFF)V", at = @At("TAIL"))
-    private void innerBlit(ResourceLocation p_283461_, int p_281399_, int p_283222_, int p_283615_, int p_283430_, int p_281729_, float p_283247_, float p_282598_, float p_282883_, float p_283017_, float p_282800_, float p_282850_, float p_282375_, float p_282754_, CallbackInfo ci) {
-        ScreenCapturing.innerBlit(p_283461_, p_281399_, p_283222_, p_283615_, p_283430_, p_281729_, p_283247_, p_282598_, p_282883_, p_283017_);
+    private void innerBlit(ResourceLocation pAtlasLocation, int pX1, int pX2, int pY1, int pY2, int pBlitOffset, float pMinU, float pMaxU, float pMinV, float pMaxV, float pRed, float pGreen, float pBlue, float pAlpha, CallbackInfo ci) {
+        //ScreenCapturing.innerBlit(pAtlasLocation, pX1, pX2, pY1, pY2, pBlitOffset, pMinU, pMaxU, pMinV, pMaxV, pRed, pGreen, pBlue, pAlpha);
+        WatutMod.getPlayerStatusManagerClient().hookInnerBlit(pAtlasLocation, pX1, pX2, pY1, pY2, pBlitOffset, pMinU, pMaxU, pMinV, pMaxV, pRed, pGreen, pBlue, pAlpha);
     }
 }

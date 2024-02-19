@@ -3,8 +3,10 @@ package com.corosus.watut.client;
 
 import com.mojang.blaze3d.pipeline.MainTarget;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.client.event.ScreenEvent;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
 
@@ -49,7 +51,14 @@ public class ScreenCapturing {
         System.out.println("pX1: " + pX1 + ", pX2: " + pX2 + ", pY1: " + pY1 + ", pY2: " + pY2 + ", pBlitOffset: " + pBlitOffset + ", pMinU: " + pMinU + ", pMaxU: " + pMaxU + ", pMinV: " + pMinV + ", pMaxV: " + pMaxV);
     }
 
-    /*public static void postScreenRenderHook(ScreenEvent.Render.Post event) {
+    public static void checkSetup() {
+        if (needsInit) {
+            needsInit = false;
+            setup();
+        }
+    }
+
+    public static void postScreenRenderHook(ScreenEvent.Render.Post event) {
         System.out.println("RENDER STACK END");
         boolean doit = false;
         if (doit) {
@@ -62,10 +71,11 @@ public class ScreenCapturing {
             getPixels();
             unbind();
         }
-    }*/
+    }
 
     public static void bind() {
-        GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, mainRenderTarget.frameBufferId);
+        //GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, mainRenderTarget.frameBufferId);
+        mainRenderTarget.bindWrite(true);
         //frameBufferObject.Begin(width, height);
     }
 
@@ -80,8 +90,17 @@ public class ScreenCapturing {
     }*/
 
     public static void unbind() {
-        GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, 0);
+        //GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, 0);
+        mainRenderTarget.unbindWrite();
         //frameBufferObject.End();
+    }
+
+    public static void renderFrameBuffer() {
+        /*GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainRenderTarget.frameBufferId);
+        GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, 0);
+        GL30.glBlitFramebuffer(0, 0, mainRenderTarget.width, mainRenderTarget.height, 0, 0, mainRenderTarget.width, mainRenderTarget.height,
+                GL30.GL_COLOR_BUFFER_BIT, GL30.GL_NEAREST);*/
+        //mainRenderTarget.blitToScreen(Minecraft.getInstance().getWindow().getWidth(), Minecraft.getInstance().getWindow().getHeight());
     }
 
     public static void getPixels() {
@@ -93,8 +112,11 @@ public class ScreenCapturing {
         int colorIndex = 0;
         String str = "";
         String strAll = "";
+
+        int cutoffTest = 100;
+
         for (int i = 0; i < capacity; i++) {
-            if (i < 100000) {
+            if (i < cutoffTest) {
                 byte val = byteBuffer.get();
                 str += val + ",";
                 if ((i + 1) % 3 == 0) {
@@ -109,6 +131,8 @@ public class ScreenCapturing {
                 //System.out.println(val);
             }
         }
+
+        System.out.println(strAll);
 
         int what = 0;
 
