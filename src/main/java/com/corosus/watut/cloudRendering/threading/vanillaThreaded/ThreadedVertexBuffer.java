@@ -85,9 +85,9 @@ public class ThreadedVertexBuffer implements AutoCloseable {
             //GlStateManager._glBindBuffer(34962, this.vertexBufferId);
          }
 
-         CULog.log("a");
+         //CULog.log("a");
          //RenderSystem.glBufferData(34962, p_231220_, this.usage.id);
-         CULog.log("b");
+         //CULog.log("b");
       }
 
       return p_231219_.format();
@@ -106,7 +106,9 @@ public class ThreadedVertexBuffer implements AutoCloseable {
    public void draw() {
       //RenderSystem.drawElements(this.mode.asGLMode, this.indexCount, this.getIndexType().asGLType);
       //switching to this broke the visual of the render, lots of triangles missing / misplaced
+      long time = System.currentTimeMillis();
       GL33.glDrawArrays(this.mode.asGLMode, 0, this.vertexCount);
+      //CULog.log("render time " + (time - System.currentTimeMillis()));
    }
 
    public void drawWithShader(Matrix4f p_254480_, Matrix4f p_254555_, ShaderInstance p_253993_) {

@@ -1,6 +1,7 @@
 package com.corosus.watut.cloudRendering.threading.vanillaThreaded;
 
 import com.google.common.collect.ImmutableList;
+import com.mojang.blaze3d.platform.MemoryTracker;
 import com.mojang.blaze3d.vertex.*;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.IntConsumer;
@@ -18,6 +19,10 @@ import org.slf4j.Logger;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
+
+import static org.lwjgl.opengl.ARBBufferStorage.GL_MAP_COHERENT_BIT;
+import static org.lwjgl.opengl.ARBBufferStorage.GL_MAP_PERSISTENT_BIT;
+import static org.lwjgl.opengl.ARBMapBufferRange.GL_MAP_WRITE_BIT;
 
 @OnlyIn(Dist.CLIENT)
 public class ThreadedBufferBuilderPersistentStorage extends DefaultedVertexConsumer implements BufferVertexConsumer {
@@ -48,9 +53,10 @@ public class ThreadedBufferBuilderPersistentStorage extends DefaultedVertexConsu
       //this.buffer = MemoryTracker.create(p_85664_ * 6);
       //this.bufferInternal = BufferUtils.createByteBuffer(p_85664_ * 6);
       //this.buffer = BufferUtils.createByteBuffer(p_85664_ * 6);
-      ByteBuffer buffer = BufferUtils.createByteBuffer(p_85664_ * 6);
-      ARBBufferStorage.glBufferStorage(GL33.GL_ARRAY_BUFFER, buffer, GL33.GL_MAP_WRITE_BIT | ARBBufferStorage.GL_MAP_PERSISTENT_BIT | ARBBufferStorage.GL_MAP_COHERENT_BIT);
-      this.buffer = GL33.glMapBufferRange(GL33.GL_ARRAY_BUFFER, 0, p_85664_ * 6, GL33.GL_MAP_WRITE_BIT | ARBBufferStorage.GL_MAP_PERSISTENT_BIT | GL33.GL_MAP_UNSYNCHRONIZED_BIT | ARBBufferStorage.GL_MAP_COHERENT_BIT);
+      //ByteBuffer buffer = BufferUtils.createByteBuffer(p_85664_ * 6);
+      ByteBuffer buffer = MemoryTracker.create(p_85664_ * 6);
+      ARBBufferStorage.glBufferStorage(GL33.GL_ARRAY_BUFFER, buffer, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+      this.buffer = GL33.glMapBufferRange(GL33.GL_ARRAY_BUFFER, 0, p_85664_ * 6, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
    }
 
    private void ensureVertexCapacity() {
@@ -59,14 +65,14 @@ public class ThreadedBufferBuilderPersistentStorage extends DefaultedVertexConsu
 
    private void ensureCapacity(int p_85723_) {
       if (this.nextElementByte + p_85723_ > this.buffer.capacity()) {
-         System.out.println((this.nextElementByte + p_85723_) + " vs cur " + this.buffer.capacity());
-         /*int i = this.buffer.capacity();
+         //System.out.println((this.nextElementByte + p_85723_) + " vs cur " + this.buffer.capacity());
+         int i = this.buffer.capacity();
          int j = i + roundUp(p_85723_);
          LOGGER.debug("Needed to grow BufferBuilder buffer: Old size {} bytes, new size {} bytes.", i, j);
          LOGGER.debug("??? {}", p_85723_);
          ByteBuffer bytebuffer = MemoryTracker.resize(this.buffer, j);
          bytebuffer.rewind();
-         this.buffer = bytebuffer;*/
+         this.buffer = bytebuffer;
       }
    }
 
