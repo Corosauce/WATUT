@@ -53,10 +53,13 @@ public class ThreadedBufferBuilderPersistentStorage extends DefaultedVertexConsu
       //this.buffer = MemoryTracker.create(p_85664_ * 6);
       //this.bufferInternal = BufferUtils.createByteBuffer(p_85664_ * 6);
       //this.buffer = BufferUtils.createByteBuffer(p_85664_ * 6);
-      //ByteBuffer buffer = BufferUtils.createByteBuffer(p_85664_ * 6);
-      ByteBuffer buffer = MemoryTracker.create(p_85664_ * 6);
-      ARBBufferStorage.glBufferStorage(GL33.GL_ARRAY_BUFFER, buffer, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
-      this.buffer = GL33.glMapBufferRange(GL33.GL_ARRAY_BUFFER, 0, p_85664_ * 6, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+      ByteBuffer buffer = BufferUtils.createByteBuffer(p_85664_ * 6);
+      //ByteBuffer buffer = MemoryTracker.create(p_85664_ * 6);
+      /*ARBBufferStorage.glBufferStorage(GL33.GL_ARRAY_BUFFER, buffer, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+      this.buffer = GL33.glMapBufferRange(GL33.GL_ARRAY_BUFFER, 0, p_85664_ * 6, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);*/
+
+      ARBBufferStorage.glBufferStorage(GL33.GL_ARRAY_BUFFER, buffer, GL33.GL_MAP_WRITE_BIT | ARBBufferStorage.GL_MAP_PERSISTENT_BIT);
+      this.buffer = GL33.glMapBufferRange(GL33.GL_ARRAY_BUFFER, 0, p_85664_ * 6, GL33.GL_MAP_WRITE_BIT | ARBBufferStorage.GL_MAP_PERSISTENT_BIT);
    }
 
    private void ensureVertexCapacity() {

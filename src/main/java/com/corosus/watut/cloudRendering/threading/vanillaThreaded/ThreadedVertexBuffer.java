@@ -109,6 +109,7 @@ public class ThreadedVertexBuffer implements AutoCloseable {
       long time = System.currentTimeMillis();
       GL33.glDrawArrays(this.mode.asGLMode, 0, this.vertexCount);
       //CULog.log("render time " + (time - System.currentTimeMillis()));
+      CULog.log("this.vertexCount " + this.vertexCount);
    }
 
    public void drawWithShader(Matrix4f p_254480_, Matrix4f p_254555_, ShaderInstance p_253993_) {
