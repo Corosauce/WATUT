@@ -1,6 +1,7 @@
 package com.corosus.watut;
 
 import com.corosus.coroutil.util.CULog;
+import com.corosus.watut.cloudRendering.test.BufferDataExample;
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.math.Lerpables;
 import com.corosus.watut.particle.*;
@@ -393,6 +394,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         return false;
     }
 
+    public boolean testInit = false;
+    public BufferDataExample bufferDataExample = new BufferDataExample();
+
     public void onGuiRender() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen instanceof ChatScreen && mc.getConnection() != null && ConfigClient.screenTypingVisible) {
@@ -402,6 +406,14 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             guigraphics.drawString(mc.font, WatutMod.getPlayerStatusManagerClient().getTypingPlayers(), 2 + ConfigClient.screenTypingRelativePosition_X, height - 50 + ConfigClient.screenTypingRelativePosition_Y, 16777215);
             guigraphics.flush();
         }
+
+
+
+        if (!testInit) {
+            testInit = true;
+            bufferDataExample.init();
+        }
+        bufferDataExample.loop();
     }
 
     public String getTypingPlayers() {

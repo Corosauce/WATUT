@@ -3,6 +3,7 @@ package com.corosus.watut.cloudRendering;
 import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.ParticleRegistry;
 import com.corosus.watut.WatutMod;
+import com.corosus.watut.cloudRendering.test.BufferDataExample;
 import com.corosus.watut.cloudRendering.threading.ThreadedCloudBuilder;
 import com.corosus.watut.cloudRendering.threading.vanillaThreaded.ThreadedBufferBuilderPersistentStorage;
 import com.corosus.watut.cloudRendering.threading.vanillaThreaded.ThreadedVertexBuffer;
@@ -203,7 +204,7 @@ public class CloudRenderHandler {
 
         //p_254145_.translate(((timeShort + p_254364_)) * 0.03F, 0, 0);
 
-        boolean renderClouds = true;
+        boolean renderClouds = false;
 
         if (renderClouds) {
             if (threadedCloudBuilder.isMultiBufferMode()) {
