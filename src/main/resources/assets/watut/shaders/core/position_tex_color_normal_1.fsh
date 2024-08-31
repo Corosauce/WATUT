@@ -144,6 +144,11 @@ void main() {
     float ditherValue = ditherMatrix[pos.y][pos.x];
     float ditherValueInv = ditherMatrixInverted[pos.y][pos.x];
 
+    //a bit of sky blue
+    //color = mix(color, vec4(0.5, 0.65, 1, 1), 0.4);
+    //mix in some of the fog, for sunset
+    //color = mix(color, FogColor, 0.3);
+
     //fragColor = color;//linear_fog(color, vertexDistance, FogStart, FogEnd, FogColor);
     //fragColor = linear_fog(color, vertexDistance, 50, 512, FogColor);
     // Apply dithering based on the transparency level

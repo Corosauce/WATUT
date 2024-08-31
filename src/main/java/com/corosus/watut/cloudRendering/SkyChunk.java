@@ -254,6 +254,7 @@ public class SkyChunk {
         if (x < 0 || x >= SkyChunk.size || y < 0 || y >= SkyChunk.size || z < 0 || z >= SkyChunk.size) {
             CULog.err("x y z used outside of SkyChunk range!!! " + x + " " + y + " " + z);
         }
+        markDirty();
         long hash = BlockPos.asLong(x, y, z);
         if (mainThread) {
             if (!lookupPointsMainThread.containsKey(hash)) {
@@ -274,7 +275,6 @@ public class SkyChunk {
                 }
             }
         }
-        markDirty();
         return hash;
     }
 

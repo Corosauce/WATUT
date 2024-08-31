@@ -107,8 +107,9 @@ public class CloudRenderHandler {
         }
         //threadedCloudBuilder.setScale(1);
         threadedCloudBuilder.setCloudsY(256);
-        skyChunkRenderRadius = Minecraft.getInstance().options.renderDistance().get() / 4;
-        skyChunkRenderRadius = Math.max(512 / (threadedCloudBuilder.getScale() * SkyChunk.size), 1) + 1;
+        //skyChunkRenderRadius = Minecraft.getInstance().options.renderDistance().get() / 4;
+        //skyChunkRenderRadius = Math.max(512 / (threadedCloudBuilder.getScale() * SkyChunk.size), 1) + 1;
+        skyChunkRenderRadius = Math.max(768 / (threadedCloudBuilder.getScale() * SkyChunk.size), 1) + 1;
         //skyChunkRenderRadius = 1;
 
         if (threadedCloudBuilder.getSyncState() == ThreadedCloudBuilder.SyncState.IDLE) {
@@ -217,7 +218,8 @@ public class CloudRenderHandler {
                 int scale = threadedCloudBuilder.getScale();
                 BlockPos pos = skyChunk.getWorldPos().multiply(scale);
                 AABB aabb = new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + (SkyChunk.size * scale), pos.getY() + (SkyChunk.size * scale), pos.getZ() + (SkyChunk.size * scale));
-                if (frustum.isVisible(aabb)) {
+                //TODO: fix buggy frustum check, probably my AABB is bad
+                if (frustum.isVisible(aabb) || true) {
                     renderCount++;
                     Vec3 vecCamVBO = skyChunk.getCameraPosForRender();
                     WatutMod.cloudShader.VBO_RENDER_POS.set(new Vector3f((float)(vecCamVBO.x - vecCam.x), (float) (vecCamVBO.y - vecCam.y), (float) (vecCamVBO.z - vecCam.z)));

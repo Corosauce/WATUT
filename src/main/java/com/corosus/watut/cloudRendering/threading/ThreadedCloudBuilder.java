@@ -209,6 +209,10 @@ public class ThreadedCloudBuilder {
         for (Iterator<Map.Entry<Long, SkyChunk>> it = SkyChunkManager.instance().getSkyChunks().entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<Long, SkyChunk> entry = it.next();
             SkyChunk skyChunk = entry.getValue();
+
+            //until we find a nice way to clean up chunks that were unused, just flag everything for new data which will do this for us
+            skyChunk.markDirty();
+
             if (skyChunk.isWaitingToUploadData() || !skyChunk.isDirty()) continue;
 
             Vec3 vecCam = Minecraft.getInstance().cameraEntity.position();
@@ -341,13 +345,16 @@ public class ThreadedCloudBuilder {
                     int indexY = posY + y;
                     int indexZ = worldPosZ + z;
 
+                    float distFromCenterY = Vector3f.distance(0, sizeY/2, 0, 0, y, 0);
+                    float vecY = distFromCenterY / (sizeY);
+
                     //double scaleP = 10;
                     double scaleP = 2 * scale;
                     //double scaleP = 10 / (scale / 2);
                     double noiseVal = perlinNoise.getValue(((indexX) * scaleP) + time, ((indexY) * scaleP) + time,((indexZ) * scaleP) + time)/* + 0.2F*/;
 
-                    float noiseThreshAdj = (float) (0.3F/* + (Math.sin(time * 0.1F) * 0.1F)*/);
-                    if (Math.abs(noiseVal) > 0.0 + noiseThreshAdj) {
+                    float noiseThreshAdj = (float) (vecY + (Math.sin(time * 0.2F) * 0.4F) + 0.1F);
+                    if (Math.abs(noiseVal) > noiseThreshAdj) {
                         //skyChunk.addPoint(false, x, y + offsetY, z);
                         SkyChunkManager.instance().addPoint(false, indexX, indexY, indexZ);
                     }
