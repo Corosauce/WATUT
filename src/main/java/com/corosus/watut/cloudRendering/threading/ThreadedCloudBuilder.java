@@ -155,7 +155,7 @@ public class ThreadedCloudBuilder {
     }
 
     public boolean tickThreaded() {
-        //if (true) return false;
+        if (true) return false;
         if (Minecraft.getInstance().level == null || Minecraft.getInstance().cameraEntity == null) {
             return false;
         }

@@ -76,7 +76,7 @@ public class CloudRenderHandler {
     }
 
     public void renderClouds(PoseStack p_254145_, Matrix4f p_254537_, float p_254364_, double camX, double camY, double camZ) {
-        //if (true) return;
+        if (true) return;
         if (WatutMod.cloudShader == null) return;
         if (getLevel().effects().renderClouds(getLevel(), getTicks(), p_254364_, p_254145_, camX, camY, camZ, p_254537_))
             return;
