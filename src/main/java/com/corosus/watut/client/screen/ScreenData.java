@@ -1,5 +1,6 @@
 package com.corosus.watut.client.screen;
 
+import com.corosus.watut.config.JSONLoader;
 import com.mojang.blaze3d.pipeline.MainTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -21,6 +22,8 @@ public class ScreenData {
     private MainTarget mainRenderTarget;
 
     private ParticleRenderType particleRenderType;
+
+    private String screenClass = "";
 
     public int width = 1920;
     public int height = 1080;
@@ -87,6 +90,10 @@ public class ScreenData {
         listRenderCalls.clear();
         isCapturing = true;
         //System.out.println("capture started");
+
+        if (Minecraft.getInstance().screen != null) {
+            screenClass = Minecraft.getInstance().screen.getClass().getCanonicalName();
+        }
     }
 
     public void stopCapture() {
@@ -132,5 +139,13 @@ public class ScreenData {
 
     public void setParticleRenderType(ParticleRenderType particleRenderType) {
         this.particleRenderType = particleRenderType;
+    }
+
+    public String getScreenClass() {
+        return screenClass;
+    }
+
+    public void setScreenClass(String screenClass) {
+        this.screenClass = screenClass;
     }
 }

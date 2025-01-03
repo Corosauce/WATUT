@@ -3,6 +3,7 @@ package com.corosus.watut;
 import com.corosus.modconfig.CoroConfigRegistry;
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigCommon;
+import com.corosus.watut.config.JSONLoader;
 import net.minecraft.server.players.PlayerList;
 
 public abstract class WatutMod
@@ -34,6 +35,10 @@ public abstract class WatutMod
         instance = this;
         CoroConfigRegistry.instance().addConfigFile(MODID, new ConfigCommon());
         CoroConfigRegistry.instance().addConfigFile(MODID, new ConfigClient());
+    }
+
+    public void loadConfigs() {
+        JSONLoader.getInstance().loadFiles();
     }
 
     public abstract PlayerList getPlayerList();

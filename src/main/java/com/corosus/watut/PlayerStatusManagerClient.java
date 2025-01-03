@@ -1,8 +1,11 @@
 package com.corosus.watut;
 
+import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.client.screen.RenderCall;
 import com.corosus.watut.client.screen.RenderCallType;
 import com.corosus.watut.config.ConfigClient;
+import com.corosus.watut.config.JSONLoader;
+import com.corosus.watut.config.JsonObjects.ScreenRule;
 import com.corosus.watut.math.Lerpables;
 import com.corosus.watut.particle.*;
 import com.ibm.icu.impl.Pair;
@@ -665,9 +668,49 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     public void hookStartScreenRender() {
         PlayerStatus playerStatusLocal = getStatusLocal();
 
-        if (playerStatusLocal.getLastScreenCaptured() != playerStatusLocal.getPlayerGuiState() || (Minecraft.getInstance().level != null && Minecraft.getInstance().level.getGameTime() % 10 == 0)) {
+        boolean shouldCapture = false;
+
+        ScreenRule screenRule = null;
+        String screenName = "";
+
+        if (Minecraft.getInstance().screen != null) {
+            screenName = Minecraft.getInstance().screen.getClass().getCanonicalName();
+            screenRule = JSONLoader.getInstance().getAllGuiOverrideConfigs().getScreenRuleByClass(screenName);
+        }
+
+        if (playerStatusLocal.getLastScreenCaptured() != playerStatusLocal.getPlayerGuiState()) {
+            if (screenRule != null) {
+                if (screenRule.getRenderType().equals(ScreenRule.RenderTypes.SINGLE_TEXTURE) || screenRule.getRenderType().equals(ScreenRule.RenderTypes.BIGGEST_TEXTURE)) {
+
+                }
+            }
+
+            //TODO: For now always capture, so the receiving end updates its dynamic texture, this might be fine long term
+            shouldCapture = true;
+        }
+
+        //TODO: needs to avoid endlessly updating if player is afk or something similar
+        if (screenRule != null && (Minecraft.getInstance().level != null && Minecraft.getInstance().level.getGameTime() % 10 == 0)) {
+            if (screenRule.getRenderType().equals(ScreenRule.RenderTypes.ALL_TEXTURES)) {
+                shouldCapture = true;
+            }
+        }
+
+        //decide if we need to actually start a capture
+        //if (playerStatusLocal.getLastScreenCaptured() != playerStatusLocal.getPlayerGuiState() || (Minecraft.getInstance().level != null && Minecraft.getInstance().level.getGameTime() % 10 == 0)) {
+        if (shouldCapture) {
+
             playerStatusLocal.setLastScreenCaptured(playerStatusLocal.getPlayerGuiState());
             if (playerStatusLocal.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && playerStatusLocal.getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
+
+                if (screenRule != null) {
+                    if (!screenRule.getRenderType().equals(ScreenRule.RenderTypes.ALL_TEXTURES)) {
+                        CULog.dbg("found rule for screen class: " + screenName);
+                    }
+                } else {
+                    CULog.dbg("no found rule for screen class: " + screenName);
+                }
+
                 playerStatusLocal.getScreenData().startCapture();
             }
         }
@@ -1023,6 +1066,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
 
         data.put(WatutNetworking.NBTDataPlayerScreenRenderCalls, nbtRenderCalls);
+        data.putString(WatutNetworking.NBTDataPlayerScreenClass, status.getScreenData().getScreenClass());
 
         //System.out.println("send screen data");
 
@@ -1118,7 +1162,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         if (data.contains(WatutNetworking.NBTDataPlayerScreenRenderCalls)) {
             status.getScreenData().getListRenderCalls().clear();
-            System.out.println("receiving screen data");
+            //System.out.println("receiving screen data");
             CompoundTag nbtRenderCalls = data.getCompound(WatutNetworking.NBTDataPlayerScreenRenderCalls);
             int renderCallIndex = 0;
             while (true) {
@@ -1151,6 +1195,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 }
                 renderCallIndex++;
             }
+
+            status.getScreenData().setScreenClass(data.getString(WatutNetworking.NBTDataPlayerScreenClass));
+
             status.getScreenData().markNeedsNewRender(true);
             //System.out.println("received screen data");
         }

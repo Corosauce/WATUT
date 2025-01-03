@@ -1,0 +1,30 @@
+{
+  "screen_rules": [
+    {
+      "screen_class": "vectorwing.farmersdelight.client.gui.CookingPotScreen",
+      "render_type": "biggest_texture"
+    },
+    {
+      "screen_class": "vectorwing.farmersdelight.client.gui.CookingPotScreen2",
+      "render_type": "single_texture",
+      "texture": "farmersdelight:textures/gui/cooking_pot.png",
+      "pos": [
+        0,
+        0
+      ],
+      //most of the time its just 0 0, so very optional
+      "size": [
+        256,
+        256
+      ]
+      //often needed unless the texture is ONLY the part you need
+    },
+    {
+      "screen_class": "asdasdasd",
+      "render_type": "single_texture",
+      "texture": "2.png",
+      "pos": [ 0, 0 ], //most of the time its just 0 0, so very optional
+      "size": [ 256, 256 ] //often needed unless the texture is ONLY the part you need
+    }
+  ]
+}

@@ -50,7 +50,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         }
 
         if (data.contains(WatutNetworking.NBTDataPlayerScreenRenderCalls)) {
-            System.out.println("server receive screen data");
+            //System.out.println("server receive screen data");
         }
 
         //update active snapshot with latest data

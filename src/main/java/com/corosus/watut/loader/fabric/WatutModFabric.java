@@ -15,6 +15,7 @@ public class WatutModFabric extends WatutMod implements ModInitializer {
 	public WatutModFabric() {
 		super();
 		new WatutNetworkingFabric();
+		loadConfigs();
 	}
 
 	@Override
