@@ -8,7 +8,11 @@ public enum RenderCallType {
     INNER_BLIT,
     INNER_BLIT2,
     INNER_BLIT_BLUR,
-    INNER_BLIT_BLUR2;
+    INNER_BLIT_BLUR2,
+    POSE_TRANSLATE_F,
+    POSE_TRANSLATE_D,
+    POSE_PUSH,
+    POSE_POP;
 
     private static final Map<Integer, RenderCallType> lookup = new HashMap<>();
 

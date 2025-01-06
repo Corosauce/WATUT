@@ -1,5 +1,6 @@
 package com.corosus.watut.client.screen;
 
+import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.config.JSONLoader;
 import com.mojang.blaze3d.pipeline.MainTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -16,7 +17,7 @@ import java.util.List;
 
 public class ScreenData {
 
-    private boolean isCapturing = false;
+    //private boolean isCapturing = false;
     private List<RenderCall> listRenderCalls = new ArrayList<>();
 
     private String screenClass = "";
@@ -26,18 +27,20 @@ public class ScreenData {
 
     }
 
-    public void startCapture() {
+    public synchronized void startCapture() {
         listRenderCalls.clear();
-        isCapturing = true;
+        ScreenParticleRenderer.isCapturing = true;
         //System.out.println("capture started");
 
         if (Minecraft.getInstance().screen != null) {
             screenClass = Minecraft.getInstance().screen.getClass().getCanonicalName();
+        } else {
+            CULog.dbg("watut screen capture started but screen is null?");
         }
     }
 
-    public void stopCapture() {
-        isCapturing = false;
+    public synchronized void stopCapture() {
+        ScreenParticleRenderer.isCapturing = false;
         //System.out.println("capture stopped - captured call count: " + listRenderCalls.size());
     }
 
@@ -45,12 +48,12 @@ public class ScreenData {
         listRenderCalls.add(renderCall);
     }
 
-    public boolean isCapturing() {
-        return isCapturing;
+    public synchronized boolean isCapturing() {
+        return ScreenParticleRenderer.isCapturing;
     }
 
-    public void setCapturing(boolean capturing) {
-        isCapturing = capturing;
+    public synchronized void setCapturing(boolean capturing) {
+        ScreenParticleRenderer.isCapturing = capturing;
     }
 
     public List<RenderCall> getListRenderCalls() {

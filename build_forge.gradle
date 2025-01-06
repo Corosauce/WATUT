@@ -158,6 +158,7 @@ dependencies {
 	annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
     implementation fg.deobf("curse.maven:jei-238222:5101366")
     implementation fg.deobf("curse.maven:farmers-delight-398521:5051242")
+    implementation fg.deobf("curse.maven:enderio-64578:6035212")
 
     implementation fg.deobf("com.corosus.coroutil:coroutil-forge:${project.minecraft_version}-${project.coroutil_version}")
 

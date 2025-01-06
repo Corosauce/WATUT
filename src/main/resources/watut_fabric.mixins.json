@@ -6,6 +6,7 @@
   "client": [
     "client.SetupRotationsInject",
     "client.RenderPingIconInject",
+    "client.GuiGraphicsInnerBlit",
     "client.GuiRender",
     "client.KeyboardHandlerKeyPress",
     "client.MinecraftTick",

@@ -103,6 +103,10 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             selfPlayerStatusPrev.reset();
         }
         lastLevel = level;
+
+        if (JSONLoader.RELOAD_LIVE_OFTEN && level != null && level.getGameTime() % 100 == 0) {
+            JSONLoader.getInstance().loadFiles();
+        }
     }
 
     public void tickPlayerClient(Player player) {
@@ -506,12 +510,17 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 ParticleRotating particle = null;
                 Vec3 posParticle = getParticlePosition(player);
 
+                boolean testNewRender = true;
+
                 if (ConfigClient.showPlayerActiveChatGui) {
                     if (PlayerStatus.PlayerGuiState.isTypingGui(this.getStatus(player).getPlayerGuiState())) {
                         if (this.getStatus(player).getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_FOCUSED) {
                             particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_idle.getSpriteSet());
-                            if (ScreenParticleRenderer.getInstance().getParticleRenderType() != null) {
-                                particle = new ParticleDynamic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ScreenParticleRenderer.getInstance().getParticleRenderType(), 0.7F);
+                            if (testNewRender) {
+                                if (ScreenParticleRenderer.getInstance().getParticleRenderType() != null) {
+                                    particle = new ParticleDynamic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ScreenParticleRenderer.getInstance().getParticleRenderType(), 0.7F);
+                                }
+                                //particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.inventory.getSpriteSet());
                             }
                         } else if (this.getStatus(player).getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_TYPING) {
                             particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_typing.getSpriteSet());
@@ -689,6 +698,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             }
 
             //TODO: For now always capture, so the receiving end updates its dynamic texture, this might be fine long term
+            //this is causing false captures like ReceievingLevelScreen capture,
             shouldCapture = true;
         }
 
@@ -724,14 +734,19 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         if (playerStatusLocal.getScreenData().isCapturing()) {
             playerStatusLocal.getScreenData().stopCapture();
 
-            sendScreenRenderData(playerStatusLocal);
+            if (playerStatusLocal.getScreenData().getListRenderCalls().size() > 0) {
+                sendScreenRenderData(playerStatusLocal);
+            } else {
+                CULog.dbg("watut screen recording was triggered but no render calls were captured, for " + playerStatusLocal.getScreenData().getScreenClass());
+            }
+
         }
     }
 
     public void hookInnerBlit(ResourceLocation pAtlasLocation, int pX1, int pX2, int pY1, int pY2, int pBlitOffset, float pMinU, float pMaxU, float pMinV, float pMaxV) {
         PlayerStatus playerStatusLocal = getStatusLocal();
         if (playerStatusLocal.getScreenData().isCapturing()) {
-            RenderCall renderCall = new RenderCall(RenderCallType.INNER_BLIT);
+            RenderCall renderCall = new RenderCall(RenderCallType.INNER_BLIT_BLUR);
             renderCall.innerBlit(pAtlasLocation, pX1, pX2, pY1, pY2, pBlitOffset, pMinU, pMaxU, pMinV, pMaxV);
             playerStatusLocal.getScreenData().addRenderCall(renderCall);
         }
@@ -741,7 +756,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     public void hookInnerBlit(ResourceLocation pAtlasLocation, int pX1, int pX2, int pY1, int pY2, int pBlitOffset, float pMinU, float pMaxU, float pMinV, float pMaxV, float pRed, float pGreen, float pBlue, float pAlpha) {
         PlayerStatus playerStatusLocal = getStatusLocal();
         if (playerStatusLocal.getScreenData().isCapturing()) {
-            RenderCall renderCall = new RenderCall(RenderCallType.INNER_BLIT2);
+            RenderCall renderCall = new RenderCall(RenderCallType.INNER_BLIT_BLUR2);
             renderCall.innerBlit(pAtlasLocation, pX1, pX2, pY1, pY2, pBlitOffset, pMinU, pMaxU, pMinV, pMaxV, pRed, pGreen, pBlue, pAlpha);
             playerStatusLocal.getScreenData().addRenderCall(renderCall);
         }
@@ -947,7 +962,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         float distFromFace = 0.75F;
         //float distFromFace = -3.5F;
         Vec3 lookVec = getBodyAngle(player).scale(distFromFace);
-        return new Vec3(pos.x + lookVec.x, pos.y + 1.2D, pos.z + lookVec.z);
+        return new Vec3(pos.x + lookVec.x - 1, pos.y + 1.2D, pos.z + lookVec.z);
         //return new Vec3(pos.x + lookVec.x, pos.y + 2D, pos.z + lookVec.z);
     }
 

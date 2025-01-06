@@ -20,6 +20,10 @@ public class AllGuiOverrideConfigs {
         }
     }
 
+    public void reset() {
+        lookup.clear();
+    }
+
     public ScreenRule getScreenRuleByClass(String screenClass) {
         return lookup.get(screenClass);
     }

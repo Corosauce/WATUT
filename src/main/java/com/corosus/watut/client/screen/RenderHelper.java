@@ -12,10 +12,13 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.client.ForgeHooksClient;
 import org.joml.Matrix4f;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -27,16 +30,21 @@ public class RenderHelper {
         try {
             lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT, GuiGraphics.class.getDeclaredMethod("innerBlit", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class));
             lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT2, GuiGraphics.class.getDeclaredMethod("innerBlit", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class));
+            lookupRenderCallsToMethod.put(RenderCallType.POSE_PUSH, PoseStack.class.getDeclaredMethod("pushPose"));
+            lookupRenderCallsToMethod.put(RenderCallType.POSE_POP, PoseStack.class.getDeclaredMethod("popPose"));
+            lookupRenderCallsToMethod.put(RenderCallType.POSE_TRANSLATE_F, PoseStack.class.getDeclaredMethod("translate", float.class, float.class, float.class));
+            lookupRenderCallsToMethod.put(RenderCallType.POSE_TRANSLATE_D, PoseStack.class.getDeclaredMethod("translate", double.class, double.class, double.class));
 
-            lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT_BLUR, ScreenParticleRenderer.class.getDeclaredMethod("innerBlit", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class, PoseStack.class));
-            lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT_BLUR2, ScreenParticleRenderer.class.getDeclaredMethod("innerBlit", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, PoseStack.class));
+            lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT_BLUR, ScreenParticleRenderer.class.getDeclaredMethod("innerBlit", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class, PoseStack.class, ScreenRule.class));
+            lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT_BLUR2, ScreenParticleRenderer.class.getDeclaredMethod("innerBlit", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, PoseStack.class, ScreenRule.class));
         } catch (NoSuchMethodException e) {
+            //e.printStackTrace();
             try {
                 lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT, GuiGraphics.class.getDeclaredMethod("m_280444_", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class));
                 lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT2, GuiGraphics.class.getDeclaredMethod("m_280479_", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class));
 
-                lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT_BLUR, ScreenParticleRenderer.class.getDeclaredMethod("innerBlit", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class, PoseStack.class));
-                lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT_BLUR2, ScreenParticleRenderer.class.getDeclaredMethod("innerBlit", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, PoseStack.class));
+                lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT_BLUR, ScreenParticleRenderer.class.getDeclaredMethod("innerBlit", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class, PoseStack.class, ScreenRule.class));
+                lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT_BLUR2, ScreenParticleRenderer.class.getDeclaredMethod("innerBlit", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, PoseStack.class, ScreenRule.class));
             } catch (NoSuchMethodException e2) {
                 throw new RuntimeException(e2);
             }
@@ -47,7 +55,13 @@ public class RenderHelper {
         for (PlayerStatus playerStatus : WatutMod.getPlayerStatusManagerClient().lookupPlayerToStatus.values()) {
             ScreenData screenData = playerStatus.getScreenData();
 
-            if (ScreenParticleRenderer.getInstance().needsNewRender() || true) {
+            int gameTime = 0;
+            if (Minecraft.getInstance().level != null) {
+                gameTime = (int) Minecraft.getInstance().level.getGameTime();
+            }
+
+            //needsNewRender can be true during initial minecraft load due to ScreenParticleRenderer.resize getting triggered marking a new rerender need, so we just check if theres data too
+            if ((ScreenParticleRenderer.getInstance().needsNewRender()/* || gameTime % 20 == 0*/) && screenData.getListRenderCalls().size() > 0 && Minecraft.getInstance().screen != null/* || true*/) {
                 ScreenParticleRenderer.getInstance().markNeedsNewRender(false);
 
                 ScreenParticleRenderer.getInstance().checkSetup();
@@ -71,79 +85,93 @@ public class RenderHelper {
                     renderType = screenRule.getRenderType();
                 }
 
-                System.out.println("render type " + renderType);
+                //System.out.println("render type " + renderType);
 
-                if (renderType.equals(ScreenRule.RenderTypes.ALL_TEXTURES)) {
-                    for (RenderCall renderCall : screenData.getListRenderCalls()) {
-                        List<Object> listParams = renderCall.getListParams();
+                boolean test = true;
 
-                        //System.out.println("size x: " + ((float)listParams.get(7) * 256) + " - " + "size y: " + ((float)listParams.get(9) * 256));
-                        try {
-
-                            lookupRenderCallsToMethod.get(renderCall.getRenderCallType()).invoke(pGuiGraphics, listParams.toArray());
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
+                if (test) {
+                    if (Minecraft.getInstance().screen != null) {
+                        ForgeHooksClient.drawScreen(Minecraft.getInstance().screen, pGuiGraphics, pMouseX, pMouseY, pPartialTick);
                     }
-                } else if (renderType.equals(ScreenRule.RenderTypes.BIGGEST_TEXTURE)) {
+                } else {
+                    if (renderType.equals(ScreenRule.RenderTypes.ALL_TEXTURES)) {
+                        for (RenderCall renderCall : screenData.getListRenderCalls()) {
+                            List<Object> listParams = renderCall.getListParamsCopy();
+                            if (renderCall.getRenderCallType() == RenderCallType.INNER_BLIT_BLUR || renderCall.getRenderCallType() == RenderCallType.INNER_BLIT_BLUR2) {
+                                listParams.add(pGuiGraphics.pose());
+                                listParams.add(screenRule);
+                            }
 
-                    int biggestUVRenderCallIndex = -1;
-                    float biggest = 0;
-                    for (int i = 0; i < screenData.getListRenderCalls().size(); i++) {
-                        RenderCall renderCall = screenData.getListRenderCalls().get(i);
-                        float x1 = (int) renderCall.getListParams().get(1);
-                        float x2 = (int) renderCall.getListParams().get(2);
-                        float y1 = (int) renderCall.getListParams().get(3);
-                        float y2 = (int) renderCall.getListParams().get(4);
-                        float minU = (float) renderCall.getListParams().get(6);
-                        float maxU = (float) renderCall.getListParams().get(7);
-                        float minV = (float) renderCall.getListParams().get(8);
-                        float maxV = (float) renderCall.getListParams().get(9);
-                        float effectiveSizeX = (x2 - x1) * (maxU - minU);
-                        float effectiveSizeY = (y2 - y1) * (maxV - minV);
-                        float effectiveSize = effectiveSizeX + effectiveSizeY;
-                        if (effectiveSize > biggest) {
-                            biggestUVRenderCallIndex = i;
-                            biggest = effectiveSize;
+                            //System.out.println("size x: " + ((float)listParams.get(7) * 256) + " - " + "size y: " + ((float)listParams.get(9) * 256));
+                            Object instance = ScreenParticleRenderer.getInstance();
+                            try {
+                                //lookupRenderCallsToMethod.get(renderCall.getRenderCallType()).invoke(pGuiGraphics, listParams.toArray());
+                                //TODO: this spits out java.lang.IllegalArgumentException while escape menu is open AND resizing the screen
+
+                                if (renderCall.getRenderCallType() == RenderCallType.POSE_PUSH
+                                        || renderCall.getRenderCallType() == RenderCallType.POSE_POP
+                                        || renderCall.getRenderCallType() == RenderCallType.POSE_TRANSLATE_F
+                                        || renderCall.getRenderCallType() == RenderCallType.POSE_TRANSLATE_D) {
+                                    instance = pGuiGraphics.pose();
+                                }
+
+                                lookupRenderCallsToMethod.get(renderCall.getRenderCallType()).invoke(instance, listParams.toArray());
+                            } catch (Exception e) {
+                                System.out.println("instance " + instance);
+                                System.out.println("RenderCallType " + renderCall.getRenderCallType());
+                                System.out.println("params before render: " + listParams);
+                                e.printStackTrace();
+                            }
                         }
-                    }
+                    } else if (renderType.equals(ScreenRule.RenderTypes.BIGGEST_TEXTURE)) {
 
-                    //biggestUVRenderCallIndex = -1;
-
-                    //System.out.println("rendering biggest: " + biggest);
-                    if (biggestUVRenderCallIndex != -1) {
-                        //for (RenderCall renderCall : screenData.getListRenderCalls()) {
-                        RenderCall renderCall = screenData.getListRenderCalls().get(biggestUVRenderCallIndex);
-                        List<Object> listParams = renderCall.getListParams();
-                        //override the supposed sizes and positions that arent UV
-                            /*listParams.set(1, 0);
-                            listParams.set(2, 256);
-                            listParams.set(3, 0);
-                            listParams.set(4, 512);*/
-                        //correct the data to render top left, this might be fragile, but both innerblit methods are consistent with these params
-                        int sizeX = (int) listParams.get(2) - (int) listParams.get(1);
-                        int sizeY = (int) listParams.get(4) - (int) listParams.get(3);
-                            /*listParams.set(1, -(sizeX/2));
-                            listParams.set(2, sizeX -(sizeX/2));
-                            listParams.set(3, -(sizeY/2));
-                            listParams.set(4, sizeY -(sizeY/2));*/
-                        /*listParams.set(1, 0);
-                        listParams.set(2, sizeX);
-                        listParams.set(3, 0);
-                        listParams.set(4, sizeY);*/
-
-                        convertParamsToStaticlySized(listParams);
-
-                        //System.out.println("size x: " + ((float)listParams.get(7) * 256) + " - " + "size y: " + ((float)listParams.get(9) * 256));
-                        try {
-                            lookupRenderCallsToMethod.get(renderCall.getRenderCallType()).invoke(pGuiGraphics, listParams.toArray());
-                        } catch (Exception e) {
-                            e.printStackTrace();
+                        int biggestUVRenderCallIndex = -1;
+                        float biggest = 0;
+                        for (int i = 0; i < screenData.getListRenderCalls().size(); i++) {
+                            RenderCall renderCall = screenData.getListRenderCalls().get(i);
+                            if (renderCall.getRenderCallType() != RenderCallType.INNER_BLIT_BLUR || renderCall.getRenderCallType() != RenderCallType.INNER_BLIT_BLUR2) {
+                                continue;
+                            }
+                            float x1 = (int) renderCall.getListParams().get(1);
+                            float x2 = (int) renderCall.getListParams().get(2);
+                            float y1 = (int) renderCall.getListParams().get(3);
+                            float y2 = (int) renderCall.getListParams().get(4);
+                            float minU = (float) renderCall.getListParams().get(6);
+                            float maxU = (float) renderCall.getListParams().get(7);
+                            float minV = (float) renderCall.getListParams().get(8);
+                            float maxV = (float) renderCall.getListParams().get(9);
+                            float effectiveSizeX = (x2 - x1) * (maxU - minU);
+                            float effectiveSizeY = (y2 - y1) * (maxV - minV);
+                            float effectiveSize = effectiveSizeX + effectiveSizeY;
+                            if (effectiveSize > biggest) {
+                                biggestUVRenderCallIndex = i;
+                                biggest = effectiveSize;
+                            }
                         }
-                        //}
-                    }
 
-                }/* else if (renderType.equals(ScreenRule.RenderTypes.SINGLE_TEXTURE)) {
+                        //biggestUVRenderCallIndex = -1;
+
+                        //System.out.println("rendering biggest: " + biggest);
+                        if (biggestUVRenderCallIndex != -1) {
+                            //for (RenderCall renderCall : screenData.getListRenderCalls()) {
+                            RenderCall renderCall = screenData.getListRenderCalls().get(biggestUVRenderCallIndex);
+                            //prevent modifying original list, theres edge cases on resize where itll run this code twice before a new render call refreshes the list
+                            List<Object> listParams = renderCall.getListParamsCopy();
+                            listParams.add(pGuiGraphics.pose());
+                            listParams.add(screenRule);
+                            convertParamsToStaticlySized(listParams);
+                            try {
+                                //System.out.println("?" + renderCall.getRenderCallType());
+                                //System.out.println("params before render: " + listParams);
+                                //lookupRenderCallsToMethod.get(renderCall.getRenderCallType()).invoke(pGuiGraphics, listParams.toArray());
+                                lookupRenderCallsToMethod.get(renderCall.getRenderCallType()).invoke(ScreenParticleRenderer.getInstance(), listParams.toArray());
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            //}
+                        }
+
+                    }/* else if (renderType.equals(ScreenRule.RenderTypes.SINGLE_TEXTURE)) {
                     RenderCall renderCall = new RenderCall(RenderCallType.INNER_BLIT);
                     renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), 339, 515, 140, 306, 0, 0.0F, 0.6875F, 0.0F, 0.6484375F);
                     try {
@@ -152,13 +180,12 @@ public class RenderHelper {
                         e.printStackTrace();
                     }
                 }*/ else if (renderType.equals(ScreenRule.RenderTypes.GENERIC_INVENTORY) || renderType.equals(ScreenRule.RenderTypes.SINGLE_TEXTURE)) {
-                    RenderCall renderCall = new RenderCall(RenderCallType.INNER_BLIT_BLUR);
-                    //renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), 872, 1048, 405, 571, 0, 0.0F, 0.6875F, 0.0F, 0.8671875F);
-                    renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), 872, 1048, 968, 1190, 0, 0.0F, 0.6875F, 0.0F, 0.8671875F);
-                    renderCall.getListParams().add(pGuiGraphics.pose());
-                    //[minecraft:textures/gui/container/generic_54.png, 872, 1048, 475, 571, 0, 0.0, 0.6875, 0.4921875, 0.8671875]
-                    //int resX = Minecraft.getInstance().
-                    int sizeX = (int) renderCall.getListParams().get(2) - (int) renderCall.getListParams().get(1);
+                        RenderCall renderCall = new RenderCall(RenderCallType.INNER_BLIT_BLUR);
+                        //renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), 872, 1048, 405, 571, 0, 0.0F, 0.6875F, 0.0F, 0.8671875F);
+                        renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), 872, 1048, 968, 1190, 0, 0.0F, 0.6875F, 0.0F, 0.8671875F);
+                        //[minecraft:textures/gui/container/generic_54.png, 872, 1048, 475, 571, 0, 0.0, 0.6875, 0.4921875, 0.8671875]
+                        //int resX = Minecraft.getInstance().
+                    /*int sizeX = (int) renderCall.getListParams().get(2) - (int) renderCall.getListParams().get(1);
                     int sizeY = (int) renderCall.getListParams().get(4) - (int) renderCall.getListParams().get(3);
                     int x1 = 0;
                     int x2 = (int)(1920 / 1.26F);
@@ -174,17 +201,25 @@ public class RenderHelper {
                     renderCall.getListParams().set(3, y1);
                     renderCall.getListParams().set(4, y2);
                     System.out.println("sizeX " + sizeX + " sizeY " + sizeY + " intScale " + intScale);
-                    System.out.println("params before render: " + renderCall.getListParams());
-                    //renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), 339, 515, 140, 306, 0, 0.0F, 0.6875F, 0.0F, 0.8671875F);
-                    //renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), 872, 1048, 405, 571, 0, 0.0F, 0.6875F, 0.0F, 0.6484375F);
+                    System.out.println("params before render: " + renderCall.getListParams());*/
 
-                    //renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), x1, x2, y1, y2, 0, 0.0F, 0.6875F, 0.0F, 0.8671875F);
-                    try {
-                        lookupRenderCallsToMethod.get(renderCall.getRenderCallType()).invoke(ScreenParticleRenderer.getInstance(), renderCall.getListParams().toArray());
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                        List<Object> listParams = renderCall.getListParamsCopy();
+                        listParams.add(pGuiGraphics.pose());
+                        listParams.add(screenRule);
+                        convertParamsToStaticlySized(listParams);
+
+                        //renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), 339, 515, 140, 306, 0, 0.0F, 0.6875F, 0.0F, 0.8671875F);
+                        //renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), 872, 1048, 405, 571, 0, 0.0F, 0.6875F, 0.0F, 0.6484375F);
+
+                        //renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), x1, x2, y1, y2, 0, 0.0F, 0.6875F, 0.0F, 0.8671875F);
+                        try {
+                            lookupRenderCallsToMethod.get(renderCall.getRenderCallType()).invoke(ScreenParticleRenderer.getInstance(), listParams.toArray());
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
+
                 ScreenParticleRenderer.getInstance().unbind();
                 Minecraft.getInstance().getMainRenderTarget().bindWrite(true);
                 //System.out.println("completed new render for " + playerStatus);
@@ -201,16 +236,25 @@ public class RenderHelper {
         int y2 = 1080;
         int y1 = 0;
         int intScale = Math.min(screenParticleRenderer.width / sizeX, screenParticleRenderer.height / sizeY);
-        y1 = (screenParticleRenderer.height / 2) - (sizeY / 2 * intScale);
-        y2 = (screenParticleRenderer.height / 2) + (sizeY / 2 * intScale);
+        //TODO: guiScale setting lies, smaller window sizes dynamically reduce gui scale
+        //int guiScale = Minecraft.getInstance().options.guiScale().get();
+        double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+        //intScale = 1;
         x1 = (screenParticleRenderer.width / 2) - (sizeX / 2 * intScale);
         x2 = (screenParticleRenderer.width / 2) + (sizeX / 2 * intScale);
+        y1 = (screenParticleRenderer.height / 2) - (sizeY / 2 * intScale);
+        y2 = (screenParticleRenderer.height / 2) + (sizeY / 2 * intScale);
+        x1 /= guiScale;
+        x2 /= guiScale;
+        y1 /= guiScale;
+        y2 /= guiScale;
+        //System.out.println("sizeX " + sizeX + " sizeY " + sizeY + " intScale " + intScale + " screen width " + screenParticleRenderer.width + " screen height " + screenParticleRenderer.height);
+        //System.out.println("original params: " + params);
         params.set(1, x1);
         params.set(2, x2);
         params.set(3, y1);
         params.set(4, y2);
-        System.out.println("sizeX " + sizeX + " sizeY " + sizeY + " intScale " + intScale);
-        System.out.println("params size before render: " + params);
+        //System.out.println("adjusted params: " + params);
     }
 
 }

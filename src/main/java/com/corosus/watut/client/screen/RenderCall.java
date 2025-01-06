@@ -3,6 +3,7 @@ package com.corosus.watut.client.screen;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class RenderCall {
@@ -12,6 +13,13 @@ public class RenderCall {
 
     public RenderCall(RenderCallType renderCallType) {
         this.renderCallType = renderCallType;
+    }
+
+    public RenderCall(RenderCallType renderCallType, Object... params) {
+        this.renderCallType = renderCallType;
+        for (Object param : params) {
+            this.listParams.add(param);
+        }
     }
 
     public void innerBlit(ResourceLocation pAtlasLocation, int pX1, int pX2, int pY1, int pY2, int pBlitOffset, float pMinU, float pMaxU, float pMinV, float pMaxV) {
@@ -54,6 +62,13 @@ public class RenderCall {
 
     public List<Object> getListParams() {
         return listParams;
+    }
+
+    public List<Object> getListParamsCopy() {
+        //List<Object> listParams = new ArrayList<>();
+        //List<Object> listParams1 = getListParams();
+        //Collections.copy(listParams, listParams1);
+        return new ArrayList<>(listParams);
     }
 
     public void setListParams(List<Object> listParams) {

@@ -35,6 +35,7 @@ public class JSONLoader {
     AllGuiOverrideConfigs allGuiOverrideConfigs = new AllGuiOverrideConfigs();
 
     public static boolean DEBUG_FORCE_CONFIG_REGEN = true;
+    public static boolean RELOAD_LIVE_OFTEN = true;
 
     private static JSONLoader instance;
 
@@ -145,6 +146,7 @@ public class JSONLoader {
         }
 
         if (dataFolder.exists()) {
+            allGuiOverrideConfigs.reset();
             processFolder(dataFolder);
         } else {
             CULog.err("CRITICAL Error generating data folder");

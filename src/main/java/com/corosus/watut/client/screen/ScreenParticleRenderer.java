@@ -18,6 +18,8 @@ import java.util.List;
 
 public class ScreenParticleRenderer {
 
+    public static boolean isCapturing = false;
+
     private boolean needsNewRender = false;
     private MainTarget mainRenderTarget;
 
@@ -34,6 +36,10 @@ public class ScreenParticleRenderer {
             instance = new ScreenParticleRenderer();
         }
         return instance;
+    }
+
+    public static synchronized boolean isCapturing() {
+        return isCapturing;
     }
 
     public void init() {
@@ -84,6 +90,8 @@ public class ScreenParticleRenderer {
     }
 
     public void resize(int width, int height) {
+        this.width = width;
+        this.height = height;
         checkSetup();
         mainRenderTarget.resize(width, height, Minecraft.ON_OSX);
         markNeedsNewRender(true);
@@ -128,7 +136,13 @@ public class ScreenParticleRenderer {
         RenderSystem.setShaderTexture(0, p_283461_);
         RenderSystem.setShader(() -> PlayerStatusManagerClient.positionTexBlur);
         if (PlayerStatusManagerClient.positionTexBlur.RESOLUTION != null) {
-            PlayerStatusManagerClient.positionTexBlur.RESOLUTION.set(screenRule.getTextureSize()[0], screenRule.getTextureSize()[1]);
+            int sizeX = 256;
+            int sizeY = 256;
+            if (screenRule != null) {
+                sizeX = screenRule.getTextureSize()[0];
+                sizeY = screenRule.getTextureSize()[1];
+            }
+            PlayerStatusManagerClient.positionTexBlur.RESOLUTION.set((float)sizeX, (float)sizeY);
         }
         if (PlayerStatusManagerClient.positionTexBlur.RADIUS != null) {
             /*int blur = 2;
@@ -139,7 +153,7 @@ public class ScreenParticleRenderer {
                 blur = Mth.clamp((int)blurFloat + 10, 0, 10);
                 int sdfsdfs = 0;
             }*/
-            PlayerStatusManagerClient.positionTexBlur.RADIUS.set((float)2);
+            PlayerStatusManagerClient.positionTexBlur.RADIUS.set((float)1);
         }
         Matrix4f matrix4f = pose.last().pose();
         BufferBuilder bufferbuilder = Tesselator.getInstance().getBuilder();
@@ -152,10 +166,19 @@ public class ScreenParticleRenderer {
     }
 
     public void innerBlit(ResourceLocation p_283254_, int p_283092_, int p_281930_, int p_282113_, int p_281388_, int p_283583_, float p_281327_, float p_281676_, float p_283166_, float p_282630_, float p_282800_, float p_282850_, float p_282375_, float p_282754_, PoseStack pose, ScreenRule screenRule) {
+        if (PlayerStatusManagerClient.positionColorTexBlur == null) {
+            return;
+        }
         RenderSystem.setShaderTexture(0, p_283254_);
         RenderSystem.setShader(() -> PlayerStatusManagerClient.positionColorTexBlur);
         if (PlayerStatusManagerClient.positionTexBlur.RESOLUTION != null) {
-            PlayerStatusManagerClient.positionTexBlur.RESOLUTION.set(screenRule.getTextureSize()[0], screenRule.getTextureSize()[1]);
+            int sizeX = 256;
+            int sizeY = 256;
+            if (screenRule != null) {
+                sizeX = screenRule.getTextureSize()[0];
+                sizeY = screenRule.getTextureSize()[1];
+            }
+            PlayerStatusManagerClient.positionTexBlur.RESOLUTION.set((float)sizeX, (float)sizeY);
         }
         if (PlayerStatusManagerClient.positionTexBlur.RADIUS != null) {
             PlayerStatusManagerClient.positionTexBlur.RADIUS.set((float)2);

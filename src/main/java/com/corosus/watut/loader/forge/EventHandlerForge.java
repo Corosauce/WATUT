@@ -83,7 +83,7 @@ public class EventHandlerForge {
                     DefaultVertexFormat.POSITION_COLOR_TEX);
 
             event.registerShader(PlayerStatusManagerClient.positionTexBlur, (shaderInstance -> {}));
-            //event.registerShader(PlayerStatusManagerClient.positionColorTexBlur, (shaderInstance -> {}));
+            event.registerShader(PlayerStatusManagerClient.positionColorTexBlur, (shaderInstance -> {}));
         } catch (IOException e) {
             e.printStackTrace();
             //WatutMod.cloudShader = GameRenderer.getPositionTexColorNormalShader();
