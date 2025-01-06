@@ -7,7 +7,8 @@
     "client.SetupRotationsInject",
     "client.RenderPingIconInject",
     "client.GuiGraphicsInnerBlit",
-    "client.ScreenRenderWithTooltip"
+    "client.ScreenRenderWithTooltip",
+    "client.PostChainResize"
   ],
   "injectors": {
     "defaultRequire": 0

@@ -6,7 +6,9 @@ import java.util.Map;
 
 public enum RenderCallType {
     INNER_BLIT,
-    INNER_BLIT2;
+    INNER_BLIT2,
+    INNER_BLIT_BLUR,
+    INNER_BLIT_BLUR2;
 
     private static final Map<Integer, RenderCallType> lookup = new HashMap<>();
 

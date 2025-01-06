@@ -8,8 +8,10 @@ public class ScreenRule {
     @SerializedName("render_type")
     private String renderType;
     private String texture;
-    private int[] pos;
-    private int[] size;
+    private int[] pos = {0, 0};
+    private int[] size = {256, 256};
+    @SerializedName("texture_size")
+    private int[] textureSize = {256, 256};
     private float scale = 1;
 
     // getters and setters
@@ -53,6 +55,14 @@ public class ScreenRule {
 
     public void setSize(int[] size) {
         this.size = size;
+    }
+
+    public int[] getTextureSize() {
+        return textureSize;
+    }
+
+    public void setTextureSize(int[] textureSize) {
+        this.textureSize = textureSize;
     }
 
     public String getRenderType() {

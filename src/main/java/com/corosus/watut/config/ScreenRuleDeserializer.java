@@ -20,6 +20,7 @@ public class ScreenRuleDeserializer implements JsonDeserializer<ScreenRule> {
         if (jsonObject.has("texture")) screenRule.setTexture(jsonObject.get("texture").getAsString());
         if (jsonObject.has("pos")) screenRule.setPos(context.deserialize(jsonObject.get("pos"), int[].class));
         if (jsonObject.has("size")) screenRule.setSize(context.deserialize(jsonObject.get("size"), int[].class));
+        if (jsonObject.has("texture_size")) screenRule.setTextureSize(context.deserialize(jsonObject.get("texture_size"), int[].class));
         if (jsonObject.has("scale")) screenRule.setScale(context.deserialize(jsonObject.get("scale"), float.class));
         return screenRule;
     }
