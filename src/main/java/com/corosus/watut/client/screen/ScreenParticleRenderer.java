@@ -19,6 +19,8 @@ import java.util.List;
 public class ScreenParticleRenderer {
 
     public static boolean isCapturing = false;
+    public static boolean isRenderingParticleGUI = false;
+    public static boolean isRenderingParticleGUI2 = false;
 
     private boolean needsNewRender = false;
     private MainTarget mainRenderTarget;
@@ -40,6 +42,10 @@ public class ScreenParticleRenderer {
 
     public static synchronized boolean isCapturing() {
         return isCapturing;
+    }
+
+    public static synchronized boolean isRenderingParticleGUI() {
+        return isRenderingParticleGUI;
     }
 
     public void init() {

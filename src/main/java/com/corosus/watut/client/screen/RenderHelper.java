@@ -6,6 +6,7 @@ import com.corosus.watut.WatutMod;
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.JSONLoader;
 import com.corosus.watut.config.JsonObjects.ScreenRule;
+import com.corosus.watut.mixin.client.ScreenRenderBackground;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
@@ -14,9 +15,11 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.client.ForgeHooksClient;
 import org.joml.Matrix4f;
+import org.lwjgl.opengl.GL11;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -91,7 +94,15 @@ public class RenderHelper {
 
                 if (test) {
                     if (Minecraft.getInstance().screen != null) {
-                        ForgeHooksClient.drawScreen(Minecraft.getInstance().screen, pGuiGraphics, pMouseX, pMouseY, pPartialTick);
+                        //ForgeHooksClient.drawScreen(Minecraft.getInstance().screen, pGuiGraphics, pMouseX, pMouseY, pPartialTick);
+
+                        ScreenParticleRenderer.isRenderingParticleGUI = true;
+                        ScreenParticleRenderer.isRenderingParticleGUI2 = true;
+                        Minecraft.getInstance().screen.renderWithTooltip(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
+                        ScreenParticleRenderer.isRenderingParticleGUI = false;
+                        ScreenParticleRenderer.isRenderingParticleGUI2 = false;
+
+                        readPixelsTest();
                     }
                 } else {
                     if (renderType.equals(ScreenRule.RenderTypes.ALL_TEXTURES)) {
@@ -255,6 +266,48 @@ public class RenderHelper {
         params.set(3, y1);
         params.set(4, y2);
         //System.out.println("adjusted params: " + params);
+    }
+
+    public static void readPixelsTest() {
+        int width = ScreenParticleRenderer.getInstance().width;
+        int height = ScreenParticleRenderer.getInstance().height;
+
+        ByteBuffer pixelBuffer = ByteBuffer.allocateDirect(width * height * 4); // RGBA = 4 bytes per pixel
+        GL11.glReadPixels(0, 0, width, height, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixelBuffer);
+
+        // Process the pixel data (example: print the color of the first pixel)
+        int red = Byte.toUnsignedInt(pixelBuffer.get(0));
+        int green = Byte.toUnsignedInt(pixelBuffer.get(1));
+        int blue = Byte.toUnsignedInt(pixelBuffer.get(2));
+        int alpha = Byte.toUnsignedInt(pixelBuffer.get(3));
+
+        /**
+         * The pixel data is read from the lower-left corner of the framebuffer by default.
+         * Ensure the buffer size matches the width, height, and bytes per pixel.
+         * Performance: glReadPixels can be slow, so avoid using it in performance-critical loops.
+         */
+
+        /**
+         * reading specific pixel:
+         *
+         * int index = (y * width + x) * componentsPerPixel;
+         */
+
+        int x = width / 2; // X coordinate of the pixel
+        int y = height / 2; // Y coordinate of the pixel
+
+        // Calculate the index for pixel (x, y)
+        int componentsPerPixel = 4; // RGBA
+        int index = (y * width + x) * componentsPerPixel;
+
+        red = Byte.toUnsignedInt(pixelBuffer.get(index));
+        green = Byte.toUnsignedInt(pixelBuffer.get(index + 1));
+        blue = Byte.toUnsignedInt(pixelBuffer.get(index + 2));
+        alpha = Byte.toUnsignedInt(pixelBuffer.get(index + 3));
+
+        System.out.printf("Pixel color at (0,0): R=%d, G=%d, B=%d, A=%d%n", red, green, blue, alpha);
+
+        //confirmed works
     }
 
 }
