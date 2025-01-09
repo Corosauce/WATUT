@@ -7,6 +7,8 @@ import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.JSONLoader;
 import com.corosus.watut.config.JsonObjects.ScreenRule;
 import com.corosus.watut.mixin.client.ScreenRenderBackground;
+import com.mojang.blaze3d.pipeline.MainTarget;
+import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
@@ -16,6 +18,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.client.ForgeHooksClient;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL30;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -98,11 +101,13 @@ public class RenderHelper {
 
                         ScreenParticleRenderer.isRenderingParticleGUI = true;
                         ScreenParticleRenderer.isRenderingParticleGUI2 = true;
+                        Window window = Minecraft.getInstance().getWindow();
+                        //pGuiGraphics.fillGradient(0, 0, window.getWidth(), window.getHeight(), -1072689136, -0);
                         Minecraft.getInstance().screen.renderWithTooltip(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
-                        ScreenParticleRenderer.isRenderingParticleGUI = false;
-                        ScreenParticleRenderer.isRenderingParticleGUI2 = false;
+                        //ScreenParticleRenderer.isRenderingParticleGUI = false;
+                        //ScreenParticleRenderer.isRenderingParticleGUI2 = false;
 
-                        readPixelsTest();
+                        //readPixelsTest();
                     }
                 } else {
                     if (renderType.equals(ScreenRule.RenderTypes.ALL_TEXTURES)) {
@@ -232,6 +237,107 @@ public class RenderHelper {
                 }
 
                 ScreenParticleRenderer.getInstance().unbind();
+
+
+                Matrix4f matrix4f = (new Matrix4f()).setOrtho(0.0F, (float)ScreenParticleRenderer.getInstance().widthScaledDown, (float)ScreenParticleRenderer.getInstance().heightScaledDown, 0.0F, 1000.0F, net.minecraftforge.client.ForgeHooksClient.getGuiFarPlane());
+                RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
+
+                ScreenParticleRenderer.getInstance().bindScaledDown();
+                //ScreenParticleRenderer.getInstance().bindScaledDownFromByteBuffer();
+                RenderSystem.clear(16640, Minecraft.ON_OSX);
+                double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+                int croppedWidth = (int) (512 * guiScale);
+                int croppedHeight = (int) (512 * guiScale);
+                /*float aspectRatio = (float)ScreenParticleRenderer.getInstance().width / (float)ScreenParticleRenderer.getInstance().height;
+                croppedWidth = 512;
+                croppedHeight = (int) (croppedWidth / aspectRatio);*/
+                //croppedWidth = ScreenParticleRenderer.getInstance().width;
+                //croppedHeight = ScreenParticleRenderer.getInstance().height;
+
+                int centerX = ScreenParticleRenderer.getInstance().width / 2;
+                int centerY = ScreenParticleRenderer.getInstance().height / 2;
+                int x1 = centerX - (croppedWidth / 2);
+                int x2 = centerX + (croppedWidth / 2);
+                int y1 = centerY - (croppedHeight / 2);
+                int y2 = centerY + (croppedHeight / 2);
+                float minU = (float)x1 / (float)ScreenParticleRenderer.getInstance().width;
+                float maxU = (float)x2 / (float)ScreenParticleRenderer.getInstance().width;
+                float minV = (float)y1 / (float)ScreenParticleRenderer.getInstance().height;
+                float maxV = (float)y2 / (float)ScreenParticleRenderer.getInstance().height;
+                /*minU = 0;
+                maxU = 1;
+                minV = 0;
+                maxV = 1;*/
+                x1 = 0;
+                x2 = ScreenParticleRenderer.getInstance().widthScaledDown * 4;
+                y1 = 0;
+                y2 = ScreenParticleRenderer.getInstance().heightScaledDown * 4;
+
+                x1 = 0;
+                x2 = ScreenParticleRenderer.getInstance().width;
+                y1 = 0;
+                y2 = ScreenParticleRenderer.getInstance().height;
+
+                x1 = 0;
+                x2 = ScreenParticleRenderer.getInstance().widthScaledDown;
+                y1 = 0;
+                y2 = ScreenParticleRenderer.getInstance().heightScaledDown;
+
+                ScreenParticleRenderer t = ScreenParticleRenderer.getInstance();
+                /*ScreenParticleRenderer.getInstance().innerBlitCustom(pGuiGraphics.pose()
+                        , 0, ScreenParticleRenderer.getInstance().widthScaledDown
+                        , 0, ScreenParticleRenderer.getInstance().heightScaledDown
+                        , 0, 0, 1, 0, 1);*/
+
+                ScreenParticleRenderer.getInstance().innerBlitCustom(pGuiGraphics.pose()
+                        , x1, x2
+                        , y1, y2
+                        , 0
+                        , minU, maxU, minV, maxV);
+
+                //getting data from scaled down framebuffer
+                ByteBuffer pixelBuffer = readPixelsTest();
+
+                ScreenParticleRenderer.getInstance().unbindScaledDown();
+
+                ScreenParticleRenderer.getInstance().bindScaledDownFromByteBuffer();
+
+                GL11.glBindTexture(GL11.GL_TEXTURE_2D, ScreenParticleRenderer.getInstance().getMainRenderTargetScaledDownFromByteBuffer().getColorTextureId());
+
+                GL11.glTexImage2D(
+                        GL11.GL_TEXTURE_2D,
+                        0, // Mipmap level
+                        GL11.GL_RGBA, // Internal format
+                        ScreenParticleRenderer.getInstance().widthScaledDown,
+                        ScreenParticleRenderer.getInstance().heightScaledDown,
+                        0, // Border
+                        GL11.GL_RGBA, // Data format
+                        GL11.GL_UNSIGNED_BYTE, // Data type
+                        pixelBuffer
+                );
+
+                GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+                GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
+
+                GL30.glFramebufferTexture2D(
+                        GL30.GL_FRAMEBUFFER,
+                        GL30.GL_COLOR_ATTACHMENT0,
+                        GL11.GL_TEXTURE_2D,
+                        ScreenParticleRenderer.getInstance().getMainRenderTargetScaledDownFromByteBuffer().getColorTextureId(),
+                        0 // Mipmap level
+                );
+
+                // Check if the framebuffer is complete
+                if (GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER) != GL30.GL_FRAMEBUFFER_COMPLETE) {
+                    throw new RuntimeException("Framebuffer is not complete");
+                }
+
+                ScreenParticleRenderer.getInstance().unbindScaledDownFromByteBuffer();
+
+                Window window = Minecraft.getInstance().getWindow();
+                matrix4f = (new Matrix4f()).setOrtho(0.0F, (float)((double)window.getWidth() / window.getGuiScale()), (float)((double)window.getHeight() / window.getGuiScale()), 0.0F, 1000.0F, net.minecraftforge.client.ForgeHooksClient.getGuiFarPlane());
+                RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
+
                 Minecraft.getInstance().getMainRenderTarget().bindWrite(true);
                 //System.out.println("completed new render for " + playerStatus);
             }
@@ -268,9 +374,9 @@ public class RenderHelper {
         //System.out.println("adjusted params: " + params);
     }
 
-    public static void readPixelsTest() {
-        int width = ScreenParticleRenderer.getInstance().width;
-        int height = ScreenParticleRenderer.getInstance().height;
+    public static ByteBuffer readPixelsTest() {
+        int width = ScreenParticleRenderer.getInstance().widthScaledDown;
+        int height = ScreenParticleRenderer.getInstance().heightScaledDown;
 
         ByteBuffer pixelBuffer = ByteBuffer.allocateDirect(width * height * 4); // RGBA = 4 bytes per pixel
         GL11.glReadPixels(0, 0, width, height, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixelBuffer);
@@ -305,9 +411,10 @@ public class RenderHelper {
         blue = Byte.toUnsignedInt(pixelBuffer.get(index + 2));
         alpha = Byte.toUnsignedInt(pixelBuffer.get(index + 3));
 
-        System.out.printf("Pixel color at (0,0): R=%d, G=%d, B=%d, A=%d%n", red, green, blue, alpha);
+        //System.out.printf("Pixel color at (0,0): R=%d, G=%d, B=%d, A=%d%n", red, green, blue, alpha);
 
         //confirmed works
+        return pixelBuffer;
     }
 
 }

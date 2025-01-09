@@ -8,6 +8,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -24,11 +25,15 @@ public class ScreenParticleRenderer {
 
     private boolean needsNewRender = false;
     private MainTarget mainRenderTarget;
+    private MainTarget mainRenderTargetScaledDown;
+    private MainTarget mainRenderTargetScaledDownFromByteBuffer;
 
     private ParticleRenderType particleRenderType;
 
     public int width;
     public int height;
+    public int widthScaledDown;
+    public int heightScaledDown;
     public boolean needsInit = true;
 
     private static ScreenParticleRenderer instance;
@@ -51,6 +56,7 @@ public class ScreenParticleRenderer {
     public void init() {
 
 
+
     }
 
     public void checkSetup() {
@@ -65,9 +71,21 @@ public class ScreenParticleRenderer {
         width = mc.getWindow().getWidth();
         height = mc.getWindow().getHeight();
         mainRenderTarget = new MainTarget(width, height);
-        //mainRenderTarget = new CustomRenderTarget(width, height, true);
         mainRenderTarget.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
         mainRenderTarget.clear(Minecraft.ON_OSX);
+
+        float aspectRatio = width / height;
+        widthScaledDown = 512;
+        //heightScaledDown = (int) (widthScaledDown / aspectRatio);
+        heightScaledDown = 512;//(int) (widthScaledDown / aspectRatio);
+
+        mainRenderTargetScaledDown = new MainTarget(widthScaledDown, heightScaledDown);
+        mainRenderTargetScaledDown.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
+        mainRenderTargetScaledDown.clear(Minecraft.ON_OSX);
+
+        mainRenderTargetScaledDownFromByteBuffer = new MainTarget(widthScaledDown, heightScaledDown);
+        mainRenderTargetScaledDownFromByteBuffer.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
+        mainRenderTargetScaledDownFromByteBuffer.clear(Minecraft.ON_OSX);
 
         //System.out.println("init with resolution: " + width + "x" + height);
         //System.out.println("init new framebuffer, texture id: " + mainRenderTarget.getColorTextureId());
@@ -77,7 +95,8 @@ public class ScreenParticleRenderer {
                 RenderSystem.depthMask(true);
                 //RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
                 //RenderSystem.bindTexture(ScreenCapturing.mainRenderTarget.getColorTextureId());
-                RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
+                RenderSystem._setShaderTexture(0, mainRenderTargetScaledDownFromByteBuffer.getColorTextureId());
+                //RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
                 RenderSystem.enableBlend();
                 RenderSystem.defaultBlendFunc();
                 RenderSystem.disableCull();
@@ -100,6 +119,19 @@ public class ScreenParticleRenderer {
         this.height = height;
         checkSetup();
         mainRenderTarget.resize(width, height, Minecraft.ON_OSX);
+
+        double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+        widthScaledDown = (int) (this.width / guiScale);
+        heightScaledDown = (int) (this.height / guiScale);
+        float aspectRatio = (float)width / (float)height;
+        widthScaledDown = 512;
+        heightScaledDown = (int) (widthScaledDown / aspectRatio);
+        heightScaledDown = 512;//(int) (widthScaledDown / aspectRatio);
+        System.out.println("width: " + width + " height: " + height);
+        System.out.println("widthScaledDown: " + widthScaledDown + " heightScaledDown: " + heightScaledDown + " - gui scale " + guiScale);
+        mainRenderTargetScaledDown.resize(widthScaledDown, heightScaledDown, Minecraft.ON_OSX);
+        mainRenderTargetScaledDownFromByteBuffer.resize(widthScaledDown, heightScaledDown, Minecraft.ON_OSX);
+
         markNeedsNewRender(true);
     }
 
@@ -109,6 +141,22 @@ public class ScreenParticleRenderer {
 
     public void unbind() {
         mainRenderTarget.unbindWrite();
+    }
+
+    public void bindScaledDown() {
+        mainRenderTargetScaledDown.bindWrite(true);
+    }
+
+    public void unbindScaledDown() {
+        mainRenderTargetScaledDown.unbindWrite();
+    }
+
+    public void bindScaledDownFromByteBuffer() {
+        mainRenderTargetScaledDownFromByteBuffer.bindWrite(true);
+    }
+
+    public void unbindScaledDownFromByteBuffer() {
+        mainRenderTargetScaledDownFromByteBuffer.unbindWrite();
     }
 
     public synchronized boolean needsNewRender() {
@@ -121,6 +169,14 @@ public class ScreenParticleRenderer {
 
     public MainTarget getMainRenderTarget() {
         return mainRenderTarget;
+    }
+
+    public MainTarget getMainRenderTargetScaledDown() {
+        return mainRenderTargetScaledDown;
+    }
+
+    public MainTarget getMainRenderTargetScaledDownFromByteBuffer() {
+        return mainRenderTargetScaledDownFromByteBuffer;
     }
 
     public void setMainRenderTarget(MainTarget mainRenderTarget) {
@@ -199,5 +255,67 @@ public class ScreenParticleRenderer {
         bufferbuilder.vertex(matrix4f, (float)p_281930_, (float)p_282113_, (float)p_283583_).color(p_282800_, p_282850_, p_282375_, p_282754_).uv(p_281676_, p_283166_).endVertex();
         BufferUploader.drawWithShader(bufferbuilder.end());
         RenderSystem.disableBlend();
+    }
+
+    public void innerBlitCustom(PoseStack pose, int p_281399_, int p_283222_, int p_283615_, int p_283430_, int p_281729_, float p_283247_, float p_282598_, float p_282883_, float p_283017_) {
+        //RenderSystem.setShaderTexture(0, p_283461_);
+        RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        Matrix4f matrix4f = pose.last().pose();
+        BufferBuilder bufferbuilder = Tesselator.getInstance().getBuilder();
+        bufferbuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        /*bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283615_, (float)p_281729_).uv(p_283247_, p_282883_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283430_, (float)p_281729_).uv(p_283247_, p_283017_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283430_, (float)p_281729_).uv(p_282598_, p_283017_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283615_, (float)p_281729_).uv(p_282598_, p_282883_).endVertex();*/
+        //flip vertically, required for some reason when moving from 1 framebuffer to another
+        bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283430_, (float)p_281729_).uv(p_283247_, p_282883_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283615_, (float)p_281729_).uv(p_283247_, p_283017_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283615_, (float)p_281729_).uv(p_282598_, p_283017_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283430_, (float)p_281729_).uv(p_282598_, p_282883_).endVertex();
+        /*bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283430_, (float)p_281729_).uv(p_283247_, p_282883_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283615_, (float)p_281729_).uv(p_283247_, p_283017_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283615_, (float)p_281729_).uv(p_282598_, p_283017_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283430_, (float)p_281729_).uv(p_282598_, p_282883_).endVertex();*/
+        BufferUploader.drawWithShader(bufferbuilder.end());
+    }
+
+    public void innerBlitCustomShader(PoseStack pose, int p_281399_, int p_283222_, int p_283615_, int p_283430_, int p_281729_, float p_283247_, float p_282598_, float p_282883_, float p_283017_) {
+        //RenderSystem.setShaderTexture(0, p_283461_);
+        RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
+        //RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(() -> PlayerStatusManagerClient.positionTexBlur);
+
+        if (PlayerStatusManagerClient.positionColorTexBlur == null) {
+            return;
+        }
+        //RenderSystem.setShaderTexture(0, p_283254_);
+        RenderSystem.setShader(() -> PlayerStatusManagerClient.positionColorTexBlur);
+        if (PlayerStatusManagerClient.positionTexBlur.RESOLUTION != null) {
+            int sizeX = ScreenParticleRenderer.getInstance().widthScaledDown;
+            int sizeY = ScreenParticleRenderer.getInstance().heightScaledDown;
+            PlayerStatusManagerClient.positionTexBlur.RESOLUTION.set((float)sizeX, (float)sizeY);
+        }
+        if (PlayerStatusManagerClient.positionTexBlur.RADIUS != null) {
+            PlayerStatusManagerClient.positionTexBlur.RADIUS.set((float)2);
+        }
+
+        Matrix4f matrix4f = pose.last().pose();
+        BufferBuilder bufferbuilder = Tesselator.getInstance().getBuilder();
+        bufferbuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        /*bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283615_, (float)p_281729_).uv(p_283247_, p_282883_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283430_, (float)p_281729_).uv(p_283247_, p_283017_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283430_, (float)p_281729_).uv(p_282598_, p_283017_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283615_, (float)p_281729_).uv(p_282598_, p_282883_).endVertex();*/
+        //flip vertically, required for some reason when moving from 1 framebuffer to another
+        bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283430_, (float)p_281729_).uv(p_283247_, p_282883_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283615_, (float)p_281729_).uv(p_283247_, p_283017_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283615_, (float)p_281729_).uv(p_282598_, p_283017_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283430_, (float)p_281729_).uv(p_282598_, p_282883_).endVertex();
+        /*bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283430_, (float)p_281729_).uv(p_283247_, p_282883_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283615_, (float)p_281729_).uv(p_283247_, p_283017_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283615_, (float)p_281729_).uv(p_282598_, p_283017_).endVertex();
+        bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283430_, (float)p_281729_).uv(p_282598_, p_282883_).endVertex();*/
+        BufferUploader.drawWithShader(bufferbuilder.end());
     }
 }
