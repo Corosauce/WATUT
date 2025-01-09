@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 public class RenderHelper {
 
@@ -57,18 +59,30 @@ public class RenderHelper {
         }
     }
 
-    public static void renderWithTooltipEnd(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
+    public static synchronized void renderWithTooltipEnd(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
+
+        long time = System.currentTimeMillis();
+
+        int gameTime = 0;
+        if (Minecraft.getInstance().level != null) {
+            gameTime = (int) Minecraft.getInstance().level.getGameTime();
+            //System.out.println("???");
+        }
+
         for (PlayerStatus playerStatus : WatutMod.getPlayerStatusManagerClient().lookupPlayerToStatus.values()) {
             ScreenData screenData = playerStatus.getScreenData();
 
-            int gameTime = 0;
-            if (Minecraft.getInstance().level != null) {
-                gameTime = (int) Minecraft.getInstance().level.getGameTime();
-            }
+            /*if (gameTime % 20 == 0) {
+                ScreenParticleRenderer.getInstance().resize(ScreenParticleRenderer.getInstance().width, ScreenParticleRenderer.getInstance().height);
+            }*/
 
             //needsNewRender can be true during initial minecraft load due to ScreenParticleRenderer.resize getting triggered marking a new rerender need, so we just check if theres data too
-            if ((ScreenParticleRenderer.getInstance().needsNewRender()/* || gameTime % 20 == 0*/) && screenData.getListRenderCalls().size() > 0 && Minecraft.getInstance().screen != null/* || true*/) {
+            //TODO: if this runs after resize is called, WHILE the game is paused, and only when paused, the game likely will crash with a hard crash, why?
+            if ((ScreenParticleRenderer.getInstance().needsNewRender()/* || gameTime % 20 == 0*/ && gameTime - 10 > ScreenParticleRenderer.getInstance().lastRenderTime) && screenData.getListRenderCalls().size() > 0 && Minecraft.getInstance().screen != null/* || true*/) {
                 ScreenParticleRenderer.getInstance().markNeedsNewRender(false);
+                //TODO: renderWithTooltipEnd, this method, is running like 6 times to update the same thing, why?, remove line below and youll see it with the debug output of gametime
+                ScreenParticleRenderer.getInstance().lastRenderTime = gameTime;
+                System.out.println("new render " + gameTime);
 
                 ScreenParticleRenderer.getInstance().checkSetup();
                 Minecraft.getInstance().getMainRenderTarget().unbindWrite();
@@ -298,12 +312,37 @@ public class RenderHelper {
                 //getting data from scaled down framebuffer
                 ByteBuffer pixelBuffer = readPixelsTest();
 
+                /*Deflater deflater = new Deflater();
+                deflater.setInput(pixelBuffer);
+
+                ByteBuffer pixelBufferCompressed = ByteBuffer.allocateDirect(ScreenParticleRenderer.getInstance().widthScaledDown * ScreenParticleRenderer.getInstance().heightScaledDown * 4);
+
+                deflater.deflate(pixelBufferCompressed);*/
+
+                long time2 = System.currentTimeMillis();
+                /*ByteBuffer byteBuffer = compress(pixelBuffer);
+                ByteBuffer byteBuffer2;
+                System.out.println("perf1: " + (System.currentTimeMillis() - time2));
+                time2 = System.currentTimeMillis();
+                try {
+                    byteBuffer2 = decompress(byteBuffer, pixelBuffer.capacity());
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                System.out.println("perf2: " + (System.currentTimeMillis() - time2));*/
+
                 ScreenParticleRenderer.getInstance().unbindScaledDown();
 
                 ScreenParticleRenderer.getInstance().bindScaledDownFromByteBuffer();
 
                 GL11.glBindTexture(GL11.GL_TEXTURE_2D, ScreenParticleRenderer.getInstance().getMainRenderTargetScaledDownFromByteBuffer().getColorTextureId());
 
+                /*System.out.println("pixelBuffer buffer size before use: " + pixelBuffer.limit());
+                System.out.println("byteBuffer buffer size before use: " + byteBuffer.limit());
+                System.out.println("byteBuffer2 buffer size before use: " + byteBuffer2.limit());*/
+                //System.out.println("w " + ScreenParticleRenderer.getInstance().widthScaledDown + "h " + ScreenParticleRenderer.getInstance().heightScaledDown);
+
+                System.out.println("glTexImage2D");
                 GL11.glTexImage2D(
                         GL11.GL_TEXTURE_2D,
                         0, // Mipmap level
@@ -340,9 +379,69 @@ public class RenderHelper {
 
                 Minecraft.getInstance().getMainRenderTarget().bindWrite(true);
                 //System.out.println("completed new render for " + playerStatus);
+
+                System.out.println("perf all: " + (System.currentTimeMillis() - time));
             }
         }
     }
+
+    public static ByteBuffer compress(ByteBuffer inputBuffer) {
+        Deflater deflater = new Deflater();
+
+        // Copy ByteBuffer data into a byte array
+        byte[] inputBytes = new byte[inputBuffer.remaining()];
+        inputBuffer.get(inputBytes);
+        deflater.setInput(inputBytes);
+        deflater.finish();
+
+        // Use a direct buffer for compressed data
+        ByteBuffer outputBuffer = ByteBuffer.allocateDirect(inputBytes.length + 512); // Allow extra space
+        byte[] temp = new byte[1024];
+
+        while (!deflater.finished()) {
+            int compressedBytes = deflater.deflate(temp);
+            if (outputBuffer.remaining() < compressedBytes) {
+                // Expand the direct buffer dynamically
+                ByteBuffer newBuffer = ByteBuffer.allocateDirect(outputBuffer.capacity() * 2);
+                outputBuffer.flip();
+                newBuffer.put(outputBuffer);
+                outputBuffer = newBuffer;
+            }
+            outputBuffer.put(temp, 0, compressedBytes);
+        }
+        deflater.end();
+
+        outputBuffer.flip(); // Prepare buffer for reading
+        inputBuffer.flip();
+        return outputBuffer;
+    }
+
+    public static ByteBuffer decompress(ByteBuffer compressedBuffer, int expectedSize) throws Exception {
+        Inflater inflater = new Inflater();
+
+        // Copy compressed data into a byte array
+        byte[] compressedBytes = new byte[compressedBuffer.remaining()];
+        compressedBuffer.get(compressedBytes);
+        inflater.setInput(compressedBytes);
+
+        // Use a direct buffer for decompressed data
+        ByteBuffer outputBuffer = ByteBuffer.allocateDirect(expectedSize); // Allocate space for expected size
+        byte[] temp = new byte[1024];
+
+        while (!inflater.finished()) {
+            int decompressedBytes = inflater.inflate(temp);
+            if (outputBuffer.remaining() < decompressedBytes) {
+                throw new IllegalStateException("Decompressed size exceeds expected size!");
+            }
+            outputBuffer.put(temp, 0, decompressedBytes);
+        }
+        inflater.end();
+
+        outputBuffer.flip(); // Prepare buffer for reading
+        return outputBuffer;
+    }
+
+
 
     public static void convertParamsToStaticlySized(List<Object> params) {
         ScreenParticleRenderer screenParticleRenderer = ScreenParticleRenderer.getInstance();

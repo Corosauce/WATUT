@@ -36,6 +36,9 @@ public class ScreenParticleRenderer {
     public int heightScaledDown;
     public boolean needsInit = true;
 
+    public long lastResizeTime = 0;
+    public long lastRenderTime = 0;
+
     private static ScreenParticleRenderer instance;
 
     public static ScreenParticleRenderer getInstance() {
@@ -114,7 +117,9 @@ public class ScreenParticleRenderer {
         };
     }
 
-    public void resize(int width, int height) {
+    public synchronized void resize(int width, int height) {
+        System.out.println("resize");
+        this.lastResizeTime = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
         this.width = width;
         this.height = height;
         checkSetup();
