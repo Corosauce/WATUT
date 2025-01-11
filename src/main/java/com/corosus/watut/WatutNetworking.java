@@ -11,7 +11,12 @@ public abstract class WatutNetworking {
     public static String NBTDataPlayerGuiStatus = "playerGuiStatus";
     public static String NBTDataPlayerChatStatus = "playerChatStatus";
     public static String NBTDataPlayerTypingAmp = "playerTypingAmp";
-    public static String NBTDataPlayerScreenRenderCalls = "screenRenderCalls";
+    //public static String NBTDataPlayerScreenRenderCalls = "screenRenderCalls";
+    public static String NBTDataPlayerScreenCompressedPixelData = "screenCompressedPixelData";
+    public static String NBTDataPlayerScreenCompressedPixelDataPacketCount = "screenCompressedPixelDataPacketCount";
+    public static String NBTDataPlayerScreenCompressedPixelDataPacketIndex = "screenCompressedPixelDataPacketIndex";
+    //public static String NBTDataPlayerScreenCompressedPixelDataMD5 = "screenCompressedPixelDataMD5";
+    public static String NBTDataPlayerScreenCompressedPixelDataSize = "screenCompressedPixelDataSize";
     public static String NBTDataPlayerScreenClass = "screenClass";
     public static String NBTDataPlayerIdleTicks = "playerIdleTicks";
     //a bit of a heavy way to sync a server config to client, but itll do for now

@@ -49,14 +49,10 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
             setMouse(player.getUUID(), x, y, pressed);
         }
 
-        if (data.contains(WatutNetworking.NBTDataPlayerScreenRenderCalls)) {
-            //System.out.println("server receive screen data");
-        }
-
         //update active snapshot with latest data
         getStatus(player).getNbtCache().merge(data);
 
-        if (data.contains(WatutNetworking.NBTDataPlayerGuiStatus) || data.contains(WatutNetworking.NBTDataPlayerIdleTicks) || data.contains(WatutNetworking.NBTDataPlayerScreenRenderCalls)) {
+        if (data.contains(WatutNetworking.NBTDataPlayerGuiStatus) || data.contains(WatutNetworking.NBTDataPlayerIdleTicks) || data.contains(WatutNetworking.NBTDataPlayerScreenCompressedPixelData)) {
             WatutNetworking.instance().serverSendToClientAll(data);
         } else {
             WatutNetworking.instance().serverSendToClientNear(data, player.position(), nearbyPlayerDataSendDist, player.level());

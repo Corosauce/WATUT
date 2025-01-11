@@ -92,7 +92,8 @@ public class ParticleDynamic extends ParticleRotating {
             //vector3f.mul(f3 * 1F);
             //vector3f.mul(f3 * 3F);
             //vector3f.mul(f3 * 2F);
-            vector3f.mul(f3 * 6F);
+            //vector3f.mul(f3 * 6F);
+            vector3f.mul(f3 * 3F);
             vector3f.add(f, f1, f2);
         }
 

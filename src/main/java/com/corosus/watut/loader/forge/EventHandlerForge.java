@@ -4,6 +4,7 @@ import com.corosus.watut.ParticleRegistry;
 import com.corosus.watut.PlayerStatusManagerClient;
 import com.corosus.watut.ShaderInstanceBlur;
 import com.corosus.watut.WatutMod;
+import com.corosus.watut.client.screen.RenderHelper;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.resources.ResourceLocation;
@@ -27,6 +28,7 @@ public class EventHandlerForge {
     @OnlyIn(Dist.CLIENT)
     public void guiRender(RenderGuiEvent.Post event) {
         WatutMod.getPlayerStatusManagerClient().onGuiRender();
+        RenderHelper.guiRender();
     }
 
     @SubscribeEvent
@@ -73,15 +75,19 @@ public class EventHandlerForge {
     @SubscribeEvent
     public static void registerShaders(RegisterShadersEvent event) {
         try {
-            System.out.println("watut register shaders");
+            //System.out.println("watut register shaders");
+            PlayerStatusManagerClient.particle = null;
             PlayerStatusManagerClient.positionTexBlur = null;
             PlayerStatusManagerClient.positionColorTexBlur = null;
 
+            PlayerStatusManagerClient.particle = new ShaderInstanceBlur(event.getResourceProvider(), new ResourceLocation("watut:particle"),
+                    DefaultVertexFormat.PARTICLE);
             PlayerStatusManagerClient.positionTexBlur = new ShaderInstanceBlur(event.getResourceProvider(), new ResourceLocation("watut:position_tex_blur"),
                     DefaultVertexFormat.POSITION_TEX);
             PlayerStatusManagerClient.positionColorTexBlur = new ShaderInstanceBlur(event.getResourceProvider(), new ResourceLocation("watut:position_color_tex_blur"),
                     DefaultVertexFormat.POSITION_COLOR_TEX);
 
+            event.registerShader(PlayerStatusManagerClient.particle, (shaderInstance -> {}));
             event.registerShader(PlayerStatusManagerClient.positionTexBlur, (shaderInstance -> {}));
             event.registerShader(PlayerStatusManagerClient.positionColorTexBlur, (shaderInstance -> {}));
         } catch (IOException e) {

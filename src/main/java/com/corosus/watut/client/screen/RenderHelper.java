@@ -1,66 +1,36 @@
 package com.corosus.watut.client.screen;
 
+import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.PlayerStatus;
-import com.corosus.watut.PlayerStatusManagerClient;
 import com.corosus.watut.WatutMod;
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.JSONLoader;
 import com.corosus.watut.config.JsonObjects.ScreenRule;
-import com.corosus.watut.mixin.client.ScreenRenderBackground;
-import com.mojang.blaze3d.pipeline.MainTarget;
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.client.ForgeHooksClient;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.zip.Deflater;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 import java.util.zip.Inflater;
 
 public class RenderHelper {
 
-    public static HashMap<RenderCallType, Method> lookupRenderCallsToMethod = new HashMap<>();
+    public static boolean performingOwnRender = false;
 
-    static {
-        try {
-            lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT, GuiGraphics.class.getDeclaredMethod("innerBlit", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class));
-            lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT2, GuiGraphics.class.getDeclaredMethod("innerBlit", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class));
-            lookupRenderCallsToMethod.put(RenderCallType.POSE_PUSH, PoseStack.class.getDeclaredMethod("pushPose"));
-            lookupRenderCallsToMethod.put(RenderCallType.POSE_POP, PoseStack.class.getDeclaredMethod("popPose"));
-            lookupRenderCallsToMethod.put(RenderCallType.POSE_TRANSLATE_F, PoseStack.class.getDeclaredMethod("translate", float.class, float.class, float.class));
-            lookupRenderCallsToMethod.put(RenderCallType.POSE_TRANSLATE_D, PoseStack.class.getDeclaredMethod("translate", double.class, double.class, double.class));
-
-            lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT_BLUR, ScreenParticleRenderer.class.getDeclaredMethod("innerBlit", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class, PoseStack.class, ScreenRule.class));
-            lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT_BLUR2, ScreenParticleRenderer.class.getDeclaredMethod("innerBlit", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, PoseStack.class, ScreenRule.class));
-        } catch (NoSuchMethodException e) {
-            //e.printStackTrace();
-            try {
-                lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT, GuiGraphics.class.getDeclaredMethod("m_280444_", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class));
-                lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT2, GuiGraphics.class.getDeclaredMethod("m_280479_", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class));
-
-                lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT_BLUR, ScreenParticleRenderer.class.getDeclaredMethod("innerBlit", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class, PoseStack.class, ScreenRule.class));
-                lookupRenderCallsToMethod.put(RenderCallType.INNER_BLIT_BLUR2, ScreenParticleRenderer.class.getDeclaredMethod("innerBlit", ResourceLocation.class, int.class, int.class, int.class, int.class, int.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, float.class, PoseStack.class, ScreenRule.class));
-            } catch (NoSuchMethodException e2) {
-                throw new RuntimeException(e2);
-            }
-        }
-    }
-
-    public static synchronized void renderWithTooltipEnd(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
-
+    public static void guiRender() {
         long time = System.currentTimeMillis();
 
         int gameTime = 0;
@@ -68,6 +38,8 @@ public class RenderHelper {
             gameTime = (int) Minecraft.getInstance().level.getGameTime();
             //System.out.println("???");
         }
+
+        boolean hasUnboundVanillaMainTarget = false;
 
         for (PlayerStatus playerStatus : WatutMod.getPlayerStatusManagerClient().lookupPlayerToStatus.values()) {
             ScreenData screenData = playerStatus.getScreenData();
@@ -78,17 +50,20 @@ public class RenderHelper {
 
             //needsNewRender can be true during initial minecraft load due to ScreenParticleRenderer.resize getting triggered marking a new rerender need, so we just check if theres data too
             //TODO: if this runs after resize is called, WHILE the game is paused, and only when paused, the game likely will crash with a hard crash, why?
-            if ((ScreenParticleRenderer.getInstance().needsNewRender()/* || gameTime % 20 == 0*/ && gameTime - 10 > ScreenParticleRenderer.getInstance().lastRenderTime) && screenData.getListRenderCalls().size() > 0 && Minecraft.getInstance().screen != null/* || true*/) {
-                ScreenParticleRenderer.getInstance().markNeedsNewRender(false);
+            if ((screenData.needsNewRender() && screenData.getTexturePixelData() != null/* || gameTime % 20 == 0*/ /*&& gameTime - 10 > ScreenParticleRenderer.getInstance().lastRenderTime*/)/* && screenData.getListRenderCalls().size() > 0*/ /*&& Minecraft.getInstance().screen != null*//* || true*/) {
+                screenData.markNeedsNewRender(false);
                 //TODO: renderWithTooltipEnd, this method, is running like 6 times to update the same thing, why?, remove line below and youll see it with the debug output of gametime
+                //could have been because it was recursive loop when this was in render tooltip end hook
                 ScreenParticleRenderer.getInstance().lastRenderTime = gameTime;
-                System.out.println("new render " + gameTime);
+                //System.out.println("new render for other client" + gameTime);
 
                 ScreenParticleRenderer.getInstance().checkSetup();
-                Minecraft.getInstance().getMainRenderTarget().unbindWrite();
-                ScreenParticleRenderer.getInstance().bind();
+                if (!hasUnboundVanillaMainTarget) {
+                    hasUnboundVanillaMainTarget = true;
+                    unbindVanillaRenderTarget();
+                }
 
-                RenderSystem.clear(16640, Minecraft.ON_OSX);
+
 
                 String screenName = screenData.getScreenClass();
                 ScreenRule screenRule = null;
@@ -107,255 +82,76 @@ public class RenderHelper {
 
                 //System.out.println("render type " + renderType);
 
-                boolean test = true;
 
-                if (test) {
-                    if (Minecraft.getInstance().screen != null) {
-                        //ForgeHooksClient.drawScreen(Minecraft.getInstance().screen, pGuiGraphics, pMouseX, pMouseY, pPartialTick);
 
-                        ScreenParticleRenderer.isRenderingParticleGUI = true;
-                        ScreenParticleRenderer.isRenderingParticleGUI2 = true;
-                        Window window = Minecraft.getInstance().getWindow();
-                        //pGuiGraphics.fillGradient(0, 0, window.getWidth(), window.getHeight(), -1072689136, -0);
-                        Minecraft.getInstance().screen.renderWithTooltip(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
-                        //ScreenParticleRenderer.isRenderingParticleGUI = false;
-                        //ScreenParticleRenderer.isRenderingParticleGUI2 = false;
-
-                        //readPixelsTest();
-                    }
-                } else {
-                    if (renderType.equals(ScreenRule.RenderTypes.ALL_TEXTURES)) {
-                        for (RenderCall renderCall : screenData.getListRenderCalls()) {
-                            List<Object> listParams = renderCall.getListParamsCopy();
-                            if (renderCall.getRenderCallType() == RenderCallType.INNER_BLIT_BLUR || renderCall.getRenderCallType() == RenderCallType.INNER_BLIT_BLUR2) {
-                                listParams.add(pGuiGraphics.pose());
-                                listParams.add(screenRule);
-                            }
-
-                            //System.out.println("size x: " + ((float)listParams.get(7) * 256) + " - " + "size y: " + ((float)listParams.get(9) * 256));
-                            Object instance = ScreenParticleRenderer.getInstance();
-                            try {
-                                //lookupRenderCallsToMethod.get(renderCall.getRenderCallType()).invoke(pGuiGraphics, listParams.toArray());
-                                //TODO: this spits out java.lang.IllegalArgumentException while escape menu is open AND resizing the screen
-
-                                if (renderCall.getRenderCallType() == RenderCallType.POSE_PUSH
-                                        || renderCall.getRenderCallType() == RenderCallType.POSE_POP
-                                        || renderCall.getRenderCallType() == RenderCallType.POSE_TRANSLATE_F
-                                        || renderCall.getRenderCallType() == RenderCallType.POSE_TRANSLATE_D) {
-                                    instance = pGuiGraphics.pose();
-                                }
-
-                                lookupRenderCallsToMethod.get(renderCall.getRenderCallType()).invoke(instance, listParams.toArray());
-                            } catch (Exception e) {
-                                System.out.println("instance " + instance);
-                                System.out.println("RenderCallType " + renderCall.getRenderCallType());
-                                System.out.println("params before render: " + listParams);
-                                e.printStackTrace();
-                            }
-                        }
-                    } else if (renderType.equals(ScreenRule.RenderTypes.BIGGEST_TEXTURE)) {
-
-                        int biggestUVRenderCallIndex = -1;
-                        float biggest = 0;
-                        for (int i = 0; i < screenData.getListRenderCalls().size(); i++) {
-                            RenderCall renderCall = screenData.getListRenderCalls().get(i);
-                            if (renderCall.getRenderCallType() != RenderCallType.INNER_BLIT_BLUR || renderCall.getRenderCallType() != RenderCallType.INNER_BLIT_BLUR2) {
-                                continue;
-                            }
-                            float x1 = (int) renderCall.getListParams().get(1);
-                            float x2 = (int) renderCall.getListParams().get(2);
-                            float y1 = (int) renderCall.getListParams().get(3);
-                            float y2 = (int) renderCall.getListParams().get(4);
-                            float minU = (float) renderCall.getListParams().get(6);
-                            float maxU = (float) renderCall.getListParams().get(7);
-                            float minV = (float) renderCall.getListParams().get(8);
-                            float maxV = (float) renderCall.getListParams().get(9);
-                            float effectiveSizeX = (x2 - x1) * (maxU - minU);
-                            float effectiveSizeY = (y2 - y1) * (maxV - minV);
-                            float effectiveSize = effectiveSizeX + effectiveSizeY;
-                            if (effectiveSize > biggest) {
-                                biggestUVRenderCallIndex = i;
-                                biggest = effectiveSize;
-                            }
-                        }
-
-                        //biggestUVRenderCallIndex = -1;
-
-                        //System.out.println("rendering biggest: " + biggest);
-                        if (biggestUVRenderCallIndex != -1) {
-                            //for (RenderCall renderCall : screenData.getListRenderCalls()) {
-                            RenderCall renderCall = screenData.getListRenderCalls().get(biggestUVRenderCallIndex);
-                            //prevent modifying original list, theres edge cases on resize where itll run this code twice before a new render call refreshes the list
-                            List<Object> listParams = renderCall.getListParamsCopy();
-                            listParams.add(pGuiGraphics.pose());
-                            listParams.add(screenRule);
-                            convertParamsToStaticlySized(listParams);
-                            try {
-                                //System.out.println("?" + renderCall.getRenderCallType());
-                                //System.out.println("params before render: " + listParams);
-                                //lookupRenderCallsToMethod.get(renderCall.getRenderCallType()).invoke(pGuiGraphics, listParams.toArray());
-                                lookupRenderCallsToMethod.get(renderCall.getRenderCallType()).invoke(ScreenParticleRenderer.getInstance(), listParams.toArray());
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                            //}
-                        }
-
-                    }/* else if (renderType.equals(ScreenRule.RenderTypes.SINGLE_TEXTURE)) {
-                    RenderCall renderCall = new RenderCall(RenderCallType.INNER_BLIT);
-                    renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), 339, 515, 140, 306, 0, 0.0F, 0.6875F, 0.0F, 0.6484375F);
-                    try {
-                        lookupRenderCallsToMethod.get(renderCall.getRenderCallType()).invoke(pGuiGraphics, renderCall.getListParams().toArray());
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }*/ else if (renderType.equals(ScreenRule.RenderTypes.GENERIC_INVENTORY) || renderType.equals(ScreenRule.RenderTypes.SINGLE_TEXTURE)) {
-                        RenderCall renderCall = new RenderCall(RenderCallType.INNER_BLIT_BLUR);
-                        //renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), 872, 1048, 405, 571, 0, 0.0F, 0.6875F, 0.0F, 0.8671875F);
-                        renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), 872, 1048, 968, 1190, 0, 0.0F, 0.6875F, 0.0F, 0.8671875F);
-                        //[minecraft:textures/gui/container/generic_54.png, 872, 1048, 475, 571, 0, 0.0, 0.6875, 0.4921875, 0.8671875]
-                        //int resX = Minecraft.getInstance().
-                    /*int sizeX = (int) renderCall.getListParams().get(2) - (int) renderCall.getListParams().get(1);
-                    int sizeY = (int) renderCall.getListParams().get(4) - (int) renderCall.getListParams().get(3);
-                    int x1 = 0;
-                    int x2 = (int)(1920 / 1.26F);
-                    int y2 = 1080;
-                    int y1 = 0;
-                    int intScale = Math.min(ScreenParticleRenderer.getInstance().width / sizeX, ScreenParticleRenderer.getInstance().height / sizeY);
-                    y1 = (ScreenParticleRenderer.getInstance().height / 2) - (sizeY / 2 * intScale);
-                    y2 = (ScreenParticleRenderer.getInstance().height / 2) + (sizeY / 2 * intScale);
-                    x1 = (ScreenParticleRenderer.getInstance().width / 2) - (sizeX / 2 * intScale);
-                    x2 = (ScreenParticleRenderer.getInstance().width / 2) + (sizeX / 2 * intScale);
-                    renderCall.getListParams().set(1, x1);
-                    renderCall.getListParams().set(2, x2);
-                    renderCall.getListParams().set(3, y1);
-                    renderCall.getListParams().set(4, y2);
-                    System.out.println("sizeX " + sizeX + " sizeY " + sizeY + " intScale " + intScale);
-                    System.out.println("params before render: " + renderCall.getListParams());*/
-
-                        List<Object> listParams = renderCall.getListParamsCopy();
-                        listParams.add(pGuiGraphics.pose());
-                        listParams.add(screenRule);
-                        convertParamsToStaticlySized(listParams);
-
-                        //renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), 339, 515, 140, 306, 0, 0.0F, 0.6875F, 0.0F, 0.8671875F);
-                        //renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), 872, 1048, 405, 571, 0, 0.0F, 0.6875F, 0.0F, 0.6484375F);
-
-                        //renderCall.innerBlit(new ResourceLocation("minecraft", "textures/gui/container/generic_54.png"), x1, x2, y1, y2, 0, 0.0F, 0.6875F, 0.0F, 0.8671875F);
-                        try {
-                            lookupRenderCallsToMethod.get(renderCall.getRenderCallType()).invoke(ScreenParticleRenderer.getInstance(), listParams.toArray());
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-
-                ScreenParticleRenderer.getInstance().unbind();
 
 
                 Matrix4f matrix4f = (new Matrix4f()).setOrtho(0.0F, (float)ScreenParticleRenderer.getInstance().widthScaledDown, (float)ScreenParticleRenderer.getInstance().heightScaledDown, 0.0F, 1000.0F, net.minecraftforge.client.ForgeHooksClient.getGuiFarPlane());
                 RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
 
-                ScreenParticleRenderer.getInstance().bindScaledDown();
-                //ScreenParticleRenderer.getInstance().bindScaledDownFromByteBuffer();
-                RenderSystem.clear(16640, Minecraft.ON_OSX);
-                double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
-                int croppedWidth = (int) (512 * guiScale);
-                int croppedHeight = (int) (512 * guiScale);
-                /*float aspectRatio = (float)ScreenParticleRenderer.getInstance().width / (float)ScreenParticleRenderer.getInstance().height;
-                croppedWidth = 512;
-                croppedHeight = (int) (croppedWidth / aspectRatio);*/
-                //croppedWidth = ScreenParticleRenderer.getInstance().width;
-                //croppedHeight = ScreenParticleRenderer.getInstance().height;
-
-                int centerX = ScreenParticleRenderer.getInstance().width / 2;
-                int centerY = ScreenParticleRenderer.getInstance().height / 2;
-                int x1 = centerX - (croppedWidth / 2);
-                int x2 = centerX + (croppedWidth / 2);
-                int y1 = centerY - (croppedHeight / 2);
-                int y2 = centerY + (croppedHeight / 2);
-                float minU = (float)x1 / (float)ScreenParticleRenderer.getInstance().width;
-                float maxU = (float)x2 / (float)ScreenParticleRenderer.getInstance().width;
-                float minV = (float)y1 / (float)ScreenParticleRenderer.getInstance().height;
-                float maxV = (float)y2 / (float)ScreenParticleRenderer.getInstance().height;
-                /*minU = 0;
-                maxU = 1;
-                minV = 0;
-                maxV = 1;*/
-                x1 = 0;
-                x2 = ScreenParticleRenderer.getInstance().widthScaledDown * 4;
-                y1 = 0;
-                y2 = ScreenParticleRenderer.getInstance().heightScaledDown * 4;
-
-                x1 = 0;
-                x2 = ScreenParticleRenderer.getInstance().width;
-                y1 = 0;
-                y2 = ScreenParticleRenderer.getInstance().height;
-
-                x1 = 0;
-                x2 = ScreenParticleRenderer.getInstance().widthScaledDown;
-                y1 = 0;
-                y2 = ScreenParticleRenderer.getInstance().heightScaledDown;
-
-                ScreenParticleRenderer t = ScreenParticleRenderer.getInstance();
-                /*ScreenParticleRenderer.getInstance().innerBlitCustom(pGuiGraphics.pose()
-                        , 0, ScreenParticleRenderer.getInstance().widthScaledDown
-                        , 0, ScreenParticleRenderer.getInstance().heightScaledDown
-                        , 0, 0, 1, 0, 1);*/
-
-                ScreenParticleRenderer.getInstance().innerBlitCustom(pGuiGraphics.pose()
-                        , x1, x2
-                        , y1, y2
-                        , 0
-                        , minU, maxU, minV, maxV);
-
-                //getting data from scaled down framebuffer
-                ByteBuffer pixelBuffer = readPixelsTest();
-
-                /*Deflater deflater = new Deflater();
-                deflater.setInput(pixelBuffer);
-
-                ByteBuffer pixelBufferCompressed = ByteBuffer.allocateDirect(ScreenParticleRenderer.getInstance().widthScaledDown * ScreenParticleRenderer.getInstance().heightScaledDown * 4);
-
-                deflater.deflate(pixelBufferCompressed);*/
-
-                long time2 = System.currentTimeMillis();
-                /*ByteBuffer byteBuffer = compress(pixelBuffer);
-                ByteBuffer byteBuffer2;
-                System.out.println("perf1: " + (System.currentTimeMillis() - time2));
-                time2 = System.currentTimeMillis();
-                try {
-                    byteBuffer2 = decompress(byteBuffer, pixelBuffer.capacity());
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-                System.out.println("perf2: " + (System.currentTimeMillis() - time2));*/
-
-                ScreenParticleRenderer.getInstance().unbindScaledDown();
-
                 ScreenParticleRenderer.getInstance().bindScaledDownFromByteBuffer();
+                RenderSystem.clear(16640, Minecraft.ON_OSX);
 
-                GL11.glBindTexture(GL11.GL_TEXTURE_2D, ScreenParticleRenderer.getInstance().getMainRenderTargetScaledDownFromByteBuffer().getColorTextureId());
+                //setup a new texture, borrowing relevant bits from RenderTarget class
+                if (playerStatus.getScreenData().getTextureID() == -1) {
+                    int texture = GL11.glGenTextures();
+                    GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture);
+
+                    //from code example / RenderTarget via setFilterMode
+                    GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+                    GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
+
+                    //from RenderTarget via createBuffers when prepping a new texture
+                    GlStateManager._texParameter(3553, 10242, 33071);
+                    GlStateManager._texParameter(3553, 10243, 33071);
+                    GL30.glFramebufferTexture2D(
+                            GL30.GL_FRAMEBUFFER,
+                            GL30.GL_COLOR_ATTACHMENT0,
+                            GL11.GL_TEXTURE_2D,
+                            ScreenParticleRenderer.getInstance().getMainRenderTargetScaledDownFromByteBuffer().getColorTextureId(),
+                            0 // Mipmap level
+                    );
+
+                    playerStatus.getScreenData().setTextureID(texture);
+                }
+
+                if (playerStatus.getScreenData().getParticleRenderType() == null) {
+                    playerStatus.getScreenData().initClient();
+                }
+
+                //GL11.glBindTexture(GL11.GL_TEXTURE_2D, ScreenParticleRenderer.getInstance().getMainRenderTargetScaledDownFromByteBuffer().getColorTextureId());
+                GL11.glBindTexture(GL11.GL_TEXTURE_2D, playerStatus.getScreenData().getTextureID());
 
                 /*System.out.println("pixelBuffer buffer size before use: " + pixelBuffer.limit());
                 System.out.println("byteBuffer buffer size before use: " + byteBuffer.limit());
                 System.out.println("byteBuffer2 buffer size before use: " + byteBuffer2.limit());*/
                 //System.out.println("w " + ScreenParticleRenderer.getInstance().widthScaledDown + "h " + ScreenParticleRenderer.getInstance().heightScaledDown);
 
-                System.out.println("glTexImage2D");
-                GL11.glTexImage2D(
-                        GL11.GL_TEXTURE_2D,
-                        0, // Mipmap level
-                        GL11.GL_RGBA, // Internal format
-                        ScreenParticleRenderer.getInstance().widthScaledDown,
-                        ScreenParticleRenderer.getInstance().heightScaledDown,
-                        0, // Border
-                        GL11.GL_RGBA, // Data format
-                        GL11.GL_UNSIGNED_BYTE, // Data type
-                        pixelBuffer
-                );
+                System.out.println("expected size: " + ScreenParticleRenderer.getInstance().widthScaledDown * ScreenParticleRenderer.getInstance().heightScaledDown * 4);
+                System.out.println("2: " + screenData.getTexturePixelData().limit());
 
-                GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+                //TODO: validator false positive on size, why is size different though it still renders
+                if (validatePixelByteBuffer(screenData.getTexturePixelData(),
+                        ScreenParticleRenderer.getInstance().widthScaledDown * ScreenParticleRenderer.getInstance().heightScaledDown * 4,
+                        4)) {
+                    //System.out.println("glTexImage2D");
+                    GL11.glTexImage2D(
+                            GL11.GL_TEXTURE_2D,
+                            0, // Mipmap level
+                            GL11.GL_RGBA, // Internal format
+                            ScreenParticleRenderer.getInstance().widthScaledDown,
+                            ScreenParticleRenderer.getInstance().heightScaledDown,
+                            0, // Border
+                            GL11.GL_RGBA, // Data format
+                            GL11.GL_UNSIGNED_BYTE, // Data type
+                            screenData.getTexturePixelData()
+                    );
+                } else {
+                    CULog.dbg("ERROR: invalid bytebuffer, avoiding glTexImage2D");
+                }
+
+
+                /*GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
                 GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
 
                 GL30.glFramebufferTexture2D(
@@ -369,24 +165,183 @@ public class RenderHelper {
                 // Check if the framebuffer is complete
                 if (GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER) != GL30.GL_FRAMEBUFFER_COMPLETE) {
                     throw new RuntimeException("Framebuffer is not complete");
-                }
+                }*/
 
                 ScreenParticleRenderer.getInstance().unbindScaledDownFromByteBuffer();
-
-                Window window = Minecraft.getInstance().getWindow();
-                matrix4f = (new Matrix4f()).setOrtho(0.0F, (float)((double)window.getWidth() / window.getGuiScale()), (float)((double)window.getHeight() / window.getGuiScale()), 0.0F, 1000.0F, net.minecraftforge.client.ForgeHooksClient.getGuiFarPlane());
-                RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
-
-                Minecraft.getInstance().getMainRenderTarget().bindWrite(true);
                 //System.out.println("completed new render for " + playerStatus);
 
-                System.out.println("perf all: " + (System.currentTimeMillis() - time));
+                //System.out.println("perf all: " + (System.currentTimeMillis() - time));
             }
+        }
+
+        if (hasUnboundVanillaMainTarget) {
+            bindVanillaRenderTargetAndSetupProjectionMatrix();
         }
     }
 
+    public static void bindVanillaRenderTargetAndSetupProjectionMatrix() {
+        Window window = Minecraft.getInstance().getWindow();
+        Matrix4f matrix4f = (new Matrix4f()).setOrtho(0.0F, (float)((double)window.getWidth() / window.getGuiScale()), (float)((double)window.getHeight() / window.getGuiScale()), 0.0F, 1000.0F, net.minecraftforge.client.ForgeHooksClient.getGuiFarPlane());
+        RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
+
+        Minecraft.getInstance().getMainRenderTarget().bindWrite(true);
+    }
+
+    public static void unbindVanillaRenderTarget() {
+        Minecraft.getInstance().getMainRenderTarget().unbindWrite();
+    }
+
+    public static synchronized void renderWithTooltipEnd(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
+        //if (true) return;
+
+        int gameTime = 0;
+        if (Minecraft.getInstance().level != null) {
+            gameTime = (int) Minecraft.getInstance().level.getGameTime();
+            //System.out.println("???");
+        }
+
+        PlayerStatus playerStatusLocal = WatutMod.getPlayerStatusManagerClient().getStatusLocal();
+        ScreenData screenDataLocal = playerStatusLocal.getScreenData();
+        if ((playerStatusLocal.getScreenData().isCapturing()/* || gameTime % 20 == 0*/ /*&& gameTime - 10 > ScreenParticleRenderer.getInstance().lastRenderTime*/)/* && screenData.getListRenderCalls().size() > 0*/ && Minecraft.getInstance().screen != null/* || true*/) {
+            //screenDataLocal.markNeedsNewRender(false);
+
+            playerStatusLocal.getScreenData().stopCapture();
+
+            ScreenParticleRenderer.getInstance().lastRenderTime = gameTime;
+            //System.out.println("new render for local client" + gameTime);
+
+            ScreenParticleRenderer.getInstance().checkSetup();
+            unbindVanillaRenderTarget();
+            ScreenParticleRenderer.getInstance().bind();
+
+            RenderSystem.clear(16640, Minecraft.ON_OSX);
+
+            if (Minecraft.getInstance().screen != null) {
+                //ForgeHooksClient.drawScreen(Minecraft.getInstance().screen, pGuiGraphics, pMouseX, pMouseY, pPartialTick);
+
+                ScreenParticleRenderer.isRenderingParticleGUI = true;
+                ScreenParticleRenderer.isRenderingParticleGUI2 = true;
+                Window window = Minecraft.getInstance().getWindow();
+                //pGuiGraphics.fillGradient(0, 0, window.getWidth(), window.getHeight(), -1072689136, -0);
+                performingOwnRender = true;
+                Minecraft.getInstance().screen.renderWithTooltip(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
+                performingOwnRender = false;
+                ScreenParticleRenderer.isRenderingParticleGUI = false;
+                ScreenParticleRenderer.isRenderingParticleGUI2 = false;
+
+                //readPixelsTest();
+            }
+
+            ScreenParticleRenderer.getInstance().unbind();
+
+            Matrix4f matrix4f = (new Matrix4f()).setOrtho(0.0F, (float)ScreenParticleRenderer.getInstance().widthScaledDown, (float)ScreenParticleRenderer.getInstance().heightScaledDown, 0.0F, 1000.0F, net.minecraftforge.client.ForgeHooksClient.getGuiFarPlane());
+            RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
+
+            ScreenParticleRenderer.getInstance().bindScaledDown();
+            //ScreenParticleRenderer.getInstance().bindScaledDownFromByteBuffer();
+            RenderSystem.clear(16640, Minecraft.ON_OSX);
+            double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+            int croppedWidth = (int) (512 * guiScale);
+            int croppedHeight = (int) (512 * guiScale);
+                /*float aspectRatio = (float)ScreenParticleRenderer.getInstance().width / (float)ScreenParticleRenderer.getInstance().height;
+                croppedWidth = 512;
+                croppedHeight = (int) (croppedWidth / aspectRatio);*/
+            //croppedWidth = ScreenParticleRenderer.getInstance().width;
+            //croppedHeight = ScreenParticleRenderer.getInstance().height;
+
+            int centerX = ScreenParticleRenderer.getInstance().width / 2;
+            int centerY = ScreenParticleRenderer.getInstance().height / 2;
+            int x1 = centerX - (croppedWidth / 2);
+            int x2 = centerX + (croppedWidth / 2);
+            int y1 = centerY - (croppedHeight / 2);
+            int y2 = centerY + (croppedHeight / 2);
+            float minU = (float)x1 / (float)ScreenParticleRenderer.getInstance().width;
+            float maxU = (float)x2 / (float)ScreenParticleRenderer.getInstance().width;
+            float minV = (float)y1 / (float)ScreenParticleRenderer.getInstance().height;
+            float maxV = (float)y2 / (float)ScreenParticleRenderer.getInstance().height;
+                /*minU = 0;
+                maxU = 1;
+                minV = 0;
+                maxV = 1;*/
+            x1 = 0;
+            x2 = ScreenParticleRenderer.getInstance().widthScaledDown * 4;
+            y1 = 0;
+            y2 = ScreenParticleRenderer.getInstance().heightScaledDown * 4;
+
+            x1 = 0;
+            x2 = ScreenParticleRenderer.getInstance().width;
+            y1 = 0;
+            y2 = ScreenParticleRenderer.getInstance().height;
+
+            x1 = 0;
+            x2 = ScreenParticleRenderer.getInstance().widthScaledDown;
+            y1 = 0;
+            y2 = ScreenParticleRenderer.getInstance().heightScaledDown;
+
+            ScreenParticleRenderer t = ScreenParticleRenderer.getInstance();
+                /*ScreenParticleRenderer.getInstance().innerBlitCustom(pGuiGraphics.pose()
+                        , 0, ScreenParticleRenderer.getInstance().widthScaledDown
+                        , 0, ScreenParticleRenderer.getInstance().heightScaledDown
+                        , 0, 0, 1, 0, 1);*/
+
+                /*GL30.glEnable(GL30.GL_BLEND);
+                GL30.glBlendFunc(GL30.GL_SRC_ALPHA, GL30.GL_ONE_MINUS_SRC_ALPHA);
+
+                GL30.glEnable(GL30.GL_ALPHA_TEST);*/
+            //GL30.glAlphaFunc(GL30.GL_GREATER, 0.1f);
+
+            ScreenParticleRenderer.getInstance().innerBlitCustomShader(pGuiGraphics.pose()
+                    , x1, x2
+                    , y1, y2
+                    , 0
+                    , minU, maxU, minV, maxV);
+
+            //getting data from scaled down framebuffer
+            ByteBuffer pixelBuffer = readPixelsTest();
+
+                /*Deflater deflater = new Deflater();
+                deflater.setInput(pixelBuffer);
+
+                ByteBuffer pixelBufferCompressed = ByteBuffer.allocateDirect(ScreenParticleRenderer.getInstance().widthScaledDown * ScreenParticleRenderer.getInstance().heightScaledDown * 4);
+
+                deflater.deflate(pixelBufferCompressed);*/
+
+            long time2 = System.currentTimeMillis();
+            ByteBuffer byteBuffer = compress(pixelBuffer);
+            //ByteBuffer byteBuffer = null;
+            /*try {
+                byteBuffer = compressGZIP(pixelBuffer);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }*/
+            //ByteBuffer byteBuffer2;
+            //System.out.println("perf1: " + (System.currentTimeMillis() - time2));
+            time2 = System.currentTimeMillis();
+            try {
+                //byteBuffer2 = decompress(byteBuffer, pixelBuffer.capacity());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            //System.out.println("perf2: " + (System.currentTimeMillis() - time2));
+
+            screenDataLocal.setTexturePixelData(byteBuffer);
+
+            ScreenParticleRenderer.getInstance().unbindScaledDown();
+
+            bindVanillaRenderTargetAndSetupProjectionMatrix();
+
+            System.out.println("sending size 1: " + ScreenParticleRenderer.getInstance().widthScaledDown * ScreenParticleRenderer.getInstance().heightScaledDown * 4);
+            System.out.println("2: " + pixelBuffer.limit());
+
+            WatutMod.getPlayerStatusManagerClient().sendScreenRenderData(playerStatusLocal);
+
+        }
+
+
+    }
+
     public static ByteBuffer compress(ByteBuffer inputBuffer) {
-        Deflater deflater = new Deflater();
+        Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
 
         // Copy ByteBuffer data into a byte array
         byte[] inputBytes = new byte[inputBuffer.remaining()];
@@ -441,7 +396,59 @@ public class RenderHelper {
         return outputBuffer;
     }
 
+    public static ByteBuffer decompressGZIP(ByteBuffer compressedBuffer) throws IOException {
+        // Extract the byte array from the input ByteBuffer
+        byte[] compressedBytes = new byte[compressedBuffer.remaining()];
+        compressedBuffer.get(compressedBytes);
 
+        // Use a ByteArrayInputStream to wrap the compressed data
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(compressedBytes);
+
+        // Create a GZIPInputStream for decompression
+        GZIPInputStream gzipInputStream = new GZIPInputStream(byteArrayInputStream);
+
+        // Read decompressed data into a ByteArrayOutputStream
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        int bytesRead;
+        while ((bytesRead = gzipInputStream.read(buffer)) != -1) {
+            byteArrayOutputStream.write(buffer, 0, bytesRead);
+        }
+
+        // Close streams
+        gzipInputStream.close();
+        byteArrayInputStream.close();
+
+        // Get the decompressed data as a byte array
+        byte[] decompressedBytes = byteArrayOutputStream.toByteArray();
+
+        // Create a direct ByteBuffer and put the decompressed data into it
+        ByteBuffer directBuffer = ByteBuffer.allocateDirect(decompressedBytes.length);
+        directBuffer.put(decompressedBytes);
+        directBuffer.flip(); // Flip the buffer to prepare it for reading
+
+        return directBuffer;
+    }
+
+    public static ByteBuffer compressGZIP(ByteBuffer inputBuffer) throws IOException {
+        // Extract bytes from the input ByteBuffer
+        byte[] inputBytes = new byte[inputBuffer.remaining()];
+        inputBuffer.get(inputBytes);
+
+        // Create a ByteArrayOutputStream to hold the compressed data
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+
+        // Use GZIPOutputStream to compress the data
+        try (GZIPOutputStream gzipOutputStream = new GZIPOutputStream(byteArrayOutputStream)) {
+            gzipOutputStream.write(inputBytes);
+        }
+
+        // Get the compressed data as a byte array
+        byte[] compressedBytes = byteArrayOutputStream.toByteArray();
+
+        // Wrap the compressed data in a ByteBuffer and return it
+        return ByteBuffer.wrap(compressedBytes);
+    }
 
     public static void convertParamsToStaticlySized(List<Object> params) {
         ScreenParticleRenderer screenParticleRenderer = ScreenParticleRenderer.getInstance();
@@ -514,6 +521,19 @@ public class RenderHelper {
 
         //confirmed works
         return pixelBuffer;
+    }
+
+    public static boolean validatePixelByteBuffer(ByteBuffer byteBuffer, int expectedSize, int expectedAlignment) {
+
+        if (byteBuffer == null) return false;
+
+        if (byteBuffer.limit() != expectedSize) {
+            return false;
+        }
+
+        //GL30.glPixelStorei(GL30.GL_UNPACK_ALIGNMENT, expectedAlignment);
+
+        return true;
     }
 
 }

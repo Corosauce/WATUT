@@ -19,8 +19,11 @@ public abstract class ScreenRenderWithTooltip {
 
     @Inject(method = "renderWithTooltip", at = @At("TAIL"))
     private void renderWithTooltipEnd(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick, CallbackInfo ci) {
-        WatutMod.getPlayerStatusManagerClient().hookStopScreenRender();
+        //WatutMod.getPlayerStatusManagerClient().hookStopScreenRender();
         //WatutMod.getPlayerStatusManagerClient().renderWithTooltipEnd(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
-        RenderHelper.renderWithTooltipEnd(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
+        //avoid recursion
+        if (!RenderHelper.performingOwnRender) {
+            RenderHelper.renderWithTooltipEnd(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
+        }
     }
 }
