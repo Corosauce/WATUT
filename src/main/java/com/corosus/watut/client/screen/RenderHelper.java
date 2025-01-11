@@ -69,6 +69,7 @@ public class RenderHelper {
                     //from RenderTarget via createBuffers when prepping a new texture
                     GlStateManager._texParameter(3553, 10242, 33071);
                     GlStateManager._texParameter(3553, 10243, 33071);
+                    //this binds the texture id to the active framebuffer (scaled down framebuffer), result is anything rendered to it is stored in this texture id
                     GL30.glFramebufferTexture2D(
                             GL30.GL_FRAMEBUFFER,
                             GL30.GL_COLOR_ATTACHMENT0,
@@ -84,6 +85,7 @@ public class RenderHelper {
                     playerStatus.getScreenData().initClient();
                 }
 
+                //this might actually not be needed, since were rendering from pure data, not from this, setting the framebuffer to write to this is done above
                 GL11.glBindTexture(GL11.GL_TEXTURE_2D, playerStatus.getScreenData().getTextureID());
 
                 /*System.out.println("pixelBuffer buffer size before use: " + pixelBuffer.limit());
@@ -210,11 +212,25 @@ public class RenderHelper {
             y1 = 0;
             y2 = ScreenParticleRenderer.getInstance().heightScaledDown;
 
-            ScreenParticleRenderer.getInstance().innerBlitCustomShader(pGuiGraphics.pose()
+            ScreenParticleRenderer.getInstance().innerBlitCustomShaderHorizontal(pGuiGraphics.pose()
                     , x1, x2
                     , y1, y2
                     , 0
                     , minU, maxU, minV, maxV);
+
+            /*ScreenParticleRenderer.getInstance().innerBlitCustomShaderVertical(pGuiGraphics.pose()
+                    , x1, x2
+                    , y1, y2
+                    , 0
+                    , minU, maxU, minV, maxV);*/
+
+
+
+            ScreenParticleRenderer.getInstance().innerBlitCustomShaderVertical(pGuiGraphics.pose()
+                    , 0, ScreenParticleRenderer.getInstance().widthScaledDown
+                    , 0, ScreenParticleRenderer.getInstance().heightScaledDown
+                    , 0
+                    , 0, 1, 0, 1);
 
             //getting data from scaled down framebuffer
             ByteBuffer pixelBuffer = getPixelDataFromFrameBuffer();

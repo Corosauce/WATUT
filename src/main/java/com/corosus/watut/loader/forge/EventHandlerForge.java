@@ -6,7 +6,6 @@ import com.corosus.watut.ShaderInstanceBlur;
 import com.corosus.watut.WatutMod;
 import com.corosus.watut.client.screen.RenderHelper;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -78,18 +77,22 @@ public class EventHandlerForge {
             //System.out.println("watut register shaders");
             PlayerStatusManagerClient.particle = null;
             PlayerStatusManagerClient.positionTexBlur = null;
-            PlayerStatusManagerClient.positionColorTexBlur = null;
+            PlayerStatusManagerClient.positionTexBlurHorizontal = null;
+            PlayerStatusManagerClient.positionTexBlurVertical = null;
 
             PlayerStatusManagerClient.particle = new ShaderInstanceBlur(event.getResourceProvider(), new ResourceLocation("watut:particle"),
                     DefaultVertexFormat.PARTICLE);
             PlayerStatusManagerClient.positionTexBlur = new ShaderInstanceBlur(event.getResourceProvider(), new ResourceLocation("watut:position_tex_blur"),
                     DefaultVertexFormat.POSITION_TEX);
-            PlayerStatusManagerClient.positionColorTexBlur = new ShaderInstanceBlur(event.getResourceProvider(), new ResourceLocation("watut:position_color_tex_blur"),
-                    DefaultVertexFormat.POSITION_COLOR_TEX);
+            PlayerStatusManagerClient.positionTexBlurHorizontal = new ShaderInstanceBlur(event.getResourceProvider(), new ResourceLocation("watut:position_tex_blur_horizontal"),
+                    DefaultVertexFormat.POSITION_TEX);
+            PlayerStatusManagerClient.positionTexBlurVertical = new ShaderInstanceBlur(event.getResourceProvider(), new ResourceLocation("watut:position_tex_blur_vertical"),
+                    DefaultVertexFormat.POSITION_TEX);
 
             event.registerShader(PlayerStatusManagerClient.particle, (shaderInstance -> {}));
             event.registerShader(PlayerStatusManagerClient.positionTexBlur, (shaderInstance -> {}));
-            event.registerShader(PlayerStatusManagerClient.positionColorTexBlur, (shaderInstance -> {}));
+            event.registerShader(PlayerStatusManagerClient.positionTexBlurHorizontal, (shaderInstance -> {}));
+            event.registerShader(PlayerStatusManagerClient.positionTexBlurVertical, (shaderInstance -> {}));
         } catch (IOException e) {
             e.printStackTrace();
             //WatutMod.cloudShader = GameRenderer.getPositionTexColorNormalShader();

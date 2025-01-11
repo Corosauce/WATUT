@@ -4,11 +4,10 @@
         "srcrgb": "srcalpha",
         "dstrgb": "1-srcalpha"
     },
-    "vertex": "watut:position_color_tex_blur",
-    "fragment": "watut:position_color_tex_blur",
+    "vertex": "watut:position_tex_blur_vertical",
+    "fragment": "watut:position_tex_blur_vertical",
     "attributes": [
         "Position",
-        "Color",
         "UV0"
     ],
     "samplers": [

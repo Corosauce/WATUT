@@ -2,7 +2,6 @@ package com.corosus.watut;
 
 import com.corosus.watut.client.screen.RenderHelper;
 import com.corosus.watut.config.ConfigClient;
-import com.corosus.watut.config.ConfigCommon;
 import com.corosus.watut.math.Lerpables;
 import com.corosus.watut.particle.*;
 import com.ibm.icu.impl.Pair;
@@ -57,7 +56,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     private int mousePressedCountdown = 0;
 
     public static ShaderInstanceBlur positionTexBlur;
-    public static ShaderInstanceBlur positionColorTexBlur;
+    public static ShaderInstanceBlur positionTexBlurHorizontal;
+    public static ShaderInstanceBlur positionTexBlurVertical;
     public static ShaderInstanceBlur particle;
 
     public void tickGame() {
@@ -984,7 +984,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             //puts bytebuffer into byte[]
             status.getScreenData().getTexturePixelData().get(inputBytes);
             if (sizeByteCountLimit < packetSizeLimit/* || true*/) {
-                System.out.println("send full data " + sizeByteCountLimit + " - time " + (Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0));
+                //System.out.println("send full data " + sizeByteCountLimit + " - time " + (Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0));
 
                 data.putByteArray(WatutNetworking.NBTDataPlayerScreenCompressedPixelData, inputBytes);
 
@@ -996,8 +996,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
                 WatutNetworking.instance().clientSendToServer(data);
             } else {
-                System.out.println("packet too big! " + sizeByteCountLimit);
-                System.out.println("send partial data " + sizeByteCountLimit + " - time " + (Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0));
+                //System.out.println("packet too big! " + sizeByteCountLimit);
+                //System.out.println("send partial data " + sizeByteCountLimit + " - time " + (Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0));
 
                 int packetCount = Mth.ceil((float)sizeByteCount / (float)packetSizeLimit);
 
@@ -1006,10 +1006,10 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 for (int i = 0; i < packetCount; i++) {
                     byte[] inputBytesPartial;
                     if (packetBytesIndex + packetSizeLimit < sizeByteCount) {
-                        System.out.println("full packet size " + (packetBytesIndex + packetSizeLimit));
+                        //System.out.println("full packet size " + (packetBytesIndex + packetSizeLimit));
                         inputBytesPartial = Arrays.copyOfRange(inputBytes, packetBytesIndex, packetBytesIndex + packetSizeLimit);
                     } else {
-                        System.out.println("partial packet size " + (sizeByteCount - packetBytesIndex));
+                        //System.out.println("partial packet size " + (sizeByteCount - packetBytesIndex));
                         inputBytesPartial = Arrays.copyOfRange(inputBytes, packetBytesIndex, sizeByteCount);
                     }
                     /*if (sizeByteCount >= packetSizeLimit) {
@@ -1028,7 +1028,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     data.putString(WatutNetworking.NBTDataPlayerScreenClass, status.getScreenData().getScreenClass());
 
                     WatutNetworking.instance().clientSendToServer(data);
-                    System.out.println("sent packet " + i + " of " + packetCount + " size " + inputBytesPartial.length);
+                    //System.out.println("sent packet " + i + " of " + packetCount + " size " + inputBytesPartial.length);
 
                 }
             }
