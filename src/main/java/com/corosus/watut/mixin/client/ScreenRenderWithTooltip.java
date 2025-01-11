@@ -12,15 +12,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Screen.class)
 public abstract class ScreenRenderWithTooltip {
 
-    @Inject(method = "renderWithTooltip", at = @At("HEAD"))
+    /*@Inject(method = "renderWithTooltip", at = @At("HEAD"))
     private void renderWithTooltipStart(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick, CallbackInfo ci) {
-        WatutMod.getPlayerStatusManagerClient().hookStartScreenRender();
-    }
+        if (!RenderHelper.performingOwnRender) {
+            WatutMod.getPlayerStatusManagerClient().hookStartScreenRender();
+        }
+    }*/
 
     @Inject(method = "renderWithTooltip", at = @At("TAIL"))
     private void renderWithTooltipEnd(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick, CallbackInfo ci) {
-        //WatutMod.getPlayerStatusManagerClient().hookStopScreenRender();
-        //WatutMod.getPlayerStatusManagerClient().renderWithTooltipEnd(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
         //avoid recursion
         if (!RenderHelper.performingOwnRender) {
             RenderHelper.renderWithTooltipEnd(pGuiGraphics, pMouseX, pMouseY, pPartialTick);

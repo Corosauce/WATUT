@@ -63,7 +63,7 @@ public class ParticleDynamic extends ParticleRotating {
         if (useCustomRotation) {
             quaternion = new Quaternionf(0, 0, 0, 1);
             quaternion.mul(Axis.YP.rotationDegrees(Mth.lerp(pPartialTicks, this.prevRotationYaw, rotationYaw)));
-            quaternion.mul(Axis.XP.rotationDegrees(Mth.lerp(pPartialTicks, this.prevRotationPitch, rotationPitch)));
+            quaternion.mul(Axis.XP.rotationDegrees(Mth.lerp(pPartialTicks, this.prevRotationPitch, rotationPitch)/* + 180*/));
             quaternion.mul(Axis.ZP.rotationDegrees(Mth.lerp(pPartialTicks, this.prevRotationRoll, rotationRoll)));
         } else {
             if (this.roll == 0.0F) {

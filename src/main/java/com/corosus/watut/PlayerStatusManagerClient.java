@@ -1,11 +1,8 @@
 package com.corosus.watut;
 
-import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.client.screen.RenderHelper;
-import com.corosus.watut.client.screen.ScreenParticleRenderer;
 import com.corosus.watut.config.ConfigClient;
-import com.corosus.watut.config.JSONLoader;
-import com.corosus.watut.config.JsonObjects.ScreenRule;
+import com.corosus.watut.config.ConfigCommon;
 import com.corosus.watut.math.Lerpables;
 import com.corosus.watut.particle.*;
 import com.ibm.icu.impl.Pair;
@@ -21,11 +18,8 @@ import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
-import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
@@ -681,93 +675,6 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
     }
 
-    public void hookStartScreenRender() {
-        PlayerStatus playerStatusLocal = getStatusLocal();
-
-        boolean shouldCapture = false;
-
-        ScreenRule screenRule = null;
-        String screenName = "";
-
-        if (Minecraft.getInstance().screen != null) {
-            screenName = Minecraft.getInstance().screen.getClass().getCanonicalName();
-            screenRule = JSONLoader.getInstance().getAllGuiOverrideConfigs().getScreenRuleByClass(screenName);
-        }
-
-        if (playerStatusLocal.getLastScreenCaptured() != playerStatusLocal.getPlayerGuiState()) {
-            if (screenRule != null) {
-                if (screenRule.getRenderType().equals(ScreenRule.RenderTypes.SINGLE_TEXTURE) || screenRule.getRenderType().equals(ScreenRule.RenderTypes.BIGGEST_TEXTURE)) {
-
-                }
-            }
-
-            //TODO: For now always capture, so the receiving end updates its dynamic texture, this might be fine long term
-            //this is causing false captures like ReceievingLevelScreen capture,
-            shouldCapture = true;
-        }
-
-        //TODO: needs to avoid endlessly updating if player is afk or something similar
-        if (/*screenRule != null && */(Minecraft.getInstance().level != null && Minecraft.getInstance().level.getGameTime() % 10 == 0)) {
-            //if (screenRule.getRenderType().equals(ScreenRule.RenderTypes.ALL_TEXTURES)) {
-                shouldCapture = true;
-            //}
-        }
-
-        //decide if we need to actually start a capture
-        //if (playerStatusLocal.getLastScreenCaptured() != playerStatusLocal.getPlayerGuiState() || (Minecraft.getInstance().level != null && Minecraft.getInstance().level.getGameTime() % 10 == 0)) {
-        if (shouldCapture) {
-
-            playerStatusLocal.setLastScreenCaptured(playerStatusLocal.getPlayerGuiState());
-            if (playerStatusLocal.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && playerStatusLocal.getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
-
-                if (screenRule != null) {
-                    if (!screenRule.getRenderType().equals(ScreenRule.RenderTypes.ALL_TEXTURES)) {
-                        CULog.dbg("found rule for screen class: " + screenName);
-                    }
-                } else {
-                    CULog.dbg("no found rule for screen class: " + screenName);
-                }
-
-                playerStatusLocal.getScreenData().startCapture();
-            }
-        }
-    }
-
-    public void hookStopScreenRender() {
-        PlayerStatus playerStatusLocal = getStatusLocal();
-        if (playerStatusLocal.getScreenData().isCapturing()) {
-            playerStatusLocal.getScreenData().stopCapture();
-
-            sendScreenRenderData(playerStatusLocal);
-
-            /*if (playerStatusLocal.getScreenData().getListRenderCalls().size() > 0) {
-                sendScreenRenderData(playerStatusLocal);
-            } else {
-                CULog.dbg("watut screen recording was triggered but no render calls were captured, for " + playerStatusLocal.getScreenData().getScreenClass());
-            }*/
-
-        }
-    }
-
-    /*public void hookInnerBlit(ResourceLocation pAtlasLocation, int pX1, int pX2, int pY1, int pY2, int pBlitOffset, float pMinU, float pMaxU, float pMinV, float pMaxV) {
-        PlayerStatus playerStatusLocal = getStatusLocal();
-        if (playerStatusLocal.getScreenData().isCapturing()) {
-            RenderCall renderCall = new RenderCall(RenderCallType.INNER_BLIT_BLUR);
-            renderCall.innerBlit(pAtlasLocation, pX1, pX2, pY1, pY2, pBlitOffset, pMinU, pMaxU, pMinV, pMaxV);
-            playerStatusLocal.getScreenData().addRenderCall(renderCall);
-        }
-
-    }
-
-    public void hookInnerBlit(ResourceLocation pAtlasLocation, int pX1, int pX2, int pY1, int pY2, int pBlitOffset, float pMinU, float pMaxU, float pMinV, float pMaxV, float pRed, float pGreen, float pBlue, float pAlpha) {
-        PlayerStatus playerStatusLocal = getStatusLocal();
-        if (playerStatusLocal.getScreenData().isCapturing()) {
-            RenderCall renderCall = new RenderCall(RenderCallType.INNER_BLIT_BLUR2);
-            renderCall.innerBlit(pAtlasLocation, pX1, pX2, pY1, pY2, pBlitOffset, pMinU, pMaxU, pMinV, pMaxV, pRed, pGreen, pBlue, pAlpha);
-            playerStatusLocal.getScreenData().addRenderCall(renderCall);
-        }
-    }*/
-
     public boolean renderPingIconHook(PlayerTabOverlay playerTabOverlay, GuiGraphics pGuiGraphics, int p_281809_, int p_282801_, int pY, PlayerInfo pPlayerInfo) {
         if (Minecraft.getInstance().particleEngine == null || pPlayerInfo == null || pPlayerInfo.getProfile() == null || !ConfigClient.showIdleStatesInPlayerList) return false;
         PlayerStatus playerStatus = getStatus(pPlayerInfo.getProfile().getId());
@@ -969,7 +876,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         //float distFromFace = -3.5F;
         Vec3 lookVec = getBodyAngle(player).scale(distFromFace);
         //return new Vec3(pos.x + lookVec.x, pos.y + 1.2D, pos.z + lookVec.z);
-        return new Vec3(pos.x + lookVec.x - 2, pos.y + 1.2D, pos.z + lookVec.z);
+        return new Vec3(pos.x + lookVec.x - 1, pos.y + 1.2D, pos.z + lookVec.z);
         //return new Vec3(pos.x + lookVec.x, pos.y + 2D, pos.z + lookVec.z);
     }
 
@@ -1090,7 +997,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 WatutNetworking.instance().clientSendToServer(data);
             } else {
                 System.out.println("packet too big! " + sizeByteCountLimit);
-                System.out.println("send partial data " + sizeByteCountLimit);
+                System.out.println("send partial data " + sizeByteCountLimit + " - time " + (Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0));
 
                 int packetCount = Mth.ceil((float)sizeByteCount / (float)packetSizeLimit);
 
@@ -1223,18 +1130,18 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             if (data.contains(WatutNetworking.NBTDataPlayerScreenCompressedPixelData)) {
                 byte[] pixelData = data.getByteArray(WatutNetworking.NBTDataPlayerScreenCompressedPixelData);
                 int decompressedSize = data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataSize);
-                System.out.println("receive data " + pixelData.length);
+                //System.out.println("receive data " + pixelData.length);
                 int packetCount = data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount);
                 int packetIndex = data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex);
                 long gameTime = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
                 int timeout = 10;
                 if (packetCount > 1) {
-                    System.out.println("store partial " + packetIndex + " of " + packetCount);
+                    //System.out.println("store partial " + packetIndex + " of " + packetCount);
                     if (packetIndex == 0) {
-                        status.getScreenData().setGameticksSinceFirstPacket(gameTime);
+                        status.getScreenData().setGameTicksSinceFirstPacket(gameTime);
                         status.getScreenData().setTexturePixelDataPartial(pixelData);
                     } else {
-                        if (gameTime > status.getScreenData().getGameticksSinceFirstPacket() + timeout) {
+                        if (gameTime > status.getScreenData().getGameTicksSinceFirstPacket() + timeout) {
                             //TODO: packet timeout waiting for other pieces, abort and reset state
                             //actually dont think i have to do anything, if a new packetIndex 0 comes in it forces a fresh set
                             //CULog.dbg("watut packet took too long to come in, stop waiting and reset");
@@ -1247,7 +1154,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                                 status.getScreenData().setTexturePixelDataPartial(combined);
 
                                 if (packetIndex == packetCount-1) {
-                                    System.out.println("finished receiving full data, decompressing");
+                                    //System.out.println("finished receiving full data, decompressing");
                                     try {
                                         status.getScreenData().setTexturePixelData(RenderHelper.decompress(ByteBuffer.wrap(status.getScreenData().getTexturePixelDataPartial()), decompressedSize));
                                         //status.getScreenData().setTexturePixelData(RenderHelper.decompressGZIP(ByteBuffer.wrap(pixelData)));
