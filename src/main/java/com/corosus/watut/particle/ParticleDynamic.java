@@ -89,11 +89,8 @@ public class ParticleDynamic extends ParticleRotating {
         for(int i = 0; i < 4; ++i) {
             Vector3f vector3f = avector3f[i];
             vector3f.rotate(quaternion);
-            //vector3f.mul(f3 * 1F);
-            //vector3f.mul(f3 * 3F);
-            //vector3f.mul(f3 * 2F);
             //vector3f.mul(f3 * 6F);
-            vector3f.mul(f3 * 3F);
+            vector3f.mul(f3 * 4F);
             vector3f.add(f, f1, f2);
         }
 
@@ -108,10 +105,11 @@ public class ParticleDynamic extends ParticleRotating {
         float v1 = 1;
 
         int j = this.getLightColor(pPartialTicks);
-        pBuffer.vertex(avector3f[0].x(), avector3f[0].y(), avector3f[0].z()).uv(u1, v1).color(this.rCol, this.gCol, this.bCol, this.alpha).uv2(j).endVertex();
-        pBuffer.vertex(avector3f[1].x(), avector3f[1].y(), avector3f[1].z()).uv(u1, v0).color(this.rCol, this.gCol, this.bCol, this.alpha).uv2(j).endVertex();
-        pBuffer.vertex(avector3f[2].x(), avector3f[2].y(), avector3f[2].z()).uv(u0, v0).color(this.rCol, this.gCol, this.bCol, this.alpha).uv2(j).endVertex();
-        pBuffer.vertex(avector3f[3].x(), avector3f[3].y(), avector3f[3].z()).uv(u0, v1).color(this.rCol, this.gCol, this.bCol, this.alpha).uv2(j).endVertex();
+        float extraDark = this.getBrightness();
+        pBuffer.vertex(avector3f[0].x(), avector3f[0].y(), avector3f[0].z()).uv(u1, v1).color(this.rCol * extraDark, this.gCol * extraDark, this.bCol * extraDark, this.alpha).uv2(j).endVertex();
+        pBuffer.vertex(avector3f[1].x(), avector3f[1].y(), avector3f[1].z()).uv(u1, v0).color(this.rCol * extraDark, this.gCol * extraDark, this.bCol * extraDark, this.alpha).uv2(j).endVertex();
+        pBuffer.vertex(avector3f[2].x(), avector3f[2].y(), avector3f[2].z()).uv(u0, v0).color(this.rCol * extraDark, this.gCol * extraDark, this.bCol * extraDark, this.alpha).uv2(j).endVertex();
+        pBuffer.vertex(avector3f[3].x(), avector3f[3].y(), avector3f[3].z()).uv(u0, v1).color(this.rCol * extraDark, this.gCol * extraDark, this.bCol * extraDark, this.alpha).uv2(j).endVertex();
     }
 
 }

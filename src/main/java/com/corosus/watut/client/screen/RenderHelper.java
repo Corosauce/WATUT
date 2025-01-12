@@ -212,11 +212,17 @@ public class RenderHelper {
             y1 = 0;
             y2 = ScreenParticleRenderer.getInstance().heightScaledDown;
 
-            ScreenParticleRenderer.getInstance().innerBlitCustomShaderHorizontal(pGuiGraphics.pose()
+            ScreenParticleRenderer.getInstance().innerBlitCustomShader(pGuiGraphics.pose()
                     , x1, x2
                     , y1, y2
                     , 0
                     , minU, maxU, minV, maxV);
+
+            /*ScreenParticleRenderer.getInstance().innerBlitCustomShaderHorizontal(pGuiGraphics.pose()
+                    , x1, x2
+                    , y1, y2
+                    , 0
+                    , minU, maxU, minV, maxV);*/
 
             /*ScreenParticleRenderer.getInstance().innerBlitCustomShaderVertical(pGuiGraphics.pose()
                     , x1, x2
@@ -226,11 +232,11 @@ public class RenderHelper {
 
 
 
-            ScreenParticleRenderer.getInstance().innerBlitCustomShaderVertical(pGuiGraphics.pose()
+            /*ScreenParticleRenderer.getInstance().innerBlitCustomShaderVertical(pGuiGraphics.pose()
                     , 0, ScreenParticleRenderer.getInstance().widthScaledDown
                     , 0, ScreenParticleRenderer.getInstance().heightScaledDown
                     , 0
-                    , 0, 1, 0, 1);
+                    , 0, 1, 0, 1);*/
 
             //getting data from scaled down framebuffer
             ByteBuffer pixelBuffer = getPixelDataFromFrameBuffer();

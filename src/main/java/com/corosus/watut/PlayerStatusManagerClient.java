@@ -648,14 +648,17 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                         double distToCameraCapped = Math.max(3F, Math.min(10F, distToCamera));
                         //Watut.dbg(distToCamera);
                         //float alpha = (float) Math.max(0.35F, 1F - (distToCameraCapped / 10F));
-                        float alpha = (float) Math.max(0.35F, 1F - (distToCameraCapped / 10F));
+                        float alpha = (float) Math.max(0.35F, 1F - (distToCameraCapped / 10F))/* + 0.3F*/;
+                        float brightness = (float) Math.max(0.55F, 1F - (distToCameraCapped / 10F)) + 0.3F;
                         particle.setAlpha(alpha);
+                        particle.setBrightness(brightness);
 
                         if (particle instanceof ParticleStaticLoD) {
                             ((ParticleStaticLoD) particle).setParticleFromDistanceToCamera((float) distToCamera);
                         }
 
-                        particle.setAlpha(0.8F);
+                        //particle.setAlpha(0.4F);
+                        //particle.setBrightness(1F);
                     } else {
                         particle.setAlpha(0.5F);
                     }
@@ -875,8 +878,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         float distFromFace = 0.75F;
         //float distFromFace = -3.5F;
         Vec3 lookVec = getBodyAngle(player).scale(distFromFace);
-        //return new Vec3(pos.x + lookVec.x, pos.y + 1.2D, pos.z + lookVec.z);
-        return new Vec3(pos.x + lookVec.x - 1, pos.y + 1.2D, pos.z + lookVec.z);
+        return new Vec3(pos.x + lookVec.x, pos.y + 1.2D, pos.z + lookVec.z);
+        //return new Vec3(pos.x + lookVec.x - 1, pos.y + 1.2D, pos.z + lookVec.z);
         //return new Vec3(pos.x + lookVec.x, pos.y + 2D, pos.z + lookVec.z);
     }
 
