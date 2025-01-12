@@ -3,6 +3,7 @@ package com.corosus.watut.client.screen;
 import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.PlayerStatus;
 import com.corosus.watut.WatutMod;
+import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigCommon;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.Window;
@@ -19,6 +20,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.zip.Deflater;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -28,9 +30,12 @@ public class RenderHelper {
 
     public static boolean performingOwnRender = false;
 
-    public static void guiRender() {
-        long time = System.currentTimeMillis();
+    public static ByteBufferProcessor processor = new ByteBufferProcessor(buffer -> {
+        ByteBuffer processed = compress(buffer);
+        return processed;
+    });
 
+    public static void guiRender() {
         long gameTime = 0;
         if (Minecraft.getInstance().level != null) {
             gameTime = Minecraft.getInstance().level.getGameTime();
@@ -85,16 +90,7 @@ public class RenderHelper {
                     playerStatus.getScreenData().initClient();
                 }
 
-                //this might actually not be needed, since were rendering from pure data, not from this, setting the framebuffer to write to this is done above
                 GL11.glBindTexture(GL11.GL_TEXTURE_2D, playerStatus.getScreenData().getTextureID());
-
-                /*System.out.println("pixelBuffer buffer size before use: " + pixelBuffer.limit());
-                System.out.println("byteBuffer buffer size before use: " + byteBuffer.limit());
-                System.out.println("byteBuffer2 buffer size before use: " + byteBuffer2.limit());*/
-                //System.out.println("w " + ScreenParticleRenderer.getInstance().widthScaledDown + "h " + ScreenParticleRenderer.getInstance().heightScaledDown);
-
-                //System.out.println("expected size: " + ScreenParticleRenderer.getInstance().widthScaledDown * ScreenParticleRenderer.getInstance().heightScaledDown * 4);
-                //System.out.println("2: " + screenData.getTexturePixelData().limit());
 
                 if (validatePixelByteBuffer(screenData.getTexturePixelData(),
                         ScreenParticleRenderer.getInstance().widthScaledDown * ScreenParticleRenderer.getInstance().heightScaledDown * 4,
@@ -125,6 +121,7 @@ public class RenderHelper {
     }
 
     public static void bindVanillaRenderTargetAndSetupProjectionMatrix() {
+        if (ConfigClient.useOldSimpleGUIVisual) return;
         Window window = Minecraft.getInstance().getWindow();
         Matrix4f matrix4f = (new Matrix4f()).setOrtho(0.0F, (float)((double)window.getWidth() / window.getGuiScale()), (float)((double)window.getHeight() / window.getGuiScale()), 0.0F, 1000.0F, net.minecraftforge.client.ForgeHooksClient.getGuiFarPlane());
         RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
@@ -145,6 +142,19 @@ public class RenderHelper {
 
         PlayerStatus playerStatusLocal = WatutMod.getPlayerStatusManagerClient().getStatusLocal();
 
+        if (processor.hasProcessedBuffers()) {
+            try {
+                ByteBuffer result = processor.getProcessedBuffer();
+                if (result != null) {
+                    ScreenData screenDataLocal = playerStatusLocal.getScreenData();
+                    screenDataLocal.setTexturePixelData(result);
+                    WatutMod.getPlayerStatusManagerClient().sendScreenRenderData(playerStatusLocal);
+                }
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         boolean needsScreenUpdate = false;
 
         if (!playerStatusLocal.isIdle()) {
@@ -157,9 +167,7 @@ public class RenderHelper {
             }
         }
 
-        ScreenData screenDataLocal = playerStatusLocal.getScreenData();
-        if (needsScreenUpdate) {
-            //System.out.println("new render for local client" + gameTime);
+        if (needsScreenUpdate && !processor.hasWork()) {
 
             ScreenParticleRenderer.getInstance().checkSetup();
             unbindVanillaRenderTarget();
@@ -168,19 +176,13 @@ public class RenderHelper {
             RenderSystem.clear(16640, Minecraft.ON_OSX);
 
             if (Minecraft.getInstance().screen != null) {
-                //ForgeHooksClient.drawScreen(Minecraft.getInstance().screen, pGuiGraphics, pMouseX, pMouseY, pPartialTick);
-
                 ScreenParticleRenderer.isRenderingParticleGUI = true;
                 ScreenParticleRenderer.isRenderingParticleGUI2 = true;
-                Window window = Minecraft.getInstance().getWindow();
-                //pGuiGraphics.fillGradient(0, 0, window.getWidth(), window.getHeight(), -1072689136, -0);
                 performingOwnRender = true;
                 Minecraft.getInstance().screen.renderWithTooltip(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
                 performingOwnRender = false;
-                //ScreenParticleRenderer.isRenderingParticleGUI = false;
-                //ScreenParticleRenderer.isRenderingParticleGUI2 = false;
-
-                //readPixelsTest();
+                ScreenParticleRenderer.isRenderingParticleGUI = false;
+                ScreenParticleRenderer.isRenderingParticleGUI2 = false;
             }
 
             ScreenParticleRenderer.getInstance().unbind();
@@ -212,66 +214,49 @@ public class RenderHelper {
             y1 = 0;
             y2 = ScreenParticleRenderer.getInstance().heightScaledDown;
 
-            ScreenParticleRenderer.getInstance().innerBlitCustomShader(pGuiGraphics.pose()
+            boolean useBlur = true;
+            if (useBlur) {
+                ScreenParticleRenderer.getInstance().innerBlitCustomShaderHorizontal(pGuiGraphics.pose()
                     , x1, x2
                     , y1, y2
                     , 0
                     , minU, maxU, minV, maxV);
 
-            /*ScreenParticleRenderer.getInstance().innerBlitCustomShaderHorizontal(pGuiGraphics.pose()
-                    , x1, x2
-                    , y1, y2
-                    , 0
-                    , minU, maxU, minV, maxV);*/
+                /*ScreenParticleRenderer.getInstance().innerBlitCustomShaderVertical(pGuiGraphics.pose()
+                        , x1, x2
+                        , y1, y2
+                        , 0
+                        , minU, maxU, minV, maxV);*/
 
-            /*ScreenParticleRenderer.getInstance().innerBlitCustomShaderVertical(pGuiGraphics.pose()
-                    , x1, x2
-                    , y1, y2
-                    , 0
-                    , minU, maxU, minV, maxV);*/
-
-
-
-            /*ScreenParticleRenderer.getInstance().innerBlitCustomShaderVertical(pGuiGraphics.pose()
-                    , 0, ScreenParticleRenderer.getInstance().widthScaledDown
-                    , 0, ScreenParticleRenderer.getInstance().heightScaledDown
-                    , 0
-                    , 0, 1, 0, 1);*/
+                ScreenParticleRenderer.getInstance().innerBlitCustomShaderVertical(pGuiGraphics.pose()
+                        , 0, ScreenParticleRenderer.getInstance().widthScaledDown
+                        , 0, ScreenParticleRenderer.getInstance().heightScaledDown
+                        , 0
+                        , 0, 1, 0, 1);
+            } else {
+                ScreenParticleRenderer.getInstance().innerBlitCustomShader(pGuiGraphics.pose()
+                        , x1, x2
+                        , y1, y2
+                        , 0
+                        , minU, maxU, minV, maxV);
+            }
 
             //getting data from scaled down framebuffer
             ByteBuffer pixelBuffer = getPixelDataFromFrameBuffer();
 
-            long time2 = System.currentTimeMillis();
-            ByteBuffer byteBuffer = compress(pixelBuffer);
-            //ByteBuffer byteBuffer = null;
-            /*try {
-                byteBuffer = compressGZIP(pixelBuffer);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }*/
-            //ByteBuffer byteBuffer2;
-            //System.out.println("perf1: " + (System.currentTimeMillis() - time2));
-            time2 = System.currentTimeMillis();
-            try {
-                //byteBuffer2 = decompress(byteBuffer, pixelBuffer.capacity());
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            boolean useThread = true;
+            if (useThread) {
+                processor.submitForProcessing(pixelBuffer);
+            } else {
+                ByteBuffer byteBuffer = compress(pixelBuffer);
+                playerStatusLocal.getScreenData().setTexturePixelData(byteBuffer);
+                WatutMod.getPlayerStatusManagerClient().sendScreenRenderData(playerStatusLocal);
             }
-            //System.out.println("perf2: " + (System.currentTimeMillis() - time2));
-
-            screenDataLocal.setTexturePixelData(byteBuffer);
 
             ScreenParticleRenderer.getInstance().unbindScaledDown();
 
             bindVanillaRenderTargetAndSetupProjectionMatrix();
-
-            //System.out.println("sending size 1: " + ScreenParticleRenderer.getInstance().widthScaledDown * ScreenParticleRenderer.getInstance().heightScaledDown * 4);
-            //System.out.println("2: " + pixelBuffer.limit());
-
-            WatutMod.getPlayerStatusManagerClient().sendScreenRenderData(playerStatusLocal);
-
         }
-
     }
 
     public static ByteBuffer compress(ByteBuffer inputBuffer) {

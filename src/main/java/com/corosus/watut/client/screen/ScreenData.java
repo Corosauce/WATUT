@@ -16,7 +16,6 @@ import java.nio.ByteBuffer;
 
 public class ScreenData {
 
-    private String screenClass = "";
     private int textureID = -1;
     private ByteBuffer texturePixelData = null;
     private byte[] texturePixelDataPartial = null;
@@ -38,13 +37,12 @@ public class ScreenData {
         this.particleRenderType = new ParticleRenderType() {
             public void begin(BufferBuilder p_107455_, TextureManager p_107456_) {
                 RenderSystem.setShader(() -> PlayerStatusManagerClient.particle);
-                RenderSystem.depthMask(false);
                 RenderSystem._setShaderTexture(0, textureID);
+
+                RenderSystem.depthMask(true);
                 RenderSystem.enableBlend();
                 RenderSystem.defaultBlendFunc();
                 RenderSystem.disableCull();
-                GL30.glTexParameteri(GL30.GL_TEXTURE_2D, GL30.GL_TEXTURE_MIN_FILTER, GL30.GL_LINEAR);
-                GL30.glTexParameteri(GL30.GL_TEXTURE_2D, GL30.GL_TEXTURE_MAG_FILTER, GL30.GL_LINEAR);
                 p_107455_.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
             }
 
@@ -58,25 +56,6 @@ public class ScreenData {
             }
         };
 
-    }
-
-    /*public synchronized void startCapture() {
-        ScreenParticleRenderer.isCapturing = true;
-        System.out.println("capture started");
-
-        if (Minecraft.getInstance().screen != null) {
-            screenClass = Minecraft.getInstance().screen.getClass().getCanonicalName();
-        } else {
-            CULog.dbg("watut screen capture started but screen is null?");
-        }
-    }*/
-
-    public String getScreenClass() {
-        return screenClass;
-    }
-
-    public void setScreenClass(String screenClass) {
-        this.screenClass = screenClass;
     }
 
     public int getTextureID() {

@@ -505,13 +505,14 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 ParticleRotating particle = null;
                 Vec3 posParticle = getParticlePosition(player);
 
-                boolean testNewRender = true;
+                boolean useChatIdleForTestingOtherGUIs = true;
+                boolean newRender = !ConfigClient.useOldSimpleGUIVisual;
 
                 if (ConfigClient.showPlayerActiveChatGui) {
                     if (PlayerStatus.PlayerGuiState.isTypingGui(this.getStatus(player).getPlayerGuiState())) {
                         if (this.getStatus(player).getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_FOCUSED) {
                             particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_idle.getSpriteSet());
-                            if (testNewRender) {
+                            if (useChatIdleForTestingOtherGUIs) {
                                 if (playerStatus.getScreenData().getParticleRenderType() != null) {
                                     particle = new ParticleDynamic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, playerStatus.getScreenData().getParticleRenderType(), 0.7F);
                                 }
@@ -527,7 +528,6 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     float brightness = 0.7F;
                     int subSizeX = 0;
                     int subSizeY = 0;
-                    boolean newRender = true;
                     if (newRender) {
                         if (this.getStatus(player).getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && this.getStatus(player).getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
                             if (playerStatus.getScreenData().getParticleRenderType() != null) {
@@ -646,12 +646,18 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     if (Minecraft.getInstance().cameraEntity != null) {
                         double distToCamera = Minecraft.getInstance().cameraEntity.distanceTo(player);
                         double distToCameraCapped = Math.max(3F, Math.min(10F, distToCamera));
+                        double distToCameraCapped2 = Math.max(3F, Math.min(6F, distToCamera));
                         //Watut.dbg(distToCamera);
                         //float alpha = (float) Math.max(0.35F, 1F - (distToCameraCapped / 10F));
-                        float alpha = (float) Math.max(0.35F, 1F - (distToCameraCapped / 10F))/* + 0.3F*/;
-                        float brightness = (float) Math.max(0.55F, 1F - (distToCameraCapped / 10F)) + 0.3F;
+                        float alpha = (float) Math.max(0.35F, 1F - (distToCameraCapped / 10F)) + 0.15F;
+                        float brightness = (float) Math.max(0.55F, 1F - (distToCameraCapped / 10F)) + 0.15F;
+                        float huh = (float) Math.max(0.0F, 1F - (distToCameraCapped2 / 6F));
+                        quadSize = 0.3F + ((Math.sin((stableTime / 10F) % 360) * 0.01F) * huh);
                         particle.setAlpha(alpha);
                         particle.setBrightness(brightness);
+                        particle.setQuadSize((float) quadSize);
+                        //particle.setBrightness(1);
+                        //particle.setAlpha(1);
 
                         if (particle instanceof ParticleStaticLoD) {
                             ((ParticleStaticLoD) particle).setParticleFromDistanceToCamera((float) distToCamera);
@@ -879,8 +885,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         //float distFromFace = -3.5F;
         Vec3 lookVec = getBodyAngle(player).scale(distFromFace);
         return new Vec3(pos.x + lookVec.x, pos.y + 1.2D, pos.z + lookVec.z);
-        //return new Vec3(pos.x + lookVec.x - 1, pos.y + 1.2D, pos.z + lookVec.z);
-        //return new Vec3(pos.x + lookVec.x, pos.y + 2D, pos.z + lookVec.z);
+        //return new Vec3(pos.x + lookVec.x - 2, pos.y + 1.2D, pos.z + lookVec.z);
     }
 
     public Vec3 getBodyAngle(Player player) {
@@ -979,29 +984,18 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         int sizeByteCount = status.getScreenData().getTexturePixelData().remaining();
         int sizeByteCountLimit = status.getScreenData().getTexturePixelData().limit();
 
-        //direct byte buffer safe way
         if (status.getScreenData().getTexturePixelData() != null) {
             data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataSize, status.getScreenData().getTexturePixelData().capacity());
-            //byte[] inputBytes = new byte[status.getScreenData().getTexturePixelData().remaining()];
             byte[] inputBytes = new byte[sizeByteCount];
-            //puts bytebuffer into byte[]
             status.getScreenData().getTexturePixelData().get(inputBytes);
-            if (sizeByteCountLimit < packetSizeLimit/* || true*/) {
-                //System.out.println("send full data " + sizeByteCountLimit + " - time " + (Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0));
-
+            if (sizeByteCountLimit < packetSizeLimit) {
                 data.putByteArray(WatutNetworking.NBTDataPlayerScreenCompressedPixelData, inputBytes);
 
                 data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount, 1);
                 data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex, 1);
-                data.putString(WatutNetworking.NBTDataPlayerScreenClass, status.getScreenData().getScreenClass());
-
-                //System.out.println("send screen data");
 
                 WatutNetworking.instance().clientSendToServer(data);
             } else {
-                //System.out.println("packet too big! " + sizeByteCountLimit);
-                //System.out.println("send partial data " + sizeByteCountLimit + " - time " + (Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0));
-
                 int packetCount = Mth.ceil((float)sizeByteCount / (float)packetSizeLimit);
 
                 int packetBytesIndex = 0;
@@ -1009,29 +1003,18 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 for (int i = 0; i < packetCount; i++) {
                     byte[] inputBytesPartial;
                     if (packetBytesIndex + packetSizeLimit < sizeByteCount) {
-                        //System.out.println("full packet size " + (packetBytesIndex + packetSizeLimit));
                         inputBytesPartial = Arrays.copyOfRange(inputBytes, packetBytesIndex, packetBytesIndex + packetSizeLimit);
                     } else {
-                        //System.out.println("partial packet size " + (sizeByteCount - packetBytesIndex));
                         inputBytesPartial = Arrays.copyOfRange(inputBytes, packetBytesIndex, sizeByteCount);
                     }
-                    /*if (sizeByteCount >= packetSizeLimit) {
-                        System.out.println("full packet size " + packetBytesIndex);
-                        inputBytesPartial = Arrays.copyOfRange(inputBytes, packetBytesIndex, packetSizeLimit + packetBytesIndex);
-                    } else {
-                        System.out.println("partial packet size " + packetBytesIndex);
-                        inputBytesPartial = Arrays.copyOfRange(inputBytes, packetBytesIndex, sizeByteCount);
-                    }*/
                     packetBytesIndex += inputBytesPartial.length;
 
                     data.putByteArray(WatutNetworking.NBTDataPlayerScreenCompressedPixelData, inputBytesPartial);
 
                     data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount, packetCount);
                     data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex, i);
-                    data.putString(WatutNetworking.NBTDataPlayerScreenClass, status.getScreenData().getScreenClass());
 
                     WatutNetworking.instance().clientSendToServer(data);
-                    //System.out.println("sent packet " + i + " of " + packetCount + " size " + inputBytesPartial.length);
 
                 }
             }
@@ -1129,23 +1112,20 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         if (data.contains(WatutNetworking.NBTDataPlayerScreenCompressedPixelData)) {
 
-            status.getScreenData().setScreenClass(data.getString(WatutNetworking.NBTDataPlayerScreenClass));
             if (data.contains(WatutNetworking.NBTDataPlayerScreenCompressedPixelData)) {
                 byte[] pixelData = data.getByteArray(WatutNetworking.NBTDataPlayerScreenCompressedPixelData);
                 int decompressedSize = data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataSize);
-                //System.out.println("receive data " + pixelData.length);
                 int packetCount = data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount);
                 int packetIndex = data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex);
                 long gameTime = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
                 int timeout = 10;
                 if (packetCount > 1) {
-                    //System.out.println("store partial " + packetIndex + " of " + packetCount);
                     if (packetIndex == 0) {
                         status.getScreenData().setGameTicksSinceFirstPacket(gameTime);
                         status.getScreenData().setTexturePixelDataPartial(pixelData);
                     } else {
                         if (gameTime > status.getScreenData().getGameTicksSinceFirstPacket() + timeout) {
-                            //TODO: packet timeout waiting for other pieces, abort and reset state
+                            //packet timeout waiting for other pieces, abort and reset state
                             //actually dont think i have to do anything, if a new packetIndex 0 comes in it forces a fresh set
                             //CULog.dbg("watut packet took too long to come in, stop waiting and reset");
                         } else {
@@ -1157,10 +1137,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                                 status.getScreenData().setTexturePixelDataPartial(combined);
 
                                 if (packetIndex == packetCount-1) {
-                                    //System.out.println("finished receiving full data, decompressing");
                                     try {
                                         status.getScreenData().setTexturePixelData(RenderHelper.decompress(ByteBuffer.wrap(status.getScreenData().getTexturePixelDataPartial()), decompressedSize));
-                                        //status.getScreenData().setTexturePixelData(RenderHelper.decompressGZIP(ByteBuffer.wrap(pixelData)));
                                         status.getScreenData().markNeedsNewRender(true);
                                     } catch (Exception e) {
                                         throw new RuntimeException(e);
@@ -1173,16 +1151,12 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 } else {
                     try {
                         status.getScreenData().setTexturePixelData(RenderHelper.decompress(ByteBuffer.wrap(pixelData), decompressedSize));
-                        //status.getScreenData().setTexturePixelData(RenderHelper.decompressGZIP(ByteBuffer.wrap(pixelData)));
                         status.getScreenData().markNeedsNewRender(true);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 }
             }
-
-            //ScreenParticleRenderer.getInstance().markNeedsNewRender(true);
-            //System.out.println("received screen data");
         }
     }
 

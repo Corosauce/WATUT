@@ -64,9 +64,11 @@ public class ConfigClient implements IConfigCategory {
     @ConfigComment("Plays a sutble sound when a player clicks their mouse in a Gui")
     public static boolean playMouseClickSounds = true;
 
-    //TODO: update to v2
-    @ConfigComment("How modded guis should look by default if they dont have a special rule. Options: VANILLA_CHEST, DYNAMIC. Special rules are in config/watut/gui/. DYNAMIC tries to automatically show you the biggest texture for the open modded gui screen, but might look wrong for a lot of mods unless they have special rules setup.")
-    public static String moddedGUIDefaultVisual = "DYNAMIC";
+    /*@ConfigComment("How modded guis should look by default if they dont have a special rule. Options: VANILLA_CHEST, DYNAMIC. Special rules are in config/watut/gui/. DYNAMIC tries to automatically show you the biggest texture for the open modded gui screen, but might look wrong for a lot of mods unless they have special rules setup.")
+    public static String moddedGUIDefaultVisual = "DYNAMIC";*/
+
+    @ConfigComment("Disable new dynamic gui system and use old simple visual.")
+    public static boolean useOldSimpleGUIVisual = false;
 
     @Override
     public String getName() {
