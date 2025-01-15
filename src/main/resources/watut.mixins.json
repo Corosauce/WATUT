@@ -5,9 +5,13 @@
   "refmap": "watut.refmap.json",
   "client": [
     "client.SetupRotationsInject",
-    "client.RenderPingIconInject"/*,
-    "client.GuiGraphicsInnerBlit"
-    "client.ScreenRenderWithTooltip"*/
+    "client.RenderPingIconInject",
+    "client.ScreenRenderBackground",
+    "client.ScreenRenderWithTooltip",
+    "client.PostChainResize"
+  ],
+  "mixins": [
+    "AbstractContainerMenuDoClick"
   ],
   "injectors": {
     "defaultRequire": 0

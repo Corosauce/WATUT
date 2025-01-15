@@ -1,5 +1,6 @@
 package com.corosus.watut;
 
+import com.corosus.watut.client.screen.ScreenData;
 import com.corosus.watut.math.Lerpables;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.nbt.CompoundTag;
@@ -139,7 +140,7 @@ public class PlayerStatus {
 
     private CompoundTag nbtCache = new CompoundTag();
 
-    //private ScreenData screenData = new ScreenData();
+    private ScreenData screenData = new ScreenData();
     private PlayerGuiState lastScreenCaptured = PlayerGuiState.NONE;
 
     public PlayerStatus(PlayerGuiState playerGuiState) {
@@ -347,13 +348,13 @@ public class PlayerStatus {
         this.playerChatState = playerChatState;
     }
 
-    /*public ScreenData getScreenData() {
+    public ScreenData getScreenData() {
         return screenData;
     }
 
     public void setScreenData(ScreenData screenData) {
         this.screenData = screenData;
-    }*/
+    }
 
     public PlayerGuiState getLastScreenCaptured() {
         return lastScreenCaptured;

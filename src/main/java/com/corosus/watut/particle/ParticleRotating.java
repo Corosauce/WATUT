@@ -23,6 +23,7 @@ public abstract class ParticleRotating extends TextureSheetParticle {
     public float rotationPitch;
     public float prevRotationRoll;
     public float rotationRoll;
+    public float brightness = 1F;
 
     //removes particle once hits 0, other things should reset this to keep it spawned
     public int despawnCountdown = 40;
@@ -136,5 +137,13 @@ public abstract class ParticleRotating extends TextureSheetParticle {
         this.xo = pX;
         this.yo = pY;
         this.zo = pZ;
+    }
+
+    public float getBrightness() {
+        return brightness;
+    }
+
+    public void setBrightness(float brightness) {
+        this.brightness = brightness;
     }
 }

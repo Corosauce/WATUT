@@ -156,8 +156,12 @@ dependencies {
 
 	//Uncomment if using mixins (Mixin edits are found in 3 places)
 	annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
-    //implementation fg.deobf("curse.maven:jei-238222:5101366")
-    //implementation fg.deobf("curse.maven:farmers-delight-398521:5051242")
+    implementation fg.deobf("curse.maven:jei-238222:5101366")
+    implementation fg.deobf("curse.maven:farmers-delight-398521:5051242")
+    implementation fg.deobf("curse.maven:enderio-64578:6035212")
+    //implementation fg.deobf("curse.maven:journeymap-32274:5789363")
+    implementation fg.deobf("curse.maven:Xaeros_Minimap-263420:6012833")
+    implementation fg.deobf("curse.maven:Xaeros_WorldMap-317780:5987149")
 
     implementation fg.deobf("com.corosus.coroutil:coroutil-forge:${project.minecraft_version}-${project.coroutil_version}")
 

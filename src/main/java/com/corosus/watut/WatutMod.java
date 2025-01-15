@@ -77,6 +77,10 @@ public abstract class WatutMod
         return "";
     }
 
+    public void loadConfigs() {
+
+    }
+
     public abstract PlayerList getPlayerList();
 
     public static void dbg(Object obj) {

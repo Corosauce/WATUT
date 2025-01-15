@@ -1,0 +1,40 @@
+{
+  "screen_rules": [
+    {
+      "screen_class": "com.enderio.machines.client.gui.screen.AlloySmelterScreen",
+      "render_type": "all_textures"
+    },
+    {
+      "screen_class": "com.enderio.machines.client.gui.screen.PaintingMachineScreen",
+      "render_type": "all_textures"
+    },
+    {
+      "screen_class": "com.enderio.machines.client.gui.screen.StirlingGeneratorScreen",
+      "render_type": "all_textures"
+    },
+    {
+      "screen_class": "com.enderio.machines.client.gui.screen.SagMillScreen",
+      "render_type": "all_textures"
+    },
+    {
+      "screen_class": "com.enderio.machines.client.gui.screen.SlicerScreen",
+      "render_type": "all_textures"
+    },
+    {
+      "screen_class": "com.enderio.machines.client.gui.screen.ImpulseHopperScreen",
+      "render_type": "all_textures"
+    },
+    {
+      "screen_class": "com.enderio.machines.client.gui.screen.SoulBinderScreen",
+      "render_type": "all_textures"
+    },
+    {
+      "screen_class": "com.enderio.machines.client.gui.screen.PoweredSpawnerScreen",
+      "render_type": "all_textures"
+    },
+    {
+      "screen_class": "com.enderio.machines.client.gui.screen.CrafterScreen",
+      "render_type": "all_textures"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 package com.corosus.watut.client.screen;
 
-import com.mojang.blaze3d.pipeline.MainTarget;
+import com.corosus.coroutil.util.CULog;
+import com.corosus.watut.PlayerStatusManagerClient;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -9,55 +10,36 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.renderer.texture.TextureManager;
+import org.lwjgl.opengl.GL30;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.ByteBuffer;
 
 public class ScreenData {
 
-    private boolean isCapturing = false;
-    private List<RenderCall> listRenderCalls = new ArrayList<>();
-    private boolean needsNewRender = false;
-    private MainTarget mainRenderTarget;
+    private int textureID = -1;
+    private ByteBuffer texturePixelData = null;
+    private byte[] texturePixelDataPartial = null;
+
+    private long gameTicksSinceFirstPacket = 0;
+    private long gameTicksSinceLastScreenSend = 0;
+    private long gameTicksSinceLastScreenReceiveAndRender = 0;
 
     private ParticleRenderType particleRenderType;
 
-    public int width = 1920;
-    public int height = 1080;
-    public boolean needsInit = true;
+    private boolean needsNewRender = false;
 
     public void init() {
 
-
     }
 
-    public void checkSetup() {
-        if (needsInit) {
-            needsInit = false;
-            setup();
-        }
-    }
-
-    public void setup() {
-        Minecraft mc = Minecraft.getInstance();
-        width = mc.getWindow().getWidth();
-        height = mc.getWindow().getHeight();
-        //TODO: TEMP
-        //height = width;
-        mainRenderTarget = new MainTarget(width, height);
-        //mainRenderTarget = new CustomRenderTarget(width, height, true);
-        mainRenderTarget.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
-        mainRenderTarget.clear(Minecraft.ON_OSX);
-
-        //System.out.println("init with resolution: " + width + "x" + height);
-        //System.out.println("init new framebuffer, texture id: " + mainRenderTarget.getColorTextureId());
+    public void initClient() {
 
         this.particleRenderType = new ParticleRenderType() {
             public void begin(BufferBuilder p_107455_, TextureManager p_107456_) {
+                RenderSystem.setShader(() -> PlayerStatusManagerClient.particle);
+                RenderSystem._setShaderTexture(0, textureID);
+
                 RenderSystem.depthMask(true);
-                //RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
-                //RenderSystem.bindTexture(ScreenCapturing.mainRenderTarget.getColorTextureId());
-                RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
                 RenderSystem.enableBlend();
                 RenderSystem.defaultBlendFunc();
                 RenderSystem.disableCull();
@@ -73,41 +55,31 @@ public class ScreenData {
                 return "DYNAMIC_TEXTURE";
             }
         };
+
     }
 
-    public void bind() {
-        mainRenderTarget.bindWrite(true);
+    public int getTextureID() {
+        return textureID;
     }
 
-    public void unbind() {
-        mainRenderTarget.unbindWrite();
+    public void setTextureID(int textureID) {
+        this.textureID = textureID;
     }
 
-    public void startCapture() {
-        listRenderCalls.clear();
-        isCapturing = true;
-        //System.out.println("capture started");
+    public ByteBuffer getTexturePixelData() {
+        return texturePixelData;
     }
 
-    public void stopCapture() {
-        isCapturing = false;
-        //System.out.println("capture stopped - captured call count: " + listRenderCalls.size());
+    public void setTexturePixelData(ByteBuffer texturePixelData) {
+        this.texturePixelData = texturePixelData;
     }
 
-    public void addRenderCall(RenderCall renderCall) {
-        listRenderCalls.add(renderCall);
+    public ParticleRenderType getParticleRenderType() {
+        return particleRenderType;
     }
 
-    public boolean isCapturing() {
-        return isCapturing;
-    }
-
-    public void setCapturing(boolean capturing) {
-        isCapturing = capturing;
-    }
-
-    public List<RenderCall> getListRenderCalls() {
-        return listRenderCalls;
+    public void setParticleRenderType(ParticleRenderType particleRenderType) {
+        this.particleRenderType = particleRenderType;
     }
 
     public synchronized boolean needsNewRender() {
@@ -118,19 +90,35 @@ public class ScreenData {
         this.needsNewRender = needsNewRender;
     }
 
-    public MainTarget getMainRenderTarget() {
-        return mainRenderTarget;
+    public byte[] getTexturePixelDataPartial() {
+        return texturePixelDataPartial;
     }
 
-    public void setMainRenderTarget(MainTarget mainRenderTarget) {
-        this.mainRenderTarget = mainRenderTarget;
+    public void setTexturePixelDataPartial(byte[] texturePixelDataPartial) {
+        this.texturePixelDataPartial = texturePixelDataPartial;
     }
 
-    public ParticleRenderType getParticleRenderType() {
-        return particleRenderType;
+    public long getGameTicksSinceFirstPacket() {
+        return gameTicksSinceFirstPacket;
     }
 
-    public void setParticleRenderType(ParticleRenderType particleRenderType) {
-        this.particleRenderType = particleRenderType;
+    public void setGameTicksSinceFirstPacket(long gameTicksSinceFirstPacket) {
+        this.gameTicksSinceFirstPacket = gameTicksSinceFirstPacket;
+    }
+
+    public long getGameTicksSinceLastScreenSend() {
+        return gameTicksSinceLastScreenSend;
+    }
+
+    public void setGameTicksSinceLastScreenSend(long gameTicksSinceLastScreenSend) {
+        this.gameTicksSinceLastScreenSend = gameTicksSinceLastScreenSend;
+    }
+
+    public long getGameTicksSinceLastScreenReceiveAndRender() {
+        return gameTicksSinceLastScreenReceiveAndRender;
+    }
+
+    public void setGameTicksSinceLastScreenReceiveAndRender(long gameTicksSinceLastScreenReceiveAndRender) {
+        this.gameTicksSinceLastScreenReceiveAndRender = gameTicksSinceLastScreenReceiveAndRender;
     }
 }

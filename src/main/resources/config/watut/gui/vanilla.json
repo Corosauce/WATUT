@@ -1,0 +1,43 @@
+{
+  "screen_rules": [
+    {
+      "screen_class": "net.minecraft.client.gui.screens.PauseScreen",
+      "render_type": "all_textures"
+    },
+    {
+      "screen_class": "net.minecraft.client.gui.screens.OptionsScreen",
+      "render_type": "all_textures"
+    },
+    {
+      "screen_class": "net.minecraft.client.gui.screens.inventory.InventoryScreen",
+      "render_type": "all_textures"
+    },
+    {
+      "screen_class": "net.minecraft.client.gui.screens.debug.GameModeSwitcherScreen",
+      "render_type": "biggest_texture"
+    },
+    {
+      "screen_class": "net.minecraft.client.gui.screens.inventory.CommandBlockEditScreen",
+      "render_type": "all_textures"
+    },
+    {
+      "screen_class": "net.minecraft.client.gui.screens.achievement.StatsScreen",
+      "render_type": "all_textures"
+    },
+    {
+      "screen_class": "net.minecraft.client.gui.screens.advancements.AdvancementsScreen",
+      "render_type": "all_textures"
+    },
+    {
+      "screen_class": "net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen",
+      "render_type": "biggest_texture"
+    },
+    {
+      "screen_class": "net.minecraft.client.gui.screens.inventory.InventoryScreen2",
+      "render_type": "biggest_texture",
+      "texture": "minecraft:textures/gui/container/inventory.png",
+      "pos": [ 0, 0 ],
+      "size": [ 256, 256 ]
+    }
+  ]
+}

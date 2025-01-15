@@ -31,6 +31,7 @@ public class WatutModForge extends WatutMod {
         if (FMLEnvironment.dist.isClient()) {
             modEventBus.addListener(EventHandlerForge::getRegisteredParticles);
         }
+        loadConfigs();
     }
 
     private void setup(final FMLCommonSetupEvent event) {
