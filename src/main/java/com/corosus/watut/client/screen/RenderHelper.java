@@ -11,15 +11,20 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
+import xaero.map.graphics.ImprovedFramebuffer;
+import xaero.map.gui.GuiMap;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.zip.Deflater;
 import java.util.zip.GZIPInputStream;
@@ -29,6 +34,19 @@ import java.util.zip.Inflater;
 public class RenderHelper {
 
     public static boolean performingOwnRender = false;
+    public static ResourceLocation cursor = new ResourceLocation(WatutMod.MODID, "textures/misc/mouse.png");
+    //public static ImprovedFramebuffer GuiMapPrimaryScaleFBO;
+    public static Field guiMapPrimaryScaleFBO;
+    public static int xaeroWorldMapTextureID = -1;
+
+    static {
+        try {
+            guiMapPrimaryScaleFBO = GuiMap.class.getDeclaredField("primaryScaleFBO");
+            guiMapPrimaryScaleFBO.setAccessible(true);
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        }
+    }
 
     public static ByteBufferProcessor processor = new ByteBufferProcessor(buffer -> {
         ByteBuffer processed = compress(buffer);
@@ -72,8 +90,8 @@ public class RenderHelper {
                     GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
 
                     //from RenderTarget via createBuffers when prepping a new texture
-                    GlStateManager._texParameter(3553, 10242, 33071);
-                    GlStateManager._texParameter(3553, 10243, 33071);
+                    /*GlStateManager._texParameter(3553, 10242, 33071);
+                    GlStateManager._texParameter(3553, 10243, 33071);*/
                     //this binds the texture id to the active framebuffer (scaled down framebuffer), result is anything rendered to it is stored in this texture id
                     GL30.glFramebufferTexture2D(
                             GL30.GL_FRAMEBUFFER,
@@ -179,7 +197,30 @@ public class RenderHelper {
                 ScreenParticleRenderer.isRenderingParticleGUI = true;
                 ScreenParticleRenderer.isRenderingParticleGUI2 = true;
                 performingOwnRender = true;
-                Minecraft.getInstance().screen.renderWithTooltip(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
+                //System.out.println(Minecraft.getInstance().screen);
+                //if (Minecraft.getInstance().screen instanceof GuiMap) {
+                    //(Minecraft.getInstance().screen).render(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
+                //} else {
+                    //Minecraft.getInstance().screen.renderWithTooltip(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
+                //}
+
+                xaeroWorldMapTextureID = -1;
+
+                if (Minecraft.getInstance().screen instanceof GuiMap) {
+                    ScreenParticleRenderer.getInstance().bind();
+                    try {
+                        Object fbo = guiMapPrimaryScaleFBO.get(null);
+                        if (fbo != null) {
+                            //((ImprovedFramebuffer)fbo).bindAsMainTarget(false);
+                            xaeroWorldMapTextureID = ((ImprovedFramebuffer)fbo).colorTextureId;
+                        }
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    Minecraft.getInstance().screen.renderWithTooltip(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
+                }
+                pGuiGraphics.innerBlit(cursor, pMouseX, pMouseX + 6, pMouseY, pMouseY + 10, 100, 0, 1, 0, 1);
                 performingOwnRender = false;
                 ScreenParticleRenderer.isRenderingParticleGUI = false;
                 ScreenParticleRenderer.isRenderingParticleGUI2 = false;

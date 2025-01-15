@@ -10,6 +10,9 @@
     "client.ScreenRenderWithTooltip",
     "client.PostChainResize"
   ],
+  "mixins": [
+    "AbstractContainerMenuDoClick"
+  ],
   "injectors": {
     "defaultRequire": 0
   },

@@ -1,10 +1,15 @@
 package com.corosus.watut;
 
 import com.corosus.watut.config.ConfigCommon;
+import com.corosus.watut.mixin.AbstractContainerMenuDoClick;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.Map;
 import java.util.UUID;
@@ -90,6 +95,56 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
             for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
                 WatutMod.dbg("sending update all packet for " + entry.getKey().toString() + " to " + player.getDisplayName().getString() + " with status " + PlayerStatus.PlayerGuiState.get(entry.getValue().getNbtCache().getInt(WatutNetworking.NBTDataPlayerGuiStatus)));
                 WatutNetworking.instance().serverSendToClientPlayer(entry.getValue().getNbtCache(), player);
+            }
+        }
+    }
+
+    private InventorySnapshot inventorySnapshotPlayer;
+    private InventorySnapshot inventorySnapshotContainer;
+
+    public void doClickPre(AbstractContainerMenu abstractContainerMenu, int p_150431_, int p_150432_, ClickType p_150433_, Player p_150434_) {
+        System.out.println("pre");
+        //TODO: verify its a real player not a fake player so we dont cause wasted overhead
+        System.out.println(abstractContainerMenu.slots.size());
+        inventorySnapshotPlayer = new InventorySnapshot();
+        inventorySnapshotContainer = new InventorySnapshot();
+        for (ItemStack item : p_150434_.getInventory().items) {
+            inventorySnapshotPlayer.itemStackList.add(item.copy());
+        }
+        for (Slot slot : abstractContainerMenu.slots) {
+            inventorySnapshotContainer.itemStackList.add(slot.getItem().copy());
+        }
+    }
+
+    public void doClickPost(AbstractContainerMenu abstractContainerMenu, int p_150431_, int p_150432_, ClickType p_150433_, Player p_150434_) {
+        System.out.println("post");
+        //TODO: verify its a real player not a fake player so we dont cause wasted overhead
+        InventorySnapshot inventorySnapshotPlayerPost = new InventorySnapshot();
+        InventorySnapshot inventorySnapshotContainerPost = new InventorySnapshot();
+        for (ItemStack item : p_150434_.getInventory().items) {
+            inventorySnapshotPlayerPost.itemStackList.add(item.copy());
+        }
+        for (Slot slot : abstractContainerMenu.slots) {
+            inventorySnapshotContainerPost.itemStackList.add(slot.getItem().copy());
+        }
+
+        System.out.println("player:");
+
+        for (int i = 0; i < inventorySnapshotPlayerPost.itemStackList.size(); i++) {
+            ItemStack stack1 = inventorySnapshotPlayer.itemStackList.get(i);
+            ItemStack stack2 = inventorySnapshotPlayerPost.itemStackList.get(i);
+            if (!stack1.equals(stack2, false)) {
+                System.out.println(i + " prev: " + stack1 + " vs now: " + stack2);
+            }
+        }
+
+        System.out.println("container:");
+
+        for (int i = 0; i < inventorySnapshotContainerPost.itemStackList.size(); i++) {
+            ItemStack stack1 = inventorySnapshotContainer.itemStackList.get(i);
+            ItemStack stack2 = inventorySnapshotContainerPost.itemStackList.get(i);
+            if (!stack1.equals(stack2, false)) {
+                System.out.println(i + " prev: " + stack1 + " vs now: " + stack2);
             }
         }
     }

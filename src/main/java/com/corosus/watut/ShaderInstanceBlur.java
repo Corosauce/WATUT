@@ -17,9 +17,13 @@ public class ShaderInstanceBlur extends ShaderInstance {
     @Nullable
     public final Uniform RADIUS;
 
+    @Nullable
+    public final Uniform BLUR_LEVEL;
+
     public ShaderInstanceBlur(ResourceProvider p_173336_, ResourceLocation shaderLocation, VertexFormat p_173338_) throws IOException {
         super(p_173336_, shaderLocation, p_173338_);
         this.RESOLUTION = this.getUniform("resolution");
         this.RADIUS = this.getUniform("radius");
+        this.BLUR_LEVEL = this.getUniform("blurLevel");
     }
 }

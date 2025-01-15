@@ -70,6 +70,14 @@ public class ConfigClient implements IConfigCategory {
     @ConfigComment("Disable new dynamic gui system and use old simple visual.")
     public static boolean useOldSimpleGUIVisual = false;
 
+    //TODO: flesh these names and info out
+
+    public static int blurLevel = 1;
+
+    public static double particleSizeScale = 1;
+
+    public static double sizeRadiusInPixelsToShow = 128;
+
     @Override
     public String getName() {
         return "-client";

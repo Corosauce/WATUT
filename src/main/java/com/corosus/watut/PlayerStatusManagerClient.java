@@ -322,21 +322,35 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
     }
 
+
     public Pair<Float, Float> getMousePos() {
         Minecraft mc = Minecraft.getInstance();
+        double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+        //not actual max, just doing some guestimation work
+        double guiScaleMax = 4;
         double xPercent = (mc.mouseHandler.xpos() / mc.getWindow().getScreenWidth()) - 0.5;
         double yPercent = (mc.mouseHandler.ypos() / mc.getWindow().getScreenHeight()) - 0.5;
+
         //TODO: factor in clients gui scale, aka a ratio of gui covering screen, adjust hand move scale accordingly
+        //i wanted to do this, but its not possible without other comprimises, eg:
+        //journeymap ignores guiscale
+        //if i used a baseline of a typical gui windows with a 176 width, and factored in gui scale, i could maybe pull it off
+        //but then JEI is still off the side where id have capped the mouse movement because on gui scale one there is SO much extra room
+        //maybe just do a lazy gui scale 4 / actual gui scale and hope thats good enough
+        //yep seems good enough
+
         //emphasize the movements
-        double emphasis = 1.5;
-        //emphasis = 3;
-        double edgeLimit = 0.5;
+        //double emphasis = 1.5;
+        //double emphasis = 1.0;
+        double emphasis = guiScaleMax / guiScale;
+        double edgeLimit = 0.75;
         double edgeLimitYLower = 0.2;
         xPercent *= emphasis;
         yPercent *= emphasis;
         xPercent = Math.max(Math.min(xPercent, edgeLimit), -edgeLimit);
+        yPercent = Math.max(Math.min(yPercent, edgeLimit), -edgeLimit);
         //prevent hand in pants
-        yPercent = Math.min(yPercent, edgeLimitYLower);
+        //yPercent = Math.min(yPercent, edgeLimitYLower);
         return Pair.of((float) xPercent, (float) yPercent);
     }
 
@@ -828,9 +842,15 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             double yPercent = playerStatus.getScreenPosPercentY();
             double x = Math.toRadians(90) - Math.toRadians(22.5) - yPercent;
             double y = -Math.toRadians(15) + xPercent;
+            double xHead = Math.toRadians(22.5) + yPercent;
+            double yHead = xPercent;
 
             playerStatus.getLerpTarget().rightArm.yRot = (float) y;
             playerStatus.getLerpTarget().rightArm.xRot = (float) -x;
+
+            playerStatus.getLerpTarget().head.yRot = (float) yHead * 0.5F;
+            //playerStatus.getLerpTarget().head.xRot = (float) ((-x * 0.5F) + Math.toRadians(90));
+            playerStatus.getLerpTarget().head.xRot = (float) xHead * 0.5F;
 
             if (playerStatus.isPressing()) {
                 Vec3 vec = calculateViewVector((float) Math.toDegrees(y), (float) Math.toDegrees(x));

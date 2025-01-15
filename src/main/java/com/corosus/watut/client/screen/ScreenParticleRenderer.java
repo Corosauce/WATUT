@@ -1,7 +1,9 @@
 package com.corosus.watut.client.screen;
 
 import com.corosus.watut.PlayerStatusManagerClient;
+import com.corosus.watut.config.ConfigClient;
 import com.mojang.blaze3d.pipeline.MainTarget;
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
@@ -143,26 +145,49 @@ public class ScreenParticleRenderer {
     }
 
     public void innerBlitCustomShaderHorizontal(PoseStack pose, int p_281399_, int p_283222_, int p_283615_, int p_283430_, int p_281729_, float p_283247_, float p_282598_, float p_282883_, float p_283017_) {
-        RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
+        if (RenderHelper.xaeroWorldMapTextureID != -1) {
+            //RenderSystem._setShaderTexture(0, RenderHelper.xaeroWorldMapTextureID);
+            GlStateManager._bindTexture(RenderHelper.xaeroWorldMapTextureID);
+            RenderSystem.setShaderTexture(0, RenderHelper.xaeroWorldMapTextureID);
+            /*int test = 181;
+            GlStateManager._bindTexture(test);
+            RenderSystem.setShaderTexture(0, test);*/
+        } else {
+            RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
+        }
+        //RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
         RenderSystem.setShader(() -> PlayerStatusManagerClient.positionTexBlurHorizontal);
 
         if (PlayerStatusManagerClient.positionTexBlurHorizontal == null) {
             return;
         }
 
+        if (PlayerStatusManagerClient.positionTexBlurHorizontal.BLUR_LEVEL != null) {
+            PlayerStatusManagerClient.positionTexBlurHorizontal.BLUR_LEVEL.set((float)(RenderHelper.xaeroWorldMapTextureID != -1 ? 0 : ConfigClient.blurLevel));
+        }
+
         Matrix4f matrix4f = pose.last().pose();
         BufferBuilder bufferbuilder = Tesselator.getInstance().getBuilder();
         bufferbuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
 
-        //UV coordinates adjusted to fix upside down render from data from earlier, cant figure out why its backwards to begin with but we fixed it via UV here
-        // Bottom-left vertex
-        bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283615_, (float)p_281729_).uv(p_283247_, p_283017_).endVertex();
-        // Top-left vertex
-        bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283430_, (float)p_281729_).uv(p_283247_, p_282883_).endVertex();
-        // Top-right vertex
-        bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283430_, (float)p_281729_).uv(p_282598_, p_282883_).endVertex();
-        // Bottom-right vertex
-        bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283615_, (float)p_281729_).uv(p_282598_, p_283017_).endVertex();
+        if (RenderHelper.xaeroWorldMapTextureID != -1) {
+            bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283615_, (float)p_281729_).uv(p_283247_, p_282883_).endVertex();
+            bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283430_, (float)p_281729_).uv(p_283247_, p_283017_).endVertex();
+            bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283430_, (float)p_281729_).uv(p_282598_, p_283017_).endVertex();
+            bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283615_, (float)p_281729_).uv(p_282598_, p_282883_).endVertex();
+        } else {
+            //UV coordinates adjusted to fix upside down render from data from earlier, cant figure out why its backwards to begin with but we fixed it via UV here
+            // Bottom-left vertex
+            bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283615_, (float)p_281729_).uv(p_283247_, p_283017_).endVertex();
+            // Top-left vertex
+            bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283430_, (float)p_281729_).uv(p_283247_, p_282883_).endVertex();
+            // Top-right vertex
+            bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283430_, (float)p_281729_).uv(p_282598_, p_282883_).endVertex();
+            // Bottom-right vertex
+            bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283615_, (float)p_281729_).uv(p_282598_, p_283017_).endVertex();
+        }
+
+
 
         BufferUploader.drawWithShader(bufferbuilder.end());
     }
@@ -180,8 +205,14 @@ public class ScreenParticleRenderer {
             int sizeY = ScreenParticleRenderer.getInstance().heightScaledDown;
             PlayerStatusManagerClient.positionTexBlurVertical.RESOLUTION.set((float)sizeX, (float)sizeY);
         }
+
+        //visual cutoff radius
         if (PlayerStatusManagerClient.positionTexBlurVertical.RADIUS != null) {
-            PlayerStatusManagerClient.positionTexBlurVertical.RADIUS.set((float)0);
+            PlayerStatusManagerClient.positionTexBlurVertical.RADIUS.set((float) ConfigClient.sizeRadiusInPixelsToShow);
+        }
+
+        if (PlayerStatusManagerClient.positionTexBlurVertical.BLUR_LEVEL != null) {
+            PlayerStatusManagerClient.positionTexBlurVertical.BLUR_LEVEL.set((float)ConfigClient.blurLevel);
         }
 
         Matrix4f matrix4f = pose.last().pose();
