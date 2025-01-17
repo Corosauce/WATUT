@@ -9,6 +9,7 @@ public abstract class WatutNetworking {
 
     public static String NBTDataPlayerUUID = "playerUuid";
     public static String NBTDataPlayerGuiStatus = "playerGuiStatus";
+    public static String NBTDataPlayerGuiDontSendDetailedGUIInfo = "dontSendDetailedGUIInfo";
     public static String NBTDataPlayerChatStatus = "playerChatStatus";
     public static String NBTDataPlayerTypingAmp = "playerTypingAmp";
     //public static String NBTDataPlayerScreenRenderCalls = "screenRenderCalls";
@@ -24,6 +25,14 @@ public abstract class WatutNetworking {
     public static String NBTDataPlayerMouseX = "playerMouseX";
     public static String NBTDataPlayerMouseY = "playerMouseY";
     public static String NBTDataPlayerMousePressed = "playerMousePressed";
+
+    //server to client config
+    public static String NBTDataServerConfig = "serverConfig";
+    public static String NBTData_useOldSimpleGUIVisual = "useOldSimpleGUIVisual";
+    public static String NBTData_tickSendRateOfGUIUpdates = "tickSendRateOfGUIUpdates";
+    public static String NBTData_blurLevel = "blurLevel";
+    public static String NBTData_sizeRadiusInPixelsToShow = "sizeRadiusInPixelsToShow";
+
 
     private static WatutNetworking instance;
 

@@ -13,11 +13,14 @@ import net.minecraft.client.renderer.texture.TextureManager;
 import org.lwjgl.opengl.GL30;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ScreenData {
 
     private int textureID = -1;
-    private ByteBuffer texturePixelData = null;
+    private volatile ByteBuffer texturePixelData = null;
+    private volatile ByteBuffer decompressionBuffer = null;
+    private final AtomicBoolean isBufferReady = new AtomicBoolean(false);
     private byte[] texturePixelDataPartial = null;
 
     private long gameTicksSinceFirstPacket = 0;
@@ -120,5 +123,17 @@ public class ScreenData {
 
     public void setGameTicksSinceLastScreenReceiveAndRender(long gameTicksSinceLastScreenReceiveAndRender) {
         this.gameTicksSinceLastScreenReceiveAndRender = gameTicksSinceLastScreenReceiveAndRender;
+    }
+
+    public AtomicBoolean getIsBufferReady() {
+        return isBufferReady;
+    }
+
+    public ByteBuffer getDecompressionBuffer() {
+        return decompressionBuffer;
+    }
+
+    public void setDecompressionBuffer(ByteBuffer decompressionBuffer) {
+        this.decompressionBuffer = decompressionBuffer;
     }
 }

@@ -162,6 +162,9 @@ dependencies {
     //implementation fg.deobf("curse.maven:journeymap-32274:5789363")
     implementation fg.deobf("curse.maven:Xaeros_Minimap-263420:6012833")
     implementation fg.deobf("curse.maven:Xaeros_WorldMap-317780:5987149")
+    implementation fg.deobf("curse.maven:ftb_chunks-314906:5956390")
+    implementation fg.deobf("curse.maven:ftb_lib-404465:6016763")
+    implementation fg.deobf("curse.maven:architectury-419699:5137938")
 
     implementation fg.deobf("com.corosus.coroutil:coroutil-forge:${project.minecraft_version}-${project.coroutil_version}")
 

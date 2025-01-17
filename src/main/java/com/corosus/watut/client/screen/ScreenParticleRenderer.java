@@ -2,6 +2,7 @@ package com.corosus.watut.client.screen;
 
 import com.corosus.watut.PlayerStatusManagerClient;
 import com.corosus.watut.config.ConfigClient;
+import com.corosus.watut.config.ConfigServerSyncedToClient;
 import com.mojang.blaze3d.pipeline.MainTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -163,7 +164,7 @@ public class ScreenParticleRenderer {
         }
 
         if (PlayerStatusManagerClient.positionTexBlurHorizontal.BLUR_LEVEL != null) {
-            PlayerStatusManagerClient.positionTexBlurHorizontal.BLUR_LEVEL.set((float)(RenderHelper.xaeroWorldMapTextureID != -1 ? 0 : ConfigClient.blurLevel));
+            PlayerStatusManagerClient.positionTexBlurHorizontal.BLUR_LEVEL.set((float)(RenderHelper.xaeroWorldMapTextureID != -1 ? 0 : ConfigServerSyncedToClient.blurLevel));
         }
 
         Matrix4f matrix4f = pose.last().pose();
@@ -208,11 +209,11 @@ public class ScreenParticleRenderer {
 
         //visual cutoff radius
         if (PlayerStatusManagerClient.positionTexBlurVertical.RADIUS != null) {
-            PlayerStatusManagerClient.positionTexBlurVertical.RADIUS.set((float) ConfigClient.sizeRadiusInPixelsToShow);
+            PlayerStatusManagerClient.positionTexBlurVertical.RADIUS.set((float) ConfigServerSyncedToClient.sizeRadiusInPixelsToShow);
         }
 
         if (PlayerStatusManagerClient.positionTexBlurVertical.BLUR_LEVEL != null) {
-            PlayerStatusManagerClient.positionTexBlurVertical.BLUR_LEVEL.set((float)ConfigClient.blurLevel);
+            PlayerStatusManagerClient.positionTexBlurVertical.BLUR_LEVEL.set((float)ConfigServerSyncedToClient.blurLevel);
         }
 
         Matrix4f matrix4f = pose.last().pose();

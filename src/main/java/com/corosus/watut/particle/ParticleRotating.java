@@ -29,6 +29,20 @@ public abstract class ParticleRotating extends TextureSheetParticle {
     public int despawnCountdown = 40;
 
 
+    public static ParticleRenderType CUSTOM = new ParticleRenderType() {
+        public void begin(BufferBuilder p_107469_, TextureManager p_107470_) {
+            RenderSystem.depthMask(true);
+            RenderSystem.disableBlend();
+        }
+
+        public void end(Tesselator p_107472_) {
+        }
+
+        public String toString() {
+            return "CUSTOM";
+        }
+    };
+
     public static ParticleRenderType PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL = new ParticleRenderType() {
         public void begin(BufferBuilder p_107455_, TextureManager p_107456_) {
             RenderSystem.depthMask(true);
