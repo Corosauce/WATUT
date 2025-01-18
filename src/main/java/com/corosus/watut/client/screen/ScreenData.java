@@ -2,6 +2,8 @@ package com.corosus.watut.client.screen;
 
 import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.PlayerStatusManagerClient;
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -9,15 +11,23 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.world.level.material.MapColor;
 import org.lwjgl.opengl.GL30;
+import org.lwjgl.system.MemoryUtil;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ScreenData {
 
     private int textureID = -1;
-    private ByteBuffer texturePixelData = null;
+    private volatile ByteBuffer texturePixelData = null;
+    private volatile ByteBuffer decompressionBuffer = null;
+    private final AtomicBoolean isBufferReady = new AtomicBoolean(false);
     private byte[] texturePixelDataPartial = null;
 
     private long gameTicksSinceFirstPacket = 0;
@@ -27,6 +37,8 @@ public class ScreenData {
     private ParticleRenderType particleRenderType;
 
     private boolean needsNewRender = false;
+
+    private DynamicTexture image = null;
 
     public void init() {
 
@@ -38,6 +50,11 @@ public class ScreenData {
             public void begin(BufferBuilder p_107455_, TextureManager p_107456_) {
                 RenderSystem.setShader(() -> PlayerStatusManagerClient.particle);
                 RenderSystem._setShaderTexture(0, textureID);
+                RenderSystem._setShaderTexture(0, ScreenParticleRenderer.getInstance().getMainRenderTargetScaledDownFromByteBuffer().getColorTextureId());
+                //RenderSystem._setShaderTexture(0, getImage().getId());
+                //test
+                //GlStateManager._bindTexture(textureID);
+                //GlStateManager._bindTexture(getImage().getId());
 
                 RenderSystem.depthMask(true);
                 RenderSystem.enableBlend();
@@ -68,6 +85,12 @@ public class ScreenData {
 
     public ByteBuffer getTexturePixelData() {
         return texturePixelData;
+    }
+
+    public void freeTexturePixelData() {
+        if (texturePixelData != null) {
+            MemoryUtil.memFree(texturePixelData);
+        }
     }
 
     public void setTexturePixelData(ByteBuffer texturePixelData) {
@@ -120,5 +143,64 @@ public class ScreenData {
 
     public void setGameTicksSinceLastScreenReceiveAndRender(long gameTicksSinceLastScreenReceiveAndRender) {
         this.gameTicksSinceLastScreenReceiveAndRender = gameTicksSinceLastScreenReceiveAndRender;
+    }
+
+    public AtomicBoolean getIsBufferReady() {
+        return isBufferReady;
+    }
+
+    public ByteBuffer getDecompressionBuffer() {
+        return decompressionBuffer;
+    }
+
+    public void setDecompressionBuffer(ByteBuffer decompressionBuffer) {
+        this.decompressionBuffer = decompressionBuffer;
+    }
+
+    public void test() {
+        if (image == null) {
+            //NativeImage nativeImage = new NativeImage(ScreenParticleRenderer.getInstance().widthScaledDown, ScreenParticleRenderer.getInstance().heightScaledDown, false);
+            //DynamicTexture dynamicTexture = new DynamicTexture(ScreenParticleRenderer.getInstance().widthScaledDown, ScreenParticleRenderer.getInstance().heightScaledDown, false);
+            /*DynamicTexture dynamicTexture = null;
+            try {
+                dynamicTexture = new DynamicTexture(NativeImage.read(this.decompressionBuffer));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }*/
+            /*try {
+                image = new DynamicTexture(NativeImage.read(this.decompressionBuffer));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }*/
+            try {
+                image = new DynamicTexture(NativeImage.read(this.decompressionBuffer));
+            } catch (IOException e) {
+                e.printStackTrace();
+                image = new DynamicTexture(ScreenParticleRenderer.getInstance().widthScaledDown, ScreenParticleRenderer.getInstance().heightScaledDown, true);
+            }
+        } else {
+            /*try {
+                image = new DynamicTexture(NativeImage.read(this.decompressionBuffer));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }*/
+            //image = new DynamicTexture(ScreenParticleRenderer.getInstance().widthScaledDown, ScreenParticleRenderer.getInstance().heightScaledDown, false);
+            Random random = new Random();
+            for (int i = 0; i < 1000; i++) {
+                int x = random.nextInt(ScreenParticleRenderer.getInstance().widthScaledDown);
+                int y = random.nextInt(ScreenParticleRenderer.getInstance().heightScaledDown);
+                image.getPixels().setPixelRGBA(x, y, MapColor.getColorFromPackedId(48));
+            }
+
+            image.upload();
+        }
+    }
+
+    public DynamicTexture getImage() {
+        return image;
+    }
+
+    public void setImage(DynamicTexture image) {
+        this.image = image;
     }
 }

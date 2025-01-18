@@ -3,6 +3,7 @@ package com.corosus.watut;
 import com.corosus.watut.client.screen.RenderHelper;
 import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.config.ConfigClient;
+import com.corosus.watut.config.ConfigServerSyncedToClient;
 import com.corosus.watut.config.CustomArmCorrections;
 import com.corosus.watut.math.Lerpables;
 import com.corosus.watut.particle.*;
@@ -525,7 +526,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 Vec3 posParticle = getParticlePosition(player);
 
                 boolean useChatIdleForTestingOtherGUIs = true;
-                boolean newRender = !ConfigClient.useOldSimpleGUIVisual;
+                boolean newRender = !ConfigServerSyncedToClient.useOldSimpleGUIVisual && !playerStatus.isPlayerGuiDontSendDetailedGUIInfo();
 
                 if (ConfigClient.showPlayerActiveChatGui) {
                     if (PlayerStatus.PlayerGuiState.isTypingGui(this.getStatus(player).getPlayerGuiState())) {
@@ -936,8 +937,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         float distFromFace = 0.75F;
         //float distFromFace = -3.5F;
         Vec3 lookVec = getBodyAngle(player).scale(distFromFace);
-        return new Vec3(pos.x + lookVec.x, pos.y + 1.2D, pos.z + lookVec.z);
-        //return new Vec3(pos.x + lookVec.x - 2, pos.y + 1.2D, pos.z + lookVec.z);
+        //return new Vec3(pos.x + lookVec.x, pos.y + 1.2D, pos.z + lookVec.z);
+        return new Vec3(pos.x + lookVec.x - 2, pos.y + 1.2D, pos.z + lookVec.z);
     }
 
     public Vec3 getBodyAngle(Player player) {
@@ -990,6 +991,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         if (getStatusLocal().getPlayerGuiState() != playerStatus || force) {
             CompoundTag data = new CompoundTag();
             data.putInt(WatutNetworking.NBTDataPlayerGuiStatus, playerStatus.ordinal());
+            data.putBoolean(WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo, ConfigClient.dontSendDetailedGUIInfo);
             //CULog.dbg("sending status from client: " + playerStatus + " for " + Minecraft.getInstance().player.getUUID());
             //CULog.dbg("data: " + data);
             WatutNetworking.instance().clientSendToServer(data);
@@ -1124,6 +1126,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         if (data.contains(WatutNetworking.NBTDataPlayerGuiStatus)) {
             PlayerStatus.PlayerGuiState playerGuiState = PlayerStatus.PlayerGuiState.get(data.getInt(WatutNetworking.NBTDataPlayerGuiStatus));
             status.setPlayerGuiState(playerGuiState);
+            if (data.contains(WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo)) status.setPlayerGuiDontSendDetailedGUIInfo(data.getBoolean(WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo));
             if (status.getPlayerGuiState() != statusPrev.getPlayerGuiState()) {
                 WatutMod.dbg("New gui player state and new pose target set relating to: " + status.getPlayerGuiState() + " for " + uuid);
                 if (statusPrev.getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
@@ -1198,8 +1201,14 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
                                 if (packetIndex == packetCount-1) {
                                     try {
-                                        status.getScreenData().setTexturePixelData(RenderHelper.decompress(ByteBuffer.wrap(status.getScreenData().getTexturePixelDataPartial()), decompressedSize));
+                                        //TEMP
+                                        /*if (status.getScreenData().getDecompressionBuffer() == null) {
+                                            status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(status.getScreenData().getTexturePixelDataPartial()), decompressedSize));
+                                        }*/
+                                        //status.getScreenData().freeTexturePixelData();
+                                        status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(status.getScreenData().getTexturePixelDataPartial()), decompressedSize));
                                         status.getScreenData().markNeedsNewRender(true);
+                                        status.getScreenData().getIsBufferReady().set(true);
                                     } catch (Exception e) {
                                         throw new RuntimeException(e);
                                     }
@@ -1210,14 +1219,31 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     }
                 } else {
                     try {
-                        status.getScreenData().setTexturePixelData(RenderHelper.decompress(ByteBuffer.wrap(pixelData), decompressedSize));
+                        //TEMP
+                        /*if (status.getScreenData().getDecompressionBuffer() == null) {
+                            status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(status.getScreenData().getTexturePixelDataPartial()), decompressedSize));
+                        }*/
+                        //status.getScreenData().freeTexturePixelData();
+                        status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(status.getScreenData().getTexturePixelDataPartial()), decompressedSize));
+                        //status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(pixelData), decompressedSize));
                         status.getScreenData().markNeedsNewRender(true);
+                        status.getScreenData().getIsBufferReady().set(true);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 }
             }
         }
+    }
+
+    public void receiveServerConfig(CompoundTag nbt) {
+
+        CULog.dbg("receiving server config sync");
+        if (nbt.contains(WatutNetworking.NBTData_useOldSimpleGUIVisual)) ConfigServerSyncedToClient.useOldSimpleGUIVisual = nbt.getBoolean(WatutNetworking.NBTData_useOldSimpleGUIVisual);
+        if (nbt.contains(WatutNetworking.NBTData_tickSendRateOfGUIUpdates)) ConfigServerSyncedToClient.tickSendRateOfGUIUpdates = nbt.getInt(WatutNetworking.NBTData_tickSendRateOfGUIUpdates);
+        if (nbt.contains(WatutNetworking.NBTData_blurLevel)) ConfigServerSyncedToClient.blurLevel = nbt.getInt(WatutNetworking.NBTData_blurLevel);
+        if (nbt.contains(WatutNetworking.NBTData_sizeRadiusInPixelsToShow)) ConfigServerSyncedToClient.sizeRadiusInPixelsToShow = nbt.getDouble(WatutNetworking.NBTData_sizeRadiusInPixelsToShow);
+
     }
 
 }

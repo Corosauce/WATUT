@@ -1,10 +1,14 @@
 package com.corosus.watut;
 
+import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.config.ConfigCommon;
+import com.corosus.watut.config.ConfigServer;
 import com.corosus.watut.mixin.AbstractContainerMenuDoClick;
+import mezz.jei.forge.config.ServerConfig;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
@@ -96,7 +100,28 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
                 WatutMod.dbg("sending update all packet for " + entry.getKey().toString() + " to " + player.getDisplayName().getString() + " with status " + PlayerStatus.PlayerGuiState.get(entry.getValue().getNbtCache().getInt(WatutNetworking.NBTDataPlayerGuiStatus)));
                 WatutNetworking.instance().serverSendToClientPlayer(entry.getValue().getNbtCache(), player);
             }
+
+            //sync server config to client
+            CULog.dbg("sending server config sync to " + player.getName());
+            WatutNetworking.instance().serverSendToClientPlayer(getServerConfigNBT(), player);
         }
+    }
+
+    public void syncServerConfigToAllPlayers() {
+        for (ServerPlayer serverPlayer : WatutMod.instance().getPlayerList().getPlayers()) {
+            CULog.dbg("sending server config sync to " + serverPlayer.getName());
+            WatutNetworking.instance().serverSendToClientPlayer(getServerConfigNBT(), serverPlayer);
+        }
+    }
+
+    public CompoundTag getServerConfigNBT() {
+        CompoundTag nbt = new CompoundTag();
+        nbt.putBoolean(WatutNetworking.NBTDataServerConfig, true);
+        nbt.putBoolean(WatutNetworking.NBTData_useOldSimpleGUIVisual, ConfigServer.useOldSimpleGUIVisual);
+        nbt.putInt(WatutNetworking.NBTData_tickSendRateOfGUIUpdates, ConfigServer.tickSendRateOfGUIUpdates);
+        nbt.putInt(WatutNetworking.NBTData_blurLevel, ConfigServer.blurLevel);
+        nbt.putDouble(WatutNetworking.NBTData_sizeRadiusInPixelsToShow, ConfigServer.sizeRadiusInPixelsToShow);
+        return nbt;
     }
 
     private InventorySnapshot inventorySnapshotPlayer;
@@ -112,7 +137,9 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
             inventorySnapshotPlayer.itemStackList.add(item.copy());
         }
         for (Slot slot : abstractContainerMenu.slots) {
-            inventorySnapshotContainer.itemStackList.add(slot.getItem().copy());
+            if (!(slot.container instanceof Inventory)) {
+                inventorySnapshotContainer.itemStackList.add(slot.getItem().copy());
+            }
         }
     }
 
@@ -125,7 +152,9 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
             inventorySnapshotPlayerPost.itemStackList.add(item.copy());
         }
         for (Slot slot : abstractContainerMenu.slots) {
-            inventorySnapshotContainerPost.itemStackList.add(slot.getItem().copy());
+            if (!(slot.container instanceof Inventory)) {
+                inventorySnapshotContainerPost.itemStackList.add(slot.getItem().copy());
+            }
         }
 
         System.out.println("player:");

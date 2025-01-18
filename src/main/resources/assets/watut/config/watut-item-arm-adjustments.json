@@ -1,5 +1,5 @@
 {
-  "comment1": "These filters and adjustments affect all watut animations in the same way",
+  "comment1": "These client side filters and adjustments affect all watut animations in the same way",
   "comment2": "filters support @ for mod id, and * at the start or end of the match for partial matches",
   "comment3": "in adjustments section, you can specify 'DISABLED' to outright disable any animation on that hand and axis, or use degrees to adjust by a certain amount",
   "comment4": "matchingHandX and matchingHandY are probably all you need, for watuts animations, X is the main up/down, and Y is left/right, Z is available but usually not needed",

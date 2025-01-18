@@ -1,6 +1,7 @@
 package com.corosus.watut.config;
 
 import com.corosus.modconfig.ConfigComment;
+import com.corosus.modconfig.ConfigParams;
 import com.corosus.modconfig.IConfigCategory;
 import com.corosus.watut.WatutMod;
 
@@ -70,16 +71,15 @@ public class ConfigClient implements IConfigCategory {
     /*@ConfigComment("How modded guis should look by default if they dont have a special rule. Options: VANILLA_CHEST, DYNAMIC. Special rules are in config/watut/gui/. DYNAMIC tries to automatically show you the biggest texture for the open modded gui screen, but might look wrong for a lot of mods unless they have special rules setup.")
     public static String moddedGUIDefaultVisual = "DYNAMIC";*/
 
-    @ConfigComment("Disable new dynamic gui system and use old simple visual.")
-    public static boolean useOldSimpleGUIVisual = false;
-
-    //TODO: flesh these names and info out
-
-    public static int blurLevel = 1;
-
+    @ConfigParams(min = 0.1, comment = "Adjusts the size of the gui visual that appears infront of a player, 2 = twice the size")
     public static double particleSizeScale = 1;
 
-    public static double sizeRadiusInPixelsToShow = 128;
+    @ConfigComment("Delay between ticks your client will accept and update new image of another players gui, you can only increase the delay from what the server/other client is set to, 10 = twice a second")
+    public static int tickReceiveAndRenderRateOfGUIUpdates = 10;
+
+    //TODO: USE, mark a players playerstatus class that they want the simple version, and dont send the pixel data as well
+    @ConfigComment("Privacy setting, if you dont want to send very detailed info of your screen for everyone to see and instead use the old basic gui visual, set this to true")
+    public static boolean dontSendDetailedGUIInfo = false;
 
     @Override
     public String getName() {

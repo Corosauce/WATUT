@@ -102,6 +102,7 @@ public class PlayerStatus {
 
     //synced values
     private PlayerGuiState playerGuiState;
+    private boolean playerGuiDontSendDetailedGUIInfo;
     private PlayerChatState playerChatState;
     private float typingAmplifier = 1F;
     private float screenPosPercentX = 0;
@@ -190,6 +191,14 @@ public class PlayerStatus {
 
     public void setPlayerGuiState(PlayerGuiState playerGuiState) {
         this.playerGuiState = playerGuiState;
+    }
+
+    public boolean isPlayerGuiDontSendDetailedGUIInfo() {
+        return playerGuiDontSendDetailedGUIInfo;
+    }
+
+    public void setPlayerGuiDontSendDetailedGUIInfo(boolean playerGuiDontSendDetailedGUIInfo) {
+        this.playerGuiDontSendDetailedGUIInfo = playerGuiDontSendDetailedGUIInfo;
     }
 
     public Particle getParticle() {

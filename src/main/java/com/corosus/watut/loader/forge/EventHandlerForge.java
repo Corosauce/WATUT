@@ -29,7 +29,7 @@ public class EventHandlerForge {
     @OnlyIn(Dist.CLIENT)
     public void guiRender(RenderGuiEvent.Post event) {
         WatutMod.getPlayerStatusManagerClient().onGuiRender();
-        RenderHelper.guiRender();
+        RenderHelper.guiRender(event.getGuiGraphics());
     }
 
     @SubscribeEvent
