@@ -145,6 +145,40 @@ public class ScreenParticleRenderer {
         BufferUploader.drawWithShader(bufferbuilder.end());
     }
 
+    public void innerBlitCustomShader2(int textureID, PoseStack pose, int p_281399_, int p_283222_, int p_283615_, int p_283430_, int p_281729_, float p_283247_, float p_282598_, float p_282883_, float p_283017_) {
+        //RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
+        RenderSystem._setShaderTexture(0, textureID);
+        RenderSystem.setShader(() -> PlayerStatusManagerClient.positionTexBlur);
+
+        if (PlayerStatusManagerClient.positionTexBlur == null) {
+            return;
+        }
+        if (PlayerStatusManagerClient.positionTexBlur.RESOLUTION != null) {
+            int sizeX = ScreenParticleRenderer.getInstance().widthScaledDown;
+            int sizeY = ScreenParticleRenderer.getInstance().heightScaledDown;
+            PlayerStatusManagerClient.positionTexBlur.RESOLUTION.set((float)sizeX, (float)sizeY);
+        }
+        if (PlayerStatusManagerClient.positionTexBlur.RADIUS != null) {
+            PlayerStatusManagerClient.positionTexBlur.RADIUS.set((float)0);
+        }
+
+        Matrix4f matrix4f = pose.last().pose();
+        BufferBuilder bufferbuilder = Tesselator.getInstance().getBuilder();
+        bufferbuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+
+        //UV coordinates adjusted to fix upside down render from data from earlier, cant figure out why its backwards to begin with but we fixed it via UV here
+        // Bottom-left vertex
+        bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283615_, (float)p_281729_).uv(p_283247_, p_283017_).endVertex();
+        // Top-left vertex
+        bufferbuilder.vertex(matrix4f, (float)p_281399_, (float)p_283430_, (float)p_281729_).uv(p_283247_, p_282883_).endVertex();
+        // Top-right vertex
+        bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283430_, (float)p_281729_).uv(p_282598_, p_282883_).endVertex();
+        // Bottom-right vertex
+        bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283615_, (float)p_281729_).uv(p_282598_, p_283017_).endVertex();
+
+        BufferUploader.drawWithShader(bufferbuilder.end());
+    }
+
     public void innerBlitCustomShaderHorizontal(PoseStack pose, int p_281399_, int p_283222_, int p_283615_, int p_283430_, int p_281729_, float p_283247_, float p_282598_, float p_282883_, float p_283017_) {
         if (RenderHelper.xaeroWorldMapTextureID != -1) {
             //RenderSystem._setShaderTexture(0, RenderHelper.xaeroWorldMapTextureID);

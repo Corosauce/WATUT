@@ -11,8 +11,10 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.material.MapColor;
 import org.lwjgl.opengl.GL30;
 import org.lwjgl.system.MemoryUtil;
@@ -39,6 +41,8 @@ public class ScreenData {
     private boolean needsNewRender = false;
 
     private DynamicTexture image = null;
+    public RenderType renderType;
+    public ResourceLocation res;
 
     public void init() {
 
@@ -49,9 +53,10 @@ public class ScreenData {
         this.particleRenderType = new ParticleRenderType() {
             public void begin(BufferBuilder p_107455_, TextureManager p_107456_) {
                 RenderSystem.setShader(() -> PlayerStatusManagerClient.particle);
-                RenderSystem._setShaderTexture(0, textureID);
-                RenderSystem._setShaderTexture(0, ScreenParticleRenderer.getInstance().getMainRenderTargetScaledDownFromByteBuffer().getColorTextureId());
-                //RenderSystem._setShaderTexture(0, getImage().getId());
+                //RenderSystem._setShaderTexture(0, textureID);
+                //RenderSystem._setShaderTexture(0, ScreenParticleRenderer.getInstance().getMainRenderTargetScaledDownFromByteBuffer().getColorTextureId());
+                //TODO: this works multiplayer, textureID does not, huh?
+                RenderSystem._setShaderTexture(0, getImage().getId());
                 //test
                 //GlStateManager._bindTexture(textureID);
                 //GlStateManager._bindTexture(getImage().getId());
@@ -172,12 +177,17 @@ public class ScreenData {
             } catch (IOException e) {
                 e.printStackTrace();
             }*/
-            try {
+            /*try {
                 image = new DynamicTexture(NativeImage.read(this.decompressionBuffer));
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (IOException e) {*/
+                //e.printStackTrace();
                 image = new DynamicTexture(ScreenParticleRenderer.getInstance().widthScaledDown, ScreenParticleRenderer.getInstance().heightScaledDown, true);
-            }
+                //TODO: shouldnt be needed, see other workspace that removed it
+                Random rand = new Random();
+                ResourceLocation resourcelocation = Minecraft.getInstance().textureManager.register("testingg/" + rand.nextInt(9999999), image);
+                res = resourcelocation;
+                this.renderType = RenderType.text(resourcelocation);
+            //}
         } else {
             /*try {
                 image = new DynamicTexture(NativeImage.read(this.decompressionBuffer));
@@ -185,14 +195,14 @@ public class ScreenData {
                 e.printStackTrace();
             }*/
             //image = new DynamicTexture(ScreenParticleRenderer.getInstance().widthScaledDown, ScreenParticleRenderer.getInstance().heightScaledDown, false);
-            Random random = new Random();
+            /*Random random = new Random();
             for (int i = 0; i < 1000; i++) {
                 int x = random.nextInt(ScreenParticleRenderer.getInstance().widthScaledDown);
                 int y = random.nextInt(ScreenParticleRenderer.getInstance().heightScaledDown);
                 image.getPixels().setPixelRGBA(x, y, MapColor.getColorFromPackedId(48));
             }
 
-            image.upload();
+            image.upload();*/
         }
     }
 

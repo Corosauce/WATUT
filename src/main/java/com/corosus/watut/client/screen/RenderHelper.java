@@ -7,6 +7,7 @@ import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigCommon;
 import com.corosus.watut.config.ConfigServerSyncedToClient;
 import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
@@ -17,6 +18,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.resources.ResourceLocation;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
 import org.lwjgl.opengl.GL30;
 import org.lwjgl.system.MemoryUtil;
 import xaero.common.graphics.ImprovedFramebuffer;
@@ -50,6 +52,23 @@ public class RenderHelper {
     public static long size = 0;
 
     public static GuiGraphics temp = null;
+
+    public static Field pixelsField;
+
+    static {
+        try {
+            pixelsField = NativeImage.class.getDeclaredField("pixels");
+            pixelsField.setAccessible(true);
+        } catch (NoSuchFieldException e) {
+            try {
+                pixelsField = NativeImage.class.getDeclaredField("f_84964_");
+                pixelsField.setAccessible(true);
+            } catch (NoSuchFieldException ex) {
+                e.printStackTrace();
+            }
+
+        }
+    }
 
     public static void testCopy(ByteBuffer buffer) {
         /*if (testBuffer != null) {
@@ -144,36 +163,58 @@ public class RenderHelper {
                 RenderSystem.clear(16640, Minecraft.ON_OSX);
 
                 //setup a new texture, borrowing relevant bits from RenderTarget class
+                //TODO: im binding each new texture to the same framebuffer....... how does this play out in multiplayer? were already having issues
                 if (playerStatus.getScreenData().getTextureID() == -1) {
                     int texture = GL11.glGenTextures();
                     GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture);
+
+                    //setup the texture
+                    GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA,
+                            ScreenParticleRenderer.getInstance().widthScaledDown,
+                            ScreenParticleRenderer.getInstance().heightScaledDown, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
 
                     //from code example / RenderTarget via setFilterMode
                     GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
                     GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
 
                     //from RenderTarget via createBuffers when prepping a new texture
-                    /*GlStateManager._texParameter(3553, 10242, 33071);
-                    GlStateManager._texParameter(3553, 10243, 33071);*/
+                    GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
+                    GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
                     //this binds the texture id to the active framebuffer (scaled down framebuffer), result is anything rendered to it is stored in this texture id
-                    GL30.glFramebufferTexture2D(
+                    /*GL30.glFramebufferTexture2D(
                             GL30.GL_FRAMEBUFFER,
                             GL30.GL_COLOR_ATTACHMENT0,
                             GL11.GL_TEXTURE_2D,
                             ScreenParticleRenderer.getInstance().getMainRenderTargetScaledDownFromByteBuffer().getColorTextureId(),
                             0 // Mipmap level
-                    );
+                    );*/
+
+                    if (GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER) == GL30.GL_FRAMEBUFFER_COMPLETE) {
+                        System.out.println("Framebuffer is complete and ready to use.");
+                    } else {
+                        System.err.println("Framebuffer is not complete!");
+                    }
+
+                    System.out.println(GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER));
 
                     playerStatus.getScreenData().setTextureID(texture);
                 }
+
+                GL30.glFramebufferTexture2D(
+                        GL30.GL_FRAMEBUFFER,
+                        GL30.GL_COLOR_ATTACHMENT0,
+                        GL11.GL_TEXTURE_2D,
+                        playerStatus.getScreenData().getTextureID(),
+                        0 // Mipmap level
+                );
 
                 if (playerStatus.getScreenData().getParticleRenderType() == null) {
                     playerStatus.getScreenData().initClient();
                 }
 
-                GL11.glBindTexture(GL11.GL_TEXTURE_2D, playerStatus.getScreenData().getTextureID());
+                //GL11.glBindTexture(GL11.GL_TEXTURE_2D, playerStatus.getScreenData().getTextureID());
 
-                //RenderSystem.clear(16640, Minecraft.ON_OSX);
+                RenderSystem.clear(16640, Minecraft.ON_OSX);
 
                 /*if (screenData.getImage() != null) {
                     screenData.getImage().upload();
@@ -193,7 +234,25 @@ public class RenderHelper {
                     pose = temp.pose();
                 }*/
 
-                ScreenParticleRenderer.getInstance().innerBlitCustomShader(guiGraphics.pose()
+                /*ScreenParticleRenderer.getInstance().innerBlitCustomShader2(screenData.getTextureID(), guiGraphics.pose()
+                        , 0, ScreenParticleRenderer.getInstance().widthScaledDown
+                        , 0, ScreenParticleRenderer.getInstance().heightScaledDown
+                        , 0
+                        , 0, 1, 0, 1);*/
+
+                long nativeImagePixelMemoryAddress = -1;
+                try {
+                    nativeImagePixelMemoryAddress = (Long)pixelsField.get(screenData.getImage().getPixels());
+                    if (nativeImagePixelMemoryAddress != -1) {
+                        MemoryUtil.memCopy(MemoryUtil.memAddress(screenData.getDecompressionBuffer()), nativeImagePixelMemoryAddress, 512*512*4/*intermediatePixelBuffer.capacity()*/);
+                    }
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+
+                screenData.getImage().upload();
+
+                guiGraphics.innerBlit(screenData.res
                         , 0, 512
                         , 0, 512
                         , 0

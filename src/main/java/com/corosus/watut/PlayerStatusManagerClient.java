@@ -937,8 +937,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         float distFromFace = 0.75F;
         //float distFromFace = -3.5F;
         Vec3 lookVec = getBodyAngle(player).scale(distFromFace);
-        //return new Vec3(pos.x + lookVec.x, pos.y + 1.2D, pos.z + lookVec.z);
-        return new Vec3(pos.x + lookVec.x - 2, pos.y + 1.2D, pos.z + lookVec.z);
+        return new Vec3(pos.x + lookVec.x, pos.y + 1.2D, pos.z + lookVec.z);
+        //return new Vec3(pos.x + lookVec.x - 2, pos.y + 1.2D, pos.z + lookVec.z);
     }
 
     public Vec3 getBodyAngle(Player player) {
@@ -1206,11 +1206,15 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                                             status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(status.getScreenData().getTexturePixelDataPartial()), decompressedSize));
                                         }*/
                                         //status.getScreenData().freeTexturePixelData();
-                                        status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(status.getScreenData().getTexturePixelDataPartial()), decompressedSize));
-                                        status.getScreenData().markNeedsNewRender(true);
-                                        status.getScreenData().getIsBufferReady().set(true);
+                                        if (status.getScreenData().getTexturePixelDataPartial() != null) {
+                                            status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(status.getScreenData().getTexturePixelDataPartial()), decompressedSize));
+                                            status.getScreenData().markNeedsNewRender(true);
+                                            status.getScreenData().getIsBufferReady().set(true);
+                                        } else {
+                                            CULog.dbg("getTexturePixelDataPartial() null!");
+                                        }
                                     } catch (Exception e) {
-                                        throw new RuntimeException(e);
+                                        e.printStackTrace();
                                     }
                                 }
 
@@ -1219,17 +1223,23 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     }
                 } else {
                     try {
+                        //status.getScreenData().setTexturePixelDataPartial(pixelData);
+                        //status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(status.getScreenData().getTexturePixelDataPartial()), decompressedSize));
                         //TEMP
                         /*if (status.getScreenData().getDecompressionBuffer() == null) {
                             status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(status.getScreenData().getTexturePixelDataPartial()), decompressedSize));
                         }*/
                         //status.getScreenData().freeTexturePixelData();
-                        status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(status.getScreenData().getTexturePixelDataPartial()), decompressedSize));
-                        //status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(pixelData), decompressedSize));
-                        status.getScreenData().markNeedsNewRender(true);
-                        status.getScreenData().getIsBufferReady().set(true);
+                        //if (status.getScreenData().getTexturePixelDataPartial() != null) {
+                            //status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(status.getScreenData().getTexturePixelDataPartial()), decompressedSize));
+                            status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(pixelData), decompressedSize));
+                            status.getScreenData().markNeedsNewRender(true);
+                            status.getScreenData().getIsBufferReady().set(true);
+                        /*} else {
+                            CULog.dbg("getTexturePixelDataPartial() null!");
+                        }*/
                     } catch (Exception e) {
-                        throw new RuntimeException(e);
+                        e.printStackTrace();
                     }
                 }
             }
