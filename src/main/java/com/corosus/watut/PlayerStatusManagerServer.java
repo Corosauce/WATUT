@@ -3,8 +3,6 @@ package com.corosus.watut;
 import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.config.ConfigCommon;
 import com.corosus.watut.config.ConfigServer;
-import com.corosus.watut.mixin.AbstractContainerMenuDoClick;
-import mezz.jei.forge.config.ServerConfig;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,6 +14,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 public class PlayerStatusManagerServer extends PlayerStatusManager {
@@ -69,6 +68,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     }
 
     public void handleIdleState(Player player, int idleTicks) {
+        if (WatutMod.instance().getPlayerList() == null) return;
         PlayerStatus status = getStatus(player);
         if (WatutMod.instance().getPlayerList().getPlayerCount() > 1 || singleplayerTesting) {
             if (idleTicks > ConfigCommon.ticksToMarkPlayerIdle) {
@@ -85,6 +85,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     }
 
     public void broadcast(String msg) {
+        if (WatutMod.instance().getPlayerList() == null) return;
         if (ConfigCommon.announceIdleStatesInChat) {
             WatutMod.instance().getPlayerList().broadcastSystemMessage(Component.literal(msg), false);
         }
@@ -94,7 +95,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     public void playerLoggedIn(Player player) {
         super.playerLoggedIn(player);
 
-        WatutMod.dbg("player logged in");
+        WatutMod.dbg("player logged in " + player.getName());
         if (player instanceof ServerPlayer) {
             for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
                 WatutMod.dbg("sending update all packet for " + entry.getKey().toString() + " to " + player.getDisplayName().getString() + " with status " + PlayerStatus.PlayerGuiState.get(entry.getValue().getNbtCache().getInt(WatutNetworking.NBTDataPlayerGuiStatus)));
@@ -108,6 +109,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     }
 
     public void syncServerConfigToAllPlayers() {
+        if (WatutMod.instance().getPlayerList() == null) return;
         for (ServerPlayer serverPlayer : WatutMod.instance().getPlayerList().getPlayers()) {
             CULog.dbg("sending server config sync to " + serverPlayer.getName());
             WatutNetworking.instance().serverSendToClientPlayer(getServerConfigNBT(), serverPlayer);
@@ -117,10 +119,12 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     public CompoundTag getServerConfigNBT() {
         CompoundTag nbt = new CompoundTag();
         nbt.putBoolean(WatutNetworking.NBTDataServerConfig, true);
-        nbt.putBoolean(WatutNetworking.NBTData_useOldSimpleGUIVisual, ConfigServer.useOldSimpleGUIVisual);
-        nbt.putInt(WatutNetworking.NBTData_tickSendRateOfGUIUpdates, ConfigServer.tickSendRateOfGUIUpdates);
-        nbt.putInt(WatutNetworking.NBTData_blurLevel, ConfigServer.blurLevel);
-        nbt.putDouble(WatutNetworking.NBTData_sizeRadiusInPixelsToShow, ConfigServer.sizeRadiusInPixelsToShow);
+        nbt.putBoolean(WatutNetworking.NBTData_useOldSimpleGUIVisual, ConfigServer.dynamicGuiUseOldSimpleGUIVisual);
+        nbt.putInt(WatutNetworking.NBTData_tickSendRateOfGUIUpdates, ConfigServer.dynamicGuiTickSendRateOfGUIUpdates);
+        nbt.putInt(WatutNetworking.NBTData_blurLevel, ConfigServer.dynamicGuiBlurLevel);
+        nbt.putDouble(WatutNetworking.NBTData_sizeRadiusInPixelsToShow, ConfigServer.dynamicGuiSizeRadiusInPixelsToShow);
+        nbt.putBoolean(WatutNetworking.NBTData_dynamicGuiShowClientsEntireScreen, ConfigServer.dynamicGuiShowClientsEntireScreen);
+        nbt.putBoolean(WatutNetworking.NBTData_dynamicGuiDisableBackgroundRendering, ConfigServer.dynamicGuiDisableBackgroundRendering);
         return nbt;
     }
 
@@ -162,7 +166,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         for (int i = 0; i < inventorySnapshotPlayerPost.itemStackList.size(); i++) {
             ItemStack stack1 = inventorySnapshotPlayer.itemStackList.get(i);
             ItemStack stack2 = inventorySnapshotPlayerPost.itemStackList.get(i);
-            if (!stack1.equals(stack2, false)) {
+            if (!ItemStack.isSameItem(stack1, stack2)) {
                 System.out.println(i + " prev: " + stack1 + " vs now: " + stack2);
             }
         }
@@ -172,7 +176,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         for (int i = 0; i < inventorySnapshotContainerPost.itemStackList.size(); i++) {
             ItemStack stack1 = inventorySnapshotContainer.itemStackList.get(i);
             ItemStack stack2 = inventorySnapshotContainerPost.itemStackList.get(i);
-            if (!stack1.equals(stack2, false)) {
+            if (!ItemStack.isSameItem(stack1, stack2)) {
                 System.out.println(i + " prev: " + stack1 + " vs now: " + stack2);
             }
         }

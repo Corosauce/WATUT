@@ -7,17 +7,20 @@
     "client.SetupRotationsInject",
     "client.RenderPingIconInject",
     "client.ScreenRenderBackground",
+    "client.ScreenRenderWithTooltip",
     "client.GuiRender",
     "client.KeyboardHandlerKeyPress",
     "client.MinecraftTick",
     "client.MouseHandlerOnPress",
     "client.TextureAtlasUpload",
-    "client.PostChainResize"
+    "client.PostChainResize",
+    "client.GameRendererReloadShaders",
+    "client.ParticleEngineMixinFabric"
   ],
   "mixins": [
     "PlayerLoggedIn",
-    "PlayerTick",
-    "AbstractContainerMenuDoClick"
+    "PlayerTick"/*,
+    "AbstractContainerMenuDoClick"*/
   ],
   "injectors": {
     "defaultRequire": 0

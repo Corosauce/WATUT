@@ -43,17 +43,19 @@ void main() {
     int cutoff2 = 32;
     float dist = distance(pixelCoord, vec2(xmid, ymid));
     //vec4 color = vec4(result, 1.0);
-    if (dist > cutoff) {
-        //TODO: there might be a problem with my strat of using the same texture to render back onto itself, try enabling discard below to see the weirdness outside of the circle
-        //if i discard, the texture data remains because its already in the texture
-        //for now its ok cause im forcing all other pixels to be alpha 0
-        //discard;
-        //color.a = min(color.a, 1 - ((dist - cutoff) / cutoff2));
-        //avoid doing the alpha calculation where theres no point, saves on performance a lot
-        if (dist > cutoff + cutoff2) {
-            result.a = 0;
-        } else {
-            result.a = min(result.a, 1 - ((dist - cutoff) / cutoff2));
+    if (cutoff != -1) {
+        if (dist > cutoff) {
+            //TODO: there might be a problem with my strat of using the same texture to render back onto itself, try enabling discard below to see the weirdness outside of the circle
+            //if i discard, the texture data remains because its already in the texture
+            //for now its ok cause im forcing all other pixels to be alpha 0
+            //discard;
+            //color.a = min(color.a, 1 - ((dist - cutoff) / cutoff2));
+            //avoid doing the alpha calculation where theres no point, saves on performance a lot
+            if (dist > cutoff + cutoff2) {
+                result.a = 0;
+            } else {
+                result.a = min(result.a, 1 - ((dist - cutoff) / cutoff2));
+            }
         }
     }
     /*if (result.a <= 0.0) {

@@ -2,10 +2,8 @@ package com.corosus.watut.particle;
 
 import com.corosus.watut.client.screen.ScreenParticleRenderer;
 import com.corosus.watut.config.ConfigClient;
-import com.corosus.watut.config.ConfigServerSyncedToClient;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import mezz.jei.common.config.ClientConfig;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.ParticleRenderType;

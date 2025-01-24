@@ -1,13 +1,15 @@
 package com.corosus.watut.client.screen;
 
+import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.PlayerStatusManagerClient;
-import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigServerSyncedToClient;
 import com.mojang.blaze3d.pipeline.MainTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.resources.ResourceLocation;
 import org.joml.Matrix4f;
 
 public class ScreenParticleRenderer {
@@ -16,16 +18,19 @@ public class ScreenParticleRenderer {
     public static boolean isRenderingParticleGUI2 = false;
 
     //used on client with gui open side
+    //used to capture raw copy of minecraft screen
     private MainTarget mainRenderTarget;
-    private MainTarget mainRenderTargetScaledDown;
 
-    //used on receiving client side to render each other clients screen data onto the particles texture
-    private MainTarget mainRenderTargetScaledDownFromByteBuffer;
+    //used to render a sized down and cropped version of the above raw copy
+    private MainTarget mainRenderTargetScaledDown;
 
     public int width;
     public int height;
-    public int widthScaledDown = 512;
-    public int heightScaledDown = 512;
+    public static int defaultWidthScaledDown = 512;
+    public static int defaultHeightScaledDown = 512;
+    public static int bytesPerPixel = 4;
+    public int widthScaledDown = defaultWidthScaledDown;
+    public int heightScaledDown = defaultHeightScaledDown;
     public boolean needsInit = true;
 
     private static ScreenParticleRenderer instance;
@@ -56,13 +61,17 @@ public class ScreenParticleRenderer {
         mainRenderTarget.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
         mainRenderTarget.clear(Minecraft.ON_OSX);
 
+        if (ConfigServerSyncedToClient.dynamicGuiShowClientsEntireScreen) {
+            widthScaledDown = width;
+            heightScaledDown = height;
+        } else {
+            widthScaledDown = defaultWidthScaledDown;
+            heightScaledDown = defaultHeightScaledDown;
+        }
+
         mainRenderTargetScaledDown = new MainTarget(widthScaledDown, heightScaledDown);
         mainRenderTargetScaledDown.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
         mainRenderTargetScaledDown.clear(Minecraft.ON_OSX);
-
-        mainRenderTargetScaledDownFromByteBuffer = new MainTarget(widthScaledDown, heightScaledDown);
-        mainRenderTargetScaledDownFromByteBuffer.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
-        mainRenderTargetScaledDownFromByteBuffer.clear(Minecraft.ON_OSX);
     }
 
     public synchronized void resize(int width, int height) {
@@ -70,6 +79,26 @@ public class ScreenParticleRenderer {
         this.height = height;
         checkSetup();
         mainRenderTarget.resize(width, height, Minecraft.ON_OSX);
+        resizeScaledDown(width, height);
+    }
+
+    public void resizeScaledDown(int width, int height) {
+
+        int widthToUse = defaultWidthScaledDown;
+        int heightToUse = defaultHeightScaledDown;
+        if (ConfigServerSyncedToClient.dynamicGuiShowClientsEntireScreen) {
+            widthToUse = width;
+            heightToUse = height;
+        }
+
+        widthScaledDown = widthToUse;
+        heightScaledDown = heightToUse;
+
+        CULog.dbg("resizeScaledDown to " + widthToUse + " " + heightToUse);
+
+        if (mainRenderTargetScaledDown.width != widthToUse || mainRenderTargetScaledDown.height != heightToUse) {
+            mainRenderTargetScaledDown.resize(widthToUse, heightToUse, Minecraft.ON_OSX);
+        }
     }
 
     public void bind() {
@@ -88,24 +117,12 @@ public class ScreenParticleRenderer {
         mainRenderTargetScaledDown.unbindWrite();
     }
 
-    public void bindScaledDownFromByteBuffer() {
-        mainRenderTargetScaledDownFromByteBuffer.bindWrite(true);
-    }
-
-    public void unbindScaledDownFromByteBuffer() {
-        mainRenderTargetScaledDownFromByteBuffer.unbindWrite();
-    }
-
     public MainTarget getMainRenderTarget() {
         return mainRenderTarget;
     }
 
     public MainTarget getMainRenderTargetScaledDown() {
         return mainRenderTargetScaledDown;
-    }
-
-    public MainTarget getMainRenderTargetScaledDownFromByteBuffer() {
-        return mainRenderTargetScaledDownFromByteBuffer;
     }
 
     public void setMainRenderTarget(MainTarget mainRenderTarget) {
@@ -265,5 +282,19 @@ public class ScreenParticleRenderer {
         bufferbuilder.vertex(matrix4f, (float)p_283222_, (float)p_283615_, (float)p_281729_).uv(p_282598_, p_283017_).endVertex();
 
         BufferUploader.drawWithShader(bufferbuilder.end());
+    }
+
+    //copy of GuiGraphics.innerBlit with PoseStack added
+    public void innerBlit(PoseStack pose, ResourceLocation atlasLocation, int x1, int x2, int y1, int y2, int blitOffset, float minU, float maxU, float minV, float maxV) {
+        RenderSystem.setShaderTexture(0, atlasLocation);
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        Matrix4f matrix4f = pose.last().pose();
+        BufferBuilder bufferBuilder = Tesselator.getInstance().getBuilder();
+        bufferBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        bufferBuilder.vertex(matrix4f, (float)x1, (float)y1, (float)blitOffset).uv(minU, minV).endVertex();
+        bufferBuilder.vertex(matrix4f, (float)x1, (float)y2, (float)blitOffset).uv(minU, maxV).endVertex();
+        bufferBuilder.vertex(matrix4f, (float)x2, (float)y2, (float)blitOffset).uv(maxU, maxV).endVertex();
+        bufferBuilder.vertex(matrix4f, (float)x2, (float)y1, (float)blitOffset).uv(maxU, minV).endVertex();
+        BufferUploader.drawWithShader(bufferBuilder.end());
     }
 }

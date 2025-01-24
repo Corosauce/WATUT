@@ -1,6 +1,7 @@
 package com.corosus.watut.mixin.client;
 
 import com.corosus.watut.WatutMod;
+import com.corosus.watut.client.screen.RenderHelper;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -17,5 +18,6 @@ public abstract class GuiRender {
     @Inject(method = "render", at = @At("TAIL"))
     private void render(GuiGraphics pGuiGraphics, float pPartialTick, CallbackInfo info) {
         WatutMod.getPlayerStatusManagerClient().onGuiRender();
+        RenderHelper.guiRender(pGuiGraphics);
     }
 }

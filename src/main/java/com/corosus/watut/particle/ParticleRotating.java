@@ -47,8 +47,7 @@ public abstract class ParticleRotating extends TextureSheetParticle {
         public void begin(BufferBuilder p_107455_, TextureManager p_107456_) {
             RenderSystem.depthMask(true);
             RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
-            //RenderSystem.bindTexture(ScreenCapturing.mainRenderTarget.getColorTextureId());
-            //RenderSystem._setShaderTexture(0, ScreenCapturing.mainRenderTarget.getColorTextureId());
+            //RenderSystem.setShaderTexture(0, 219);
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             RenderSystem.disableCull();

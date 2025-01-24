@@ -8,11 +8,12 @@
     "client.RenderPingIconInject",
     "client.ScreenRenderBackground",
     "client.ScreenRenderWithTooltip",
-    "client.PostChainResize"
-  ],
+    "client.PostChainResize",
+    "client.ParticleEngineMixin"
+  ],/*
   "mixins": [
     "AbstractContainerMenuDoClick"
-  ],
+  ],*/
   "injectors": {
     "defaultRequire": 0
   },

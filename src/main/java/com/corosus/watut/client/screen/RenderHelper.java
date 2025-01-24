@@ -4,33 +4,28 @@ import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.PlayerStatus;
 import com.corosus.watut.WatutMod;
 import com.corosus.watut.config.ConfigClient;
-import com.corosus.watut.config.ConfigCommon;
 import com.corosus.watut.config.ConfigServerSyncedToClient;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.*;
+import com.mojang.blaze3d.vertex.VertexSorting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.MapRenderer;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.Level;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL12;
-import org.lwjgl.opengl.GL30;
 import org.lwjgl.system.MemoryUtil;
-import xaero.common.graphics.ImprovedFramebuffer;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.zip.Deflater;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -40,20 +35,22 @@ public class RenderHelper {
 
     public static boolean performingOwnRender = false;
     public static ResourceLocation cursor = new ResourceLocation(WatutMod.MODID, "textures/misc/mouse.png");
-    //public static ImprovedFramebuffer GuiMapPrimaryScaleFBO;
-    public static Field guiMapPrimaryScaleFBO;
-    public static Field colorTextureId;
+
+    //xaero minimap support (doesnt capture extra elements just terrain)
     public static Class guiMap;
     public static Class improvedFramebuffer;
     public static int xaeroWorldMapTextureID = -1;
-    public static ByteBuffer testBuffer = null;
+    public static Field guiMapPrimaryScaleFBO;
+    public static Field colorTextureId;
 
-    public static long pixels = 0L;
-    public static long size = 0;
-
-    public static GuiGraphics temp = null;
-
+    //hack into NativeImage to directly inject pixel data, working around its requirements for a PNG format parse
     public static Field pixelsField;
+
+    //shaders enable check support
+    public static Class irisConfig;
+    public static Class iris;
+    public static Method getIrisConfig;
+    public static Method areShadersEnabled;
 
     static {
         try {
@@ -64,37 +61,11 @@ public class RenderHelper {
                 pixelsField = NativeImage.class.getDeclaredField("f_84964_");
                 pixelsField.setAccessible(true);
             } catch (NoSuchFieldException ex) {
+                CULog.log("watut: unable to get pixels field for injecting data, watut dynamic guis wont work");
                 e.printStackTrace();
             }
 
         }
-    }
-
-    public static void testCopy(ByteBuffer buffer) {
-        /*if (testBuffer != null) {
-            MemoryUtil.memFree(testBuffer);
-        }*/
-        //buffer.flip();
-
-        // Allocate a direct ByteBuffer with the same capacity as the original
-        //ByteBuffer copiedBuffer = ByteBuffer.allocateDirect(buffer.capacity());
-        //ByteBuffer copiedBuffer = MemoryUtil.memAlloc(buffer.capacity());
-        if (pixels == 0L) {
-            pixels = MemoryUtil.nmemAlloc(buffer.capacity());
-        }
-
-        ByteBuffer copiedBuffer = MemoryUtil.memByteBuffer(pixels, buffer.capacity());
-
-
-                // Copy content from the original ByteBuffer to the new direct ByteBuffer
-        copiedBuffer.put(buffer);
-
-        // Reset position for reading in the copied buffer
-        copiedBuffer.flip();
-
-        copiedBuffer.limit(buffer.limit());
-
-        testBuffer = copiedBuffer;
     }
 
     static {
@@ -102,6 +73,22 @@ public class RenderHelper {
             guiMap = Class.forName("xaero.map.gui.GuiMap");
         } catch (ClassNotFoundException e) {
             //e.printStackTrace();
+        }
+        try {
+            improvedFramebuffer = Class.forName("xaero.map.graphics.ImprovedFramebuffer");
+        } catch (ClassNotFoundException e) {
+            //e.printStackTrace();
+        }
+        try {
+            iris = Class.forName("net.irisshaders.iris.Iris");
+            irisConfig = Class.forName("net.irisshaders.iris.config.IrisConfig");
+            getIrisConfig = iris.getDeclaredMethod("getIrisConfig");
+            areShadersEnabled = irisConfig.getDeclaredMethod("areShadersEnabled");
+        } catch (ClassNotFoundException e) {
+            //e.printStackTrace();
+            CULog.log("watut: oculus not installed or mod structure changed");
+        } catch (NoSuchMethodException e) {
+            CULog.log("watut: oculus not installed or mod structure changed");
         }
         try {
             improvedFramebuffer = Class.forName("xaero.map.graphics.ImprovedFramebuffer");
@@ -117,7 +104,19 @@ public class RenderHelper {
                 colorTextureId = improvedFramebuffer.getDeclaredField("colorTextureId");
             }
         } catch (NoSuchFieldException e) {
-            e.printStackTrace();
+            CULog.log("watut: xaero minimap not installed or mod structure changed");
+            //e.printStackTrace();
+        }
+    }
+
+    public static boolean isShadersEnabled() {
+        if (areShadersEnabled == null) return false;
+        try {
+            return (boolean) areShadersEnabled.invoke(getIrisConfig.invoke(null));
+        } catch (IllegalAccessException e) {
+            return false;
+        } catch (InvocationTargetException e) {
+            return false;
         }
     }
 
@@ -137,114 +136,43 @@ public class RenderHelper {
             gameTime = Minecraft.getInstance().level.getGameTime();
         }
 
-        boolean hasUnboundVanillaMainTarget = false;
-
         for (PlayerStatus playerStatus : WatutMod.getPlayerStatusManagerClient().lookupPlayerToStatus.values()) {
             ScreenData screenData = playerStatus.getScreenData();
 
-            if ((screenData.needsNewRender() && screenData.getTexturePixelData() != null/* && screenData.getGameTicksSinceLastScreenReceiveAndRender() + ConfigClient.tickReceiveAndRenderRateOfGUIUpdates < gameTime*/)) {
-                /*if (!screenData.getIsBufferReady().get()) {
-                    System.out.println("buffer wasnt ready, prevented issue");
-                    continue;
-                }*/
-                //screenData.markNeedsNewRender(false);
+            if (screenData.getLastLevel() != Minecraft.getInstance().level) {
+                screenData.setGameTicksSinceLastScreenSend(0);
+                screenData.setLastLevel(Minecraft.getInstance().level);
+            }
+
+            if ((screenData.getIsBufferReady().get() && screenData.needsNewRender() && screenData.getTexturePixelData() != null && screenData.getGameTicksSinceLastScreenReceiveAndRender() + ConfigClient.tickReceiveAndRenderRateOfGUIUpdates < gameTime)) {
+                screenData.markNeedsNewRender(false);
                 screenData.setGameTicksSinceLastScreenReceiveAndRender(gameTime);
 
                 ScreenParticleRenderer.getInstance().checkSetup();
-                if (!hasUnboundVanillaMainTarget) {
-                    hasUnboundVanillaMainTarget = true;
-                    unbindVanillaRenderTarget();
-                }
-
-                Matrix4f matrix4f = (new Matrix4f()).setOrtho(0.0F, (float)ScreenParticleRenderer.getInstance().widthScaledDown, (float)ScreenParticleRenderer.getInstance().heightScaledDown, 0.0F, 1000.0F, net.minecraftforge.client.ForgeHooksClient.getGuiFarPlane());
-                RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
-
-                ScreenParticleRenderer.getInstance().bindScaledDownFromByteBuffer();
-                RenderSystem.clear(16640, Minecraft.ON_OSX);
-
-                //setup a new texture, borrowing relevant bits from RenderTarget class
-                //TODO: im binding each new texture to the same framebuffer....... how does this play out in multiplayer? were already having issues
-                if (playerStatus.getScreenData().getTextureID() == -1) {
-                    int texture = GL11.glGenTextures();
-                    GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture);
-
-                    //setup the texture
-                    GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA,
-                            ScreenParticleRenderer.getInstance().widthScaledDown,
-                            ScreenParticleRenderer.getInstance().heightScaledDown, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
-
-                    //from code example / RenderTarget via setFilterMode
-                    GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
-                    GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
-
-                    //from RenderTarget via createBuffers when prepping a new texture
-                    GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-                    GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-                    //this binds the texture id to the active framebuffer (scaled down framebuffer), result is anything rendered to it is stored in this texture id
-                    /*GL30.glFramebufferTexture2D(
-                            GL30.GL_FRAMEBUFFER,
-                            GL30.GL_COLOR_ATTACHMENT0,
-                            GL11.GL_TEXTURE_2D,
-                            ScreenParticleRenderer.getInstance().getMainRenderTargetScaledDownFromByteBuffer().getColorTextureId(),
-                            0 // Mipmap level
-                    );*/
-
-                    if (GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER) == GL30.GL_FRAMEBUFFER_COMPLETE) {
-                        System.out.println("Framebuffer is complete and ready to use.");
-                    } else {
-                        System.err.println("Framebuffer is not complete!");
-                    }
-
-                    System.out.println(GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER));
-
-                    playerStatus.getScreenData().setTextureID(texture);
-                }
-
-                GL30.glFramebufferTexture2D(
-                        GL30.GL_FRAMEBUFFER,
-                        GL30.GL_COLOR_ATTACHMENT0,
-                        GL11.GL_TEXTURE_2D,
-                        playerStatus.getScreenData().getTextureID(),
-                        0 // Mipmap level
-                );
 
                 if (playerStatus.getScreenData().getParticleRenderType() == null) {
                     playerStatus.getScreenData().initClient();
                 }
 
-                //GL11.glBindTexture(GL11.GL_TEXTURE_2D, playerStatus.getScreenData().getTextureID());
+                if (screenData.getImage() == null) {
+                    screenData.setImage(new DynamicTexture(screenData.getWidth(), screenData.getHeight(), true));
+                } else {
+                    //detect a resolution change and remake buffer, only used if experimental rendering of entire screen config is on
+                    //CULog.dbg("screendata sizes " + screenData.getWidth() + " " + screenData.getHeight());
+                    if (screenData.getImage().getPixels().getWidth() != screenData.getWidth() || screenData.getImage().getPixels().getHeight() != screenData.getHeight()) {
+                        screenData.closeImage();
+                        screenData.setImage(new DynamicTexture(screenData.getWidth(), screenData.getHeight(), true));
+                        CULog.dbg("screendata image resized to " + screenData.getWidth() + " " + screenData.getHeight());
+                    }
+                }
 
-                RenderSystem.clear(16640, Minecraft.ON_OSX);
-
-                /*if (screenData.getImage() != null) {
-                    screenData.getImage().upload();
-                }*/
-
-                GL11.glBindTexture(GL11.GL_TEXTURE_2D, screenData.getImage().getId());
-
-                /*pGuiGraphics.innerBlit(testing.res
-                        , 0, 512
-                        , 0, 512
-                        , 0
-                        , 0, 1, 0, 1);*/
-
-                /*PoseStack pose = new PoseStack();
-
-                if (temp != null) {
-                    pose = temp.pose();
-                }*/
-
-                /*ScreenParticleRenderer.getInstance().innerBlitCustomShader2(screenData.getTextureID(), guiGraphics.pose()
-                        , 0, ScreenParticleRenderer.getInstance().widthScaledDown
-                        , 0, ScreenParticleRenderer.getInstance().heightScaledDown
-                        , 0
-                        , 0, 1, 0, 1);*/
-
-                long nativeImagePixelMemoryAddress = -1;
                 try {
-                    nativeImagePixelMemoryAddress = (Long)pixelsField.get(screenData.getImage().getPixels());
-                    if (nativeImagePixelMemoryAddress != -1) {
-                        MemoryUtil.memCopy(MemoryUtil.memAddress(screenData.getDecompressionBuffer()), nativeImagePixelMemoryAddress, 512*512*4/*intermediatePixelBuffer.capacity()*/);
+                    if (pixelsField != null) {
+                        long nativeImagePixelMemoryAddress = (Long) pixelsField.get(screenData.getImage().getPixels());
+                        if (nativeImagePixelMemoryAddress != -1) {
+                            MemoryUtil.memCopy(MemoryUtil.memAddress(screenData.getDecompressionBuffer()), nativeImagePixelMemoryAddress,
+                                    screenData.getWidth() * screenData.getHeight() * ScreenParticleRenderer.bytesPerPixel);
+                        }
                     }
                 } catch (IllegalAccessException e) {
                     e.printStackTrace();
@@ -252,113 +180,15 @@ public class RenderHelper {
 
                 screenData.getImage().upload();
 
-                guiGraphics.innerBlit(screenData.res
-                        , 0, 512
-                        , 0, 512
-                        , 0
-                        , 0, 1, 0, 1);
+                playerStatus.getScreenData().getIsBufferReady().set(false);
 
-                //test
-                /*if (temp != null && Minecraft.getInstance().screen != null) {
-                    Minecraft.getInstance().screen.renderWithTooltip(temp, 0, 0, 0);
-                }*/
-
-
-
-
-                //System.out.println("screenData.getTexturePixelData().limit() " + screenData.getTexturePixelData().limit());
-                /*if (testBuffer == null) {
-                    System.out.println("make copy");
-                    testCopy(screenData.getTexturePixelData());
-                    System.out.println("screenData.getTexturePixelData().limit() " + screenData.getTexturePixelData().limit());
-                    //System.out.println("testBuffer.limit() " + testBuffer.limit());
-                }*/
-                if (true || validatePixelByteBuffer(screenData.getTexturePixelData(),
-                        ScreenParticleRenderer.getInstance().widthScaledDown * ScreenParticleRenderer.getInstance().heightScaledDown * 4,
-                        4)) {
-                    //System.out.println("glTexImage2D");
-                    /*for (int i = 0; i < 100; i++) {
-                        GL11.glTexImage2D(
-                                GL11.GL_TEXTURE_2D,
-                                0, // Mipmap level
-                                GL11.GL_RGBA, // Internal format
-                                ScreenParticleRenderer.getInstance().widthScaledDown,
-                                ScreenParticleRenderer.getInstance().heightScaledDown,
-                                0, // Border
-                                GL11.GL_RGBA, // Data format
-                                GL11.GL_UNSIGNED_BYTE, // Data type
-                                screenData.getTexturePixelData()
-                        );
-                    }*/
-                    /*ByteBuffer test = ByteBuffer.allocateDirect(ScreenParticleRenderer.getInstance().widthScaledDown * ScreenParticleRenderer.getInstance().heightScaledDown * 4);
-                    test.flip();*/
-
-                    //System.out.println("screenData.getTexturePixelData().limit() " + screenData.getTexturePixelData().limit());
-                    //System.out.println("w " + ScreenParticleRenderer.getInstance().widthScaledDown + ", h " + ScreenParticleRenderer.getInstance().heightScaledDown);
-
-                    /*ByteBuffer copiedBuffer = ByteBuffer.allocateDirect(ScreenParticleRenderer.getInstance().widthScaledDown * ScreenParticleRenderer.getInstance().heightScaledDown * 4);
-                    copiedBuffer.flip();*/
-
-                    /*GL11.glTexImage2D(
-                            GL11.GL_TEXTURE_2D,
-                            0, // Mipmap level
-                            GL11.GL_RGBA, // Internal format
-                            ScreenParticleRenderer.getInstance().widthScaledDown,
-                            ScreenParticleRenderer.getInstance().heightScaledDown,
-                            0, // Border
-                            GL11.GL_RGBA, // Data format
-                            GL11.GL_UNSIGNED_BYTE, // Data type
-                            screenData.getTexturePixelData()
-                    );*/
-
-                    /*GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0,
-                            ScreenParticleRenderer.getInstance().widthScaledDown,
-                            ScreenParticleRenderer.getInstance().heightScaledDown, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);*/
-
-                    /*GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0,
-                            ScreenParticleRenderer.getInstance().widthScaledDown,
-                            ScreenParticleRenderer.getInstance().heightScaledDown, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);*/
-
-                    /*GL11.glTexImage2D(
-                            GL11.GL_TEXTURE_2D,
-                            0, // Mipmap level
-                            GL11.GL_RGBA, // Internal format
-                            ScreenParticleRenderer.getInstance().widthScaledDown,
-                            ScreenParticleRenderer.getInstance().heightScaledDown,
-                            0, // Border
-                            GL11.GL_RGBA, // Data format
-                            GL11.GL_UNSIGNED_BYTE, // Data type
-                            testBuffer
-                    );*/
-                    /*GL11.glTexImage2D(
-                            GL11.GL_TEXTURE_2D,
-                            0, // Mipmap level
-                            GL11.GL_RGBA, // Internal format
-                            ScreenParticleRenderer.getInstance().widthScaledDown,
-                            ScreenParticleRenderer.getInstance().heightScaledDown,
-                            0, // Border
-                            GL11.GL_RGBA, // Data format
-                            GL11.GL_UNSIGNED_BYTE, // Data type
-                            pixels
-                    );*/
-                    //mark it so network thread can update it again
-                    playerStatus.getScreenData().getIsBufferReady().set(false);
-                } else {
-                    CULog.dbg("ERROR: invalid bytebuffer, avoiding glTexImage2D");
-                }
-
-                ScreenParticleRenderer.getInstance().unbindScaledDownFromByteBuffer();
             }
-        }
-
-        if (hasUnboundVanillaMainTarget) {
-            bindVanillaRenderTargetAndSetupProjectionMatrix();
         }
     }
 
     public static void bindVanillaRenderTargetAndSetupProjectionMatrix() {
         Window window = Minecraft.getInstance().getWindow();
-        Matrix4f matrix4f = (new Matrix4f()).setOrtho(0.0F, (float)((double)window.getWidth() / window.getGuiScale()), (float)((double)window.getHeight() / window.getGuiScale()), 0.0F, 1000.0F, net.minecraftforge.client.ForgeHooksClient.getGuiFarPlane());
+        Matrix4f matrix4f = (new Matrix4f()).setOrtho(0.0F, (float)((double)window.getWidth() / window.getGuiScale()), (float)((double)window.getHeight() / window.getGuiScale()), 0.0F, 1000.0F, 21000.0F/*net.minecraftforge.client.ForgeHooksClient.getGuiFarPlane()*/);
         RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
 
         Minecraft.getInstance().getMainRenderTarget().bindWrite(true);
@@ -368,12 +198,15 @@ public class RenderHelper {
         Minecraft.getInstance().getMainRenderTarget().unbindWrite();
     }
 
+    public static boolean useDynamicGUISystem() {
+        if (pixelsField == null) return false;
+        if (ConfigServerSyncedToClient.useOldSimpleGUIVisual) return false;
+        if (ConfigClient.dontSendDetailedGUIInfo) return false;
+        return true;
+    }
+
     public static synchronized void renderWithTooltipEnd(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
-        if (ConfigServerSyncedToClient.useOldSimpleGUIVisual) return;
-        if (ConfigClient.dontSendDetailedGUIInfo) return;
-
-        temp = pGuiGraphics;
-
+        if (!useDynamicGUISystem()) return;
         if (Minecraft.getInstance().level == null || Minecraft.getInstance().player == null) {
             return;
         }
@@ -384,6 +217,11 @@ public class RenderHelper {
         }
 
         PlayerStatus playerStatusLocal = WatutMod.getPlayerStatusManagerClient().getStatusLocal();
+
+        if (playerStatusLocal.getScreenData().getLastLevel() != Minecraft.getInstance().level) {
+            playerStatusLocal.getScreenData().setGameTicksSinceLastScreenSend(0);
+            playerStatusLocal.getScreenData().setLastLevel(Minecraft.getInstance().level);
+        }
 
         if (processor.hasProcessedBuffers()) {
             try {
@@ -401,7 +239,7 @@ public class RenderHelper {
         boolean needsScreenUpdate = false;
 
         if (!playerStatusLocal.isIdle()) {
-            if (true || playerStatusLocal.getScreenData().getGameTicksSinceLastScreenSend() + ConfigServerSyncedToClient.tickSendRateOfGUIUpdates < gameTime) {
+            if (playerStatusLocal.getScreenData().getGameTicksSinceLastScreenSend() + ConfigServerSyncedToClient.tickSendRateOfGUIUpdates < gameTime) {
                 playerStatusLocal.setLastScreenCaptured(playerStatusLocal.getPlayerGuiState());
                 if (Minecraft.getInstance().screen != null && playerStatusLocal.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && playerStatusLocal.getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
                     playerStatusLocal.getScreenData().setGameTicksSinceLastScreenSend(gameTime);
@@ -419,21 +257,15 @@ public class RenderHelper {
             RenderSystem.clear(16640, Minecraft.ON_OSX);
 
             if (Minecraft.getInstance().screen != null) {
-                ScreenParticleRenderer.isRenderingParticleGUI = true;
-                ScreenParticleRenderer.isRenderingParticleGUI2 = true;
+                if (ConfigServerSyncedToClient.dynamicGuiDisableBackgroundRendering) {
+                    ScreenParticleRenderer.isRenderingParticleGUI = true;
+                    ScreenParticleRenderer.isRenderingParticleGUI2 = true;
+                }
                 performingOwnRender = true;
-                //System.out.println(Minecraft.getInstance().screen);
-                //if (Minecraft.getInstance().screen instanceof GuiMap) {
-                    //(Minecraft.getInstance().screen).render(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
-                //} else {
-                    //Minecraft.getInstance().screen.renderWithTooltip(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
-                //}
 
                 xaeroWorldMapTextureID = -1;
 
-                //if (Minecraft.getInstance().screen instanceof GuiMap) {
-                if (false && isXaeroGuiMap(Minecraft.getInstance().screen)) {
-                    //ScreenParticleRenderer.getInstance().bind();
+                if (isXaeroGuiMap(Minecraft.getInstance().screen)) {
                     try {
                         Object fbo = guiMapPrimaryScaleFBO.get(null);
                         if (fbo != null) {
@@ -441,7 +273,6 @@ public class RenderHelper {
                             if (colorTextureIdObj != null) {
                                 xaeroWorldMapTextureID = (int) colorTextureIdObj;
                             }
-                            //((ImprovedFramebuffer)fbo).bindAsMainTarget(false);
                         }
                     } catch (IllegalAccessException e) {
                         e.printStackTrace();
@@ -449,15 +280,18 @@ public class RenderHelper {
                 } else {
                     Minecraft.getInstance().screen.renderWithTooltip(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
                 }
-                pGuiGraphics.innerBlit(cursor, pMouseX, pMouseX + 6, pMouseY, pMouseY + 10, 100, 0, 1, 0, 1);
+
+                //render our cursor
+                ScreenParticleRenderer.getInstance().innerBlit(pGuiGraphics.pose(), cursor, pMouseX, pMouseX + 6, pMouseY, pMouseY + 10, 100, 0, 1, 0, 1);
+
                 performingOwnRender = false;
-                //ScreenParticleRenderer.isRenderingParticleGUI = false;
-                //ScreenParticleRenderer.isRenderingParticleGUI2 = false;
+                ScreenParticleRenderer.isRenderingParticleGUI = false;
+                ScreenParticleRenderer.isRenderingParticleGUI2 = false;
             }
 
             ScreenParticleRenderer.getInstance().unbind();
 
-            Matrix4f matrix4f = (new Matrix4f()).setOrtho(0.0F, (float)ScreenParticleRenderer.getInstance().widthScaledDown, (float)ScreenParticleRenderer.getInstance().heightScaledDown, 0.0F, 1000.0F, net.minecraftforge.client.ForgeHooksClient.getGuiFarPlane());
+            Matrix4f matrix4f = (new Matrix4f()).setOrtho(0.0F, (float)ScreenParticleRenderer.getInstance().widthScaledDown, (float)ScreenParticleRenderer.getInstance().heightScaledDown, 0.0F, 1000.0F, 21000.0F/*net.minecraftforge.client.ForgeHooksClient.getGuiFarPlane()*/);
             RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
 
             ScreenParticleRenderer.getInstance().bindScaledDown();
@@ -465,8 +299,11 @@ public class RenderHelper {
             RenderSystem.clear(16640, Minecraft.ON_OSX);
 
             double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
-            int croppedWidth = (int) (512 * guiScale);
-            int croppedHeight = (int) (512 * guiScale);
+            if (ConfigServerSyncedToClient.dynamicGuiShowClientsEntireScreen) {
+                guiScale = 1;
+            }
+            int croppedWidth = (int) (ScreenParticleRenderer.getInstance().widthScaledDown * guiScale);
+            int croppedHeight = (int) (ScreenParticleRenderer.getInstance().heightScaledDown * guiScale);
 
             int centerX = ScreenParticleRenderer.getInstance().width / 2;
             int centerY = ScreenParticleRenderer.getInstance().height / 2;
@@ -561,7 +398,6 @@ public class RenderHelper {
     }
 
     public static ByteBuffer decompress(ScreenData screenData, ByteBuffer compressedBuffer, int expectedSize) throws Exception {
-        //System.out.println("decompress");
         Inflater inflater = new Inflater();
 
         // Copy compressed data into a byte array
@@ -573,7 +409,7 @@ public class RenderHelper {
 
         // Use a direct buffer for decompressed data
         if (decompressionBuffer == null) {
-            System.out.println("Creating new buffer");
+            CULog.dbg("Creating new buffer for decompression");
             decompressionBuffer = MemoryUtil.memAlloc(expectedSize); // Allocate initial space
             screenData.setDecompressionBuffer(decompressionBuffer);
         } else {
@@ -589,7 +425,7 @@ public class RenderHelper {
             if (decompressionBuffer.remaining() < decompressedBytes) {
                 // Resize the buffer by creating a new one with double the capacity
                 int newCapacity = Math.max(decompressionBuffer.capacity() * 2, decompressionBuffer.capacity() + decompressedBytes);
-                System.out.println("new ByteBuffer.allocateDirect");
+                CULog.dbg("adjusting size of buffer for decompression");
                 ByteBuffer newBuffer = MemoryUtil.memAlloc(newCapacity);
                 decompressionBuffer.flip(); // Prepare for reading
                 newBuffer.put(decompressionBuffer); // Copy old data to new buffer
@@ -603,8 +439,6 @@ public class RenderHelper {
         inflater.end();
 
         decompressionBuffer.flip(); // Prepare buffer for reading
-
-        screenData.test();
 
         return decompressionBuffer;
     }
@@ -701,7 +535,7 @@ public class RenderHelper {
         int width = ScreenParticleRenderer.getInstance().widthScaledDown;
         int height = ScreenParticleRenderer.getInstance().heightScaledDown;
 
-        ByteBuffer pixelBuffer = ByteBuffer.allocateDirect(width * height * 4); // RGBA = 4 bytes per pixel
+        ByteBuffer pixelBuffer = ByteBuffer.allocateDirect(width * height * ScreenParticleRenderer.bytesPerPixel); // RGBA = 4 bytes per pixel
         GL11.glReadPixels(0, 0, width, height, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixelBuffer);
 
         return pixelBuffer;

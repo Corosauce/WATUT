@@ -22,8 +22,13 @@ public class WatutModFabricClient implements ClientModInitializer {
 			CompoundTag nbt = buf.readNbt();
 			client.execute(() -> {
 				try {
-					UUID uuid = UUID.fromString(nbt.getString(WatutNetworking.NBTDataPlayerUUID));
-					WatutMod.getPlayerStatusManagerClient().receiveAny(uuid, nbt);
+					if (nbt.contains(WatutNetworking.NBTDataPlayerUUID)) {
+						UUID uuid = UUID.fromString(nbt.getString(WatutNetworking.NBTDataPlayerUUID));
+						WatutMod.getPlayerStatusManagerClient().receiveAny(uuid, nbt);
+					} else if (nbt.contains(WatutNetworking.NBTDataServerConfig)) {
+						WatutMod.getPlayerStatusManagerClient().receiveServerConfig(nbt);
+					}
+
 				} catch (Exception ex) {
 					CULog.dbg("WATUT ERROR: packet with invalid uuid sent from server");
 					CULog.dbg("full nbt data: " + nbt);

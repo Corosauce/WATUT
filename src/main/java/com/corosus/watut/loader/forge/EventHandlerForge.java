@@ -10,11 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import com.corosus.watut.command.CommandWatutReloadJSON;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.event.InputEvent;
-import net.minecraftforge.client.event.RegisterShadersEvent;
-import net.minecraftforge.client.event.RegisterClientCommandsEvent;
-import net.minecraftforge.client.event.RenderGuiEvent;
-import net.minecraftforge.client.event.TextureStitchEvent;
+import net.minecraftforge.client.event.*;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -80,6 +76,7 @@ public class EventHandlerForge {
     }
 
     @SubscribeEvent
+    @OnlyIn(Dist.CLIENT)
     public static void registerShaders(RegisterShadersEvent event) {
         try {
             //System.out.println("watut register shaders");

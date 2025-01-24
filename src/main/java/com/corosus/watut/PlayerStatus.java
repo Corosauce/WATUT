@@ -141,7 +141,7 @@ public class PlayerStatus {
 
     private CompoundTag nbtCache = new CompoundTag();
 
-    private ScreenData screenData = new ScreenData();
+    private ScreenData screenData;
     private PlayerGuiState lastScreenCaptured = PlayerGuiState.NONE;
 
     public PlayerStatus(PlayerGuiState playerGuiState) {
@@ -358,6 +358,9 @@ public class PlayerStatus {
     }
 
     public ScreenData getScreenData() {
+        if (screenData == null) {
+            screenData = new ScreenData();
+        }
         return screenData;
     }
 

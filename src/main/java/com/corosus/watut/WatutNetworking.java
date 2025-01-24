@@ -18,7 +18,8 @@ public abstract class WatutNetworking {
     public static String NBTDataPlayerScreenCompressedPixelDataPacketIndex = "screenCompressedPixelDataPacketIndex";
     //public static String NBTDataPlayerScreenCompressedPixelDataMD5 = "screenCompressedPixelDataMD5";
     public static String NBTDataPlayerScreenCompressedPixelDataSize = "screenCompressedPixelDataSize";
-    public static String NBTDataPlayerScreenClass = "screenClass";
+    public static String NBTDataPlayerScreenWidth = "screenWidth";
+    public static String NBTDataPlayerScreenHeight = "screenHeight";
     public static String NBTDataPlayerIdleTicks = "playerIdleTicks";
     //a bit of a heavy way to sync a server config to client, but itll do for now
     public static String NBTDataPlayerTicksToGoIdle = "playerTicksToGoIdle";
@@ -32,6 +33,8 @@ public abstract class WatutNetworking {
     public static String NBTData_tickSendRateOfGUIUpdates = "tickSendRateOfGUIUpdates";
     public static String NBTData_blurLevel = "blurLevel";
     public static String NBTData_sizeRadiusInPixelsToShow = "sizeRadiusInPixelsToShow";
+    public static String NBTData_dynamicGuiShowClientsEntireScreen = "dynamicGuiShowClientsEntireScreen";
+    public static String NBTData_dynamicGuiDisableBackgroundRendering = "dynamicGuiDisableBackgroundRendering";
 
 
     private static WatutNetworking instance;

@@ -5,9 +5,14 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.particle.ParticleEngine;
+import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.players.PlayerList;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class WatutModFabric extends WatutMod implements ModInitializer {
 
@@ -36,6 +41,7 @@ public class WatutModFabric extends WatutMod implements ModInitializer {
 
 	@Override
 	public PlayerList getPlayerList() {
+		if (minecraftServer == null) return null;
 		return minecraftServer.getPlayerList();
 	}
 

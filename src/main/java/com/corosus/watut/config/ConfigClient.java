@@ -77,7 +77,6 @@ public class ConfigClient implements IConfigCategory {
     @ConfigComment("Delay between ticks your client will accept and update new image of another players gui, you can only increase the delay from what the server/other client is set to, 10 = twice a second")
     public static int tickReceiveAndRenderRateOfGUIUpdates = 10;
 
-    //TODO: USE, mark a players playerstatus class that they want the simple version, and dont send the pixel data as well
     @ConfigComment("Privacy setting, if you dont want to send very detailed info of your screen for everyone to see and instead use the old basic gui visual, set this to true")
     public static boolean dontSendDetailedGUIInfo = false;
 
