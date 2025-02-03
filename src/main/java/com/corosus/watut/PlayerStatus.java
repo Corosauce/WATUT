@@ -3,6 +3,7 @@ package com.corosus.watut;
 import com.corosus.watut.client.screen.ScreenData;
 import com.corosus.watut.math.Lerpables;
 import net.minecraft.client.particle.Particle;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 
 import java.util.*;
@@ -103,6 +104,7 @@ public class PlayerStatus {
     //synced values
     private PlayerGuiState playerGuiState;
     private boolean playerGuiDontSendDetailedGUIInfo;
+    private boolean playerGuiDontSendItemInfo;
     private PlayerChatState playerChatState;
     private float typingAmplifier = 1F;
     private float screenPosPercentX = 0;
@@ -142,11 +144,16 @@ public class PlayerStatus {
     private CompoundTag nbtCache = new CompoundTag();
 
     private ScreenData screenData;
-    private PlayerGuiState lastScreenCaptured = PlayerGuiState.NONE;
+
+    private BlockPos lastBlockOpened = BlockPos.ZERO;
+
+    private InventorySnapshot inventorySnapshotPlayer = new InventorySnapshot();
+    private InventorySnapshot inventorySnapshotContainer = new InventorySnapshot();
+    private InventorySnapshot inventorySnapshotCarried = new InventorySnapshot();
+    private boolean isCarriedItemFromPlayerInventory = false;
 
     public PlayerStatus(PlayerGuiState playerGuiState) {
         this.playerGuiState = playerGuiState;
-        //this.screenData.init();
     }
 
     public void tick() {
@@ -199,6 +206,14 @@ public class PlayerStatus {
 
     public void setPlayerGuiDontSendDetailedGUIInfo(boolean playerGuiDontSendDetailedGUIInfo) {
         this.playerGuiDontSendDetailedGUIInfo = playerGuiDontSendDetailedGUIInfo;
+    }
+
+    public boolean isPlayerGuiDontSendItemInfo() {
+        return playerGuiDontSendItemInfo;
+    }
+
+    public void setPlayerGuiDontSendItemInfo(boolean playerGuiDontSendItemInfo) {
+        this.playerGuiDontSendItemInfo = playerGuiDontSendItemInfo;
     }
 
     public Particle getParticle() {
@@ -368,11 +383,43 @@ public class PlayerStatus {
         this.screenData = screenData;
     }
 
-    public PlayerGuiState getLastScreenCaptured() {
-        return lastScreenCaptured;
+    public BlockPos getLastBlockOpened() {
+        return lastBlockOpened;
     }
 
-    public void setLastScreenCaptured(PlayerGuiState lastScreenCaptured) {
-        this.lastScreenCaptured = lastScreenCaptured;
+    public void setLastBlockOpened(BlockPos lastBlockOpened) {
+        this.lastBlockOpened = lastBlockOpened;
+    }
+
+    public InventorySnapshot getInventorySnapshotPlayer() {
+        return inventorySnapshotPlayer;
+    }
+
+    public void setInventorySnapshotPlayer(InventorySnapshot inventorySnapshotPlayer) {
+        this.inventorySnapshotPlayer = inventorySnapshotPlayer;
+    }
+
+    public InventorySnapshot getInventorySnapshotContainer() {
+        return inventorySnapshotContainer;
+    }
+
+    public void setInventorySnapshotContainer(InventorySnapshot inventorySnapshotContainer) {
+        this.inventorySnapshotContainer = inventorySnapshotContainer;
+    }
+
+    public InventorySnapshot getInventorySnapshotCarried() {
+        return inventorySnapshotCarried;
+    }
+
+    public void setInventorySnapshotCarried(InventorySnapshot inventorySnapshotCarried) {
+        this.inventorySnapshotCarried = inventorySnapshotCarried;
+    }
+
+    public boolean isCarriedItemFromPlayerInventory() {
+        return isCarriedItemFromPlayerInventory;
+    }
+
+    public void setCarriedItemFromPlayerInventory(boolean carriedItemFromPlayerInventory) {
+        isCarriedItemFromPlayerInventory = carriedItemFromPlayerInventory;
     }
 }

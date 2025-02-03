@@ -68,9 +68,6 @@ public class ConfigClient implements IConfigCategory {
     @ConfigComment("Plays a sutble sound when a player clicks their mouse in a Gui")
     public static boolean playMouseClickSounds = true;
 
-    /*@ConfigComment("How modded guis should look by default if they dont have a special rule. Options: VANILLA_CHEST, DYNAMIC. Special rules are in config/watut/gui/. DYNAMIC tries to automatically show you the biggest texture for the open modded gui screen, but might look wrong for a lot of mods unless they have special rules setup.")
-    public static String moddedGUIDefaultVisual = "DYNAMIC";*/
-
     @ConfigParams(min = 0.1, comment = "Adjusts the size of the gui visual that appears infront of a player, 2 = twice the size")
     public static double particleSizeScale = 1;
 
@@ -79,6 +76,9 @@ public class ConfigClient implements IConfigCategory {
 
     @ConfigComment("Privacy setting, if you dont want to send very detailed info of your screen for everyone to see and instead use the old basic gui visual, set this to true")
     public static boolean dontSendDetailedGUIInfo = false;
+
+    @ConfigComment("Privacy setting, if you dont want to show the items you are transferring to and from yourself and containers, set this to true")
+    public static boolean dontSendItemInfo = false;
 
     @Override
     public String getName() {

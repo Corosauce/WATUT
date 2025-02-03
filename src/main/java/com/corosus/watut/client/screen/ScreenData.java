@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.texture.DynamicTexture;
@@ -29,13 +30,17 @@ public class ScreenData {
 
     private ParticleRenderType particleRenderType;
 
-    private boolean needsNewRender = false;
+    private boolean needsNewRenderFromPixelData = false;
+
+    //used for communicating from outside screen render hook to inside it
+    private boolean needsNewRenderToPixelData = false;
 
     private DynamicTexture image = null;
     private int width = ScreenParticleRenderer.defaultWidthScaledDown;
     private int height = ScreenParticleRenderer.defaultHeightScaledDown;
 
-    private Level lastLevel;
+    //since gui states are kinda old system and require specifically adding support for a screen, we use this instead to track true differences now
+    private Screen lastScreen;
 
     public void init() {
 
@@ -96,12 +101,20 @@ public class ScreenData {
         this.particleRenderType = particleRenderType;
     }
 
-    public synchronized boolean needsNewRender() {
-        return needsNewRender;
+    public synchronized boolean needsNewRenderFromPixelData() {
+        return needsNewRenderFromPixelData;
     }
 
-    public synchronized void markNeedsNewRender(boolean needsNewRender) {
-        this.needsNewRender = needsNewRender;
+    public synchronized void markNeedsNewRenderFromPixelData(boolean needsNewRender) {
+        this.needsNewRenderFromPixelData = needsNewRender;
+    }
+
+    public boolean isNeedsNewRenderToPixelData() {
+        return needsNewRenderToPixelData;
+    }
+
+    public void setNeedsNewRenderToPixelData(boolean needsNewRenderToPixelData) {
+        this.needsNewRenderToPixelData = needsNewRenderToPixelData;
     }
 
     public byte[] getTexturePixelDataPartial() {
@@ -178,11 +191,11 @@ public class ScreenData {
         this.height = height;
     }
 
-    public Level getLastLevel() {
-        return lastLevel;
+    public Screen getLastScreen() {
+        return lastScreen;
     }
 
-    public void setLastLevel(Level lastLevel) {
-        this.lastLevel = lastLevel;
+    public void setLastScreen(Screen lastScreen) {
+        this.lastScreen = lastScreen;
     }
 }

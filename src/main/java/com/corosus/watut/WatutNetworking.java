@@ -10,6 +10,7 @@ public abstract class WatutNetworking {
     public static String NBTDataPlayerUUID = "playerUuid";
     public static String NBTDataPlayerGuiStatus = "playerGuiStatus";
     public static String NBTDataPlayerGuiDontSendDetailedGUIInfo = "dontSendDetailedGUIInfo";
+    public static String NBTDataPlayerGuiDontSendItemInfo = "dontSendDetailedItemInfo";
     public static String NBTDataPlayerChatStatus = "playerChatStatus";
     public static String NBTDataPlayerTypingAmp = "playerTypingAmp";
     //public static String NBTDataPlayerScreenRenderCalls = "screenRenderCalls";
@@ -26,6 +27,13 @@ public abstract class WatutNetworking {
     public static String NBTDataPlayerMouseX = "playerMouseX";
     public static String NBTDataPlayerMouseY = "playerMouseY";
     public static String NBTDataPlayerMousePressed = "playerMousePressed";
+    public static String NBTDataItemTransferItemStack = "itemTransferItemStack";
+    public static String NBTDataItemTransferFromX = "itemTransferFromX";
+    public static String NBTDataItemTransferFromY = "itemTransferFromY";
+    public static String NBTDataItemTransferFromZ = "itemTransferFromZ";
+    public static String NBTDataItemTransferToX = "itemTransferToX";
+    public static String NBTDataItemTransferToY = "itemTransferToY";
+    public static String NBTDataItemTransferToZ = "itemTransferToZ";
 
     //server to client config
     public static String NBTDataServerConfig = "serverConfig";
@@ -35,6 +43,9 @@ public abstract class WatutNetworking {
     public static String NBTData_sizeRadiusInPixelsToShow = "sizeRadiusInPixelsToShow";
     public static String NBTData_dynamicGuiShowClientsEntireScreen = "dynamicGuiShowClientsEntireScreen";
     public static String NBTData_dynamicGuiDisableBackgroundRendering = "dynamicGuiDisableBackgroundRendering";
+    public static String NBTData_showItemsBeingTransferredBetweenPlayerAndContainer = "showItemsBeingTransferredBetweenPlayerAndContainer";
+    public static String NBTData_distanceRequiredToShowGUIInfo = "distanceRequiredToShowGUIInfo";
+    public static String NBTData_dynamicGuiDontSendConstantGUIUpdates = "dynamicGuiDontSendConstantGUIUpdates";
 
 
     private static WatutNetworking instance;

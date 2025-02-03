@@ -13,8 +13,15 @@ public class ConfigServerSyncedToClient {
 
     public static int tickSendRateOfGUIUpdates = ConfigServer.dynamicGuiTickSendRateOfGUIUpdates;
 
+    public static boolean dynamicGuiDontSendConstantGUIUpdates = ConfigServer.dynamicGuiDontSendConstantGUIUpdates;
+
     public static boolean dynamicGuiShowClientsEntireScreen = ConfigServer.dynamicGuiShowClientsEntireScreen;
 
     public static boolean dynamicGuiDisableBackgroundRendering = ConfigServer.dynamicGuiDisableBackgroundRendering;
+
+    //not actually used client side
+    public static boolean showItemsBeingTransferredBetweenPlayerAndContainer = ConfigServer.showItemsBeingTransferredBetweenPlayerAndContainer;
+
+    public static int distanceRequiredToShowGUIInfo = ConfigServer.distanceRequiredToShowGUIInfo;
 
 }

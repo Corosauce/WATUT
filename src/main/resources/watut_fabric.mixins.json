@@ -19,8 +19,9 @@
   ],
   "mixins": [
     "PlayerLoggedIn",
-    "PlayerTick"/*,
-    "AbstractContainerMenuDoClick"*/
+    "PlayerTick",
+    "AbstractContainerMenuDoClick",
+    "BlockBehaviorUse"
   ],
   "injectors": {
     "defaultRequire": 0

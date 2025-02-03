@@ -64,6 +64,27 @@ public abstract class ParticleRotating extends TextureSheetParticle {
         }
     };
 
+    public static ParticleRenderType TERRAIN_SHEET_TRANSLUCENT_NO_FACE_CULL = new ParticleRenderType() {
+        public void begin(BufferBuilder p_107455_, TextureManager p_107456_) {
+            RenderSystem.depthMask(true);
+            RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_BLOCKS);
+            RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
+            RenderSystem.disableCull();
+            RenderSystem.disableDepthTest();
+            p_107455_.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+        }
+
+        public void end(Tesselator p_107458_) {
+            p_107458_.end();
+            RenderSystem.enableCull();
+        }
+
+        public String toString() {
+            return "TERRAIN_SHEET_TRANSLUCENT_NO_FACE_CULL";
+        }
+    };
+
     @Override
     public void tick() {
         despawnCountdown--;

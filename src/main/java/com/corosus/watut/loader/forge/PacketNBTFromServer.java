@@ -37,6 +37,8 @@ public class PacketNBTFromServer {
                         WatutMod.getPlayerStatusManagerClient().receiveAny(uuid, nbt);
                     } else if (nbt.contains(WatutNetworking.NBTDataServerConfig)) {
                         WatutMod.getPlayerStatusManagerClient().receiveServerConfig(nbt);
+                    } else if (nbt.contains(WatutNetworking.NBTDataItemTransferItemStack)) {
+                        WatutMod.getPlayerStatusManagerClient().receiveItemMove(nbt);
                     }
 
                 } catch (Exception ex) {

@@ -10,10 +10,11 @@
     "client.ScreenRenderWithTooltip",
     "client.PostChainResize",
     "client.ParticleEngineMixin"
-  ],/*
+  ],
   "mixins": [
-    "AbstractContainerMenuDoClick"
-  ],*/
+    "AbstractContainerMenuDoClick",
+    "BlockBehaviorUse"
+  ],
   "injectors": {
     "defaultRequire": 0
   },

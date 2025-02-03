@@ -14,7 +14,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.Level;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.system.MemoryUtil;
@@ -139,13 +138,8 @@ public class RenderHelper {
         for (PlayerStatus playerStatus : WatutMod.getPlayerStatusManagerClient().lookupPlayerToStatus.values()) {
             ScreenData screenData = playerStatus.getScreenData();
 
-            if (screenData.getLastLevel() != Minecraft.getInstance().level) {
-                screenData.setGameTicksSinceLastScreenSend(0);
-                screenData.setLastLevel(Minecraft.getInstance().level);
-            }
-
-            if ((screenData.getIsBufferReady().get() && screenData.needsNewRender() && screenData.getTexturePixelData() != null && screenData.getGameTicksSinceLastScreenReceiveAndRender() + ConfigClient.tickReceiveAndRenderRateOfGUIUpdates < gameTime)) {
-                screenData.markNeedsNewRender(false);
+            if ((screenData.getIsBufferReady().get() && screenData.needsNewRenderFromPixelData() && screenData.getTexturePixelData() != null && screenData.getGameTicksSinceLastScreenReceiveAndRender() + ConfigClient.tickReceiveAndRenderRateOfGUIUpdates < gameTime)) {
+                screenData.markNeedsNewRenderFromPixelData(false);
                 screenData.setGameTicksSinceLastScreenReceiveAndRender(gameTime);
 
                 ScreenParticleRenderer.getInstance().checkSetup();
@@ -211,17 +205,7 @@ public class RenderHelper {
             return;
         }
 
-        long gameTime = 0;
-        if (Minecraft.getInstance().level != null) {
-            gameTime = Minecraft.getInstance().level.getGameTime();
-        }
-
         PlayerStatus playerStatusLocal = WatutMod.getPlayerStatusManagerClient().getStatusLocal();
-
-        if (playerStatusLocal.getScreenData().getLastLevel() != Minecraft.getInstance().level) {
-            playerStatusLocal.getScreenData().setGameTicksSinceLastScreenSend(0);
-            playerStatusLocal.getScreenData().setLastLevel(Minecraft.getInstance().level);
-        }
 
         if (processor.hasProcessedBuffers()) {
             try {
@@ -236,20 +220,13 @@ public class RenderHelper {
             }
         }
 
-        boolean needsScreenUpdate = false;
+        boolean needsScreenUpdate = playerStatusLocal.getScreenData().isNeedsNewRenderToPixelData();
 
-        if (!playerStatusLocal.isIdle()) {
-            if (playerStatusLocal.getScreenData().getGameTicksSinceLastScreenSend() + ConfigServerSyncedToClient.tickSendRateOfGUIUpdates < gameTime) {
-                playerStatusLocal.setLastScreenCaptured(playerStatusLocal.getPlayerGuiState());
-                if (Minecraft.getInstance().screen != null && playerStatusLocal.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && playerStatusLocal.getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
-                    playerStatusLocal.getScreenData().setGameTicksSinceLastScreenSend(gameTime);
-                    needsScreenUpdate = true;
-                }
-            }
-        }
+
 
         if (needsScreenUpdate && !processor.hasWork()) {
 
+            playerStatusLocal.getScreenData().setNeedsNewRenderToPixelData(false);
             ScreenParticleRenderer.getInstance().checkSetup();
             unbindVanillaRenderTarget();
             ScreenParticleRenderer.getInstance().bind();
