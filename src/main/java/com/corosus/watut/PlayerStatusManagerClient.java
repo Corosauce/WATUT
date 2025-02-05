@@ -567,7 +567,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 ParticleRotating particle = null;
                 Vec3 posParticle = getParticlePosition(player);
 
-                boolean useChatIdleForTestingOtherGUIs = false;
+                boolean useChatIdleForTestingOtherGUIs = true;
                 boolean newRender = RenderHelper.useDynamicGUISystem() && !playerStatus.isPlayerGuiDontSendDetailedGUIInfo();
 
                 if (ConfigClient.showPlayerActiveChatGui) {
@@ -1222,6 +1222,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             status.getScreenData().setHeight(data.getInt(WatutNetworking.NBTDataPlayerScreenHeight));
             long gameTime = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
             int timeout = 10;
+            CULog.dbg("compressed pixel data size in bytes: " + pixelData.length + " - " + packetIndex + " of " + packetCount);
             if (packetCount > 1) {
                 if (packetIndex == 0) {
                     status.getScreenData().setGameTicksSinceFirstPacket(gameTime);
@@ -1273,7 +1274,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
             ItemStack itemStack = ItemStack.of(data.getCompound(WatutNetworking.NBTDataItemTransferItemStack));
             ParticleItem particleItem = new ParticleItem(Minecraft.getInstance().level, 1, itemStack,
-                    Minecraft.getInstance().renderBuffers,
+                    Minecraft.getInstance().renderBuffers(),
                     Minecraft.getInstance().getEntityRenderDispatcher(),
                     data.getFloat(WatutNetworking.NBTDataItemTransferFromX),
                     data.getFloat(WatutNetworking.NBTDataItemTransferFromY),
@@ -1281,7 +1282,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     data.getFloat(WatutNetworking.NBTDataItemTransferToX),
                     data.getFloat(WatutNetworking.NBTDataItemTransferToY),
                     data.getFloat(WatutNetworking.NBTDataItemTransferToZ));
-            Minecraft.getInstance().particleEngine.add(particleItem);
+            //Minecraft.getInstance().particleEngine.add(particleItem);
+            getParticleEngine().add(particleItem);
 
         }
     }

@@ -26,8 +26,8 @@ public class ScreenParticleRenderer {
 
     public int width;
     public int height;
-    public static int defaultWidthScaledDown = 512;
-    public static int defaultHeightScaledDown = 512;
+    public static int defaultWidthScaledDown = 256;
+    public static int defaultHeightScaledDown = 256;
     public static int bytesPerPixel = 4;
     public int widthScaledDown = defaultWidthScaledDown;
     public int heightScaledDown = defaultHeightScaledDown;

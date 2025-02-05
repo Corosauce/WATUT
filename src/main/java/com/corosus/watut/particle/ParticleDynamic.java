@@ -2,6 +2,7 @@ package com.corosus.watut.particle;
 
 import com.corosus.watut.client.screen.ScreenParticleRenderer;
 import com.corosus.watut.config.ConfigClient;
+import com.corosus.watut.config.ConfigServerSyncedToClient;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Camera;
@@ -91,7 +92,11 @@ public class ParticleDynamic extends ParticleRotating {
             Vector3f vector3f = avector3f[i];
             vector3f.rotate(quaternion);
             //vector3f.mul(f3 * 6F);
-            vector3f.mul((float) (f3 * 4F * ConfigClient.particleSizeScale));
+            if (ConfigServerSyncedToClient.dynamicGuiShowClientsEntireScreen) {
+                vector3f.mul((float) (f3 * 4F * ConfigClient.particleSizeScale));
+            } else {
+                vector3f.mul((float) (f3 * 2F * ConfigClient.particleSizeScale));
+            }
             vector3f.add(f, f1, f2);
         }
 

@@ -147,7 +147,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     public void sendItemMove(Player player, Level level, ItemStack itemStack, float fromX, float fromY, float fromZ, float toX, float toY, float toZ) {
         if (level.getNearestPlayer(fromX, fromY, fromZ, ConfigServer.distanceRequiredToShowGUIInfo, (entity) -> entity != player) != null) {
             CompoundTag data = new CompoundTag();
-            data.put(WatutNetworking.NBTDataItemTransferItemStack, itemStack.serializeNBT());
+            data.put(WatutNetworking.NBTDataItemTransferItemStack, itemStack.save(new CompoundTag()));
             data.putFloat(WatutNetworking.NBTDataItemTransferFromX, fromX);
             data.putFloat(WatutNetworking.NBTDataItemTransferFromY, fromY);
             data.putFloat(WatutNetworking.NBTDataItemTransferFromZ, fromZ);

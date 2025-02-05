@@ -28,10 +28,10 @@ public class ConfigServer implements IConfigCategory {
     @ConfigParams(min = 0, max = 2, comment = "Blur is used to prevent nasty aliasing/flicker artifacts at the cost of clarity")
     public static int dynamicGuiBlurLevel = 1;
 
-    @ConfigParams(comment = "Adjust the size of the circle used to cut off extra info beyond their main area of their gui, visual issues may occur of too big")
-    public static double dynamicGuiSizeRadiusInPixelsToShow = 128;
+    @ConfigParams(comment = "Adjust the size of the circle used to cut off extra info beyond their main area of their gui, visual issues may occur of too big. Set to -1 to disable")
+    public static double dynamicGuiSizeRadiusInPixelsToShow = 112;
 
-    @ConfigParams(comment = "Show a clients entire screen instead of using dynamicGuiSizeRadiusInPixelsToShow for a circle fade in a 512x512 area, WARNING: experimental, has cpu and network performance impact")
+    @ConfigParams(comment = "Show a clients entire screen instead of using dynamicGuiSizeRadiusInPixelsToShow for a circle fade in a 512x512 area, WARNING: experimental, has cpu and network performance impact. Tweak dynamicGuiSizeRadiusInPixelsToShow to -1 or something large if you use this setting.")
     public static boolean dynamicGuiShowClientsEntireScreen = false;
 
     @ConfigParams(comment = "Disables the background rendering for most guis, might hide things like JEI or other things count as background rendering")

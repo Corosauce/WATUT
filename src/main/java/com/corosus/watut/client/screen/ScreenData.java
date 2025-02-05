@@ -42,10 +42,6 @@ public class ScreenData {
     //since gui states are kinda old system and require specifically adding support for a screen, we use this instead to track true differences now
     private Screen lastScreen;
 
-    public void init() {
-
-    }
-
     public void initClient() {
 
         this.particleRenderType = new ParticleRenderType() {

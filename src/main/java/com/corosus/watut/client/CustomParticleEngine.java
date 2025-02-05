@@ -1,5 +1,6 @@
 package com.corosus.watut.client;
 
+import com.corosus.watut.particle.ParticleRotating;
 import com.google.common.collect.*;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -262,7 +263,35 @@ public class CustomParticleEngine implements PreparableReloadListener {
       posestack.mulPoseMatrix(p_107337_.last().pose());
       RenderSystem.applyModelViewMatrix();
 
+      /**
+       * ParticleItem using special item/terrain pickup breaks particle render state so we just make sure to render it last
+       * - related: see classic forge issue of the item pickup particle breaking depth testing and darkening particles
+       * -- https://github.com/MinecraftForge/MinecraftForge/pull/8378/files
+       * --- detailed breakdown: https://github.com/Asek3/Oculus/issues/149#issuecomment-1727945597
+       * I cant precompute the render order because ParticleDynamic uses a new ParticleRenderType per player and I don't want to keep recomputing the render order.
+       * This solution works enough and should avoid any performance overhead
+       *
+       * If I switch to using vanilla particle renderer, my ParticleItem renders for forge, but not for fabric, didn't dig into why.
+       */
+      this.render(p_107337_, p_107338_, p_107339_, p_107340_, p_107341_, clippingHelper, false);
+      this.render(p_107337_, p_107338_, p_107339_, p_107340_, p_107341_, clippingHelper, true);
+
+      posestack.popPose();
+      RenderSystem.applyModelViewMatrix();
+      RenderSystem.depthMask(true);
+      RenderSystem.disableBlend();
+      p_107339_.turnOffLightLayer();
+   }
+
+   public void render(PoseStack p_107337_, MultiBufferSource.BufferSource p_107338_, LightTexture p_107339_, Camera p_107340_, float p_107341_, net.minecraft.client.renderer.culling.Frustum clippingHelper, boolean pickupParticleMode) {
+
       for(ParticleRenderType particlerendertype : this.particles.keySet()) { // Forge: allow custom IParticleRenderType's
+         if (pickupParticleMode) {
+            if (particlerendertype != ParticleRotating.TERRAIN_SHEET_TRANSLUCENT_NO_FACE_CULL) continue;
+         } else {
+            if (particlerendertype == ParticleRotating.TERRAIN_SHEET_TRANSLUCENT_NO_FACE_CULL) continue;
+         }
+
          if (particlerendertype == ParticleRenderType.NO_RENDER) continue;
          Iterable<Particle> iterable = this.particles.get(particlerendertype);
          if (iterable != null) {
@@ -288,11 +317,6 @@ public class CustomParticleEngine implements PreparableReloadListener {
          }
       }
 
-      posestack.popPose();
-      RenderSystem.applyModelViewMatrix();
-      RenderSystem.depthMask(true);
-      RenderSystem.disableBlend();
-      p_107339_.turnOffLightLayer();
    }
 
    public void setLevel(ClientLevel p_107343_) {

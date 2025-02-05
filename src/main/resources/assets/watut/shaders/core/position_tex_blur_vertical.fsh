@@ -40,7 +40,8 @@ void main() {
     //col.a = texCoord0.y;
     float cutoff = radius;
     //cutoff = 32;
-    int cutoff2 = 32;
+    //int cutoff2 = 32;
+    int cutoff2 = 16;
     float dist = distance(pixelCoord, vec2(xmid, ymid));
     //vec4 color = vec4(result, 1.0);
     if (cutoff != -1) {

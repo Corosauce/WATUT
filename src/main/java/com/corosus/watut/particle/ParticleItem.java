@@ -2,6 +2,7 @@ package com.corosus.watut.particle;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -14,6 +15,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Quaternionf;
 
 public class ParticleItem extends ParticleRotating {
 
@@ -33,7 +35,7 @@ public class ParticleItem extends ParticleRotating {
         this.lifetime = Integer.MAX_VALUE;
         this.gravity = 0.0F;
         this.setSize(0.2F, 0.2F);
-        this.quadSize = 0.5F;
+        this.quadSize = 1F;
         this.xd = 0;
         this.yd = 0;
         this.zd = 0;
@@ -47,6 +49,7 @@ public class ParticleItem extends ParticleRotating {
         this.bakedModel = Minecraft.getInstance().getItemRenderer().getModel(itemStack, Minecraft.getInstance().level, null, 0);
         this.itemStack = itemStack;
         this.entityRenderDispatcher = entityRenderDispatcher;
+        this.rotationYaw = pLevel.getRandom().nextFloat() * 360;
         this.renderBuffers = renderBuffers;
     }
 
@@ -114,14 +117,18 @@ public class ParticleItem extends ParticleRotating {
 
         int j = this.getLightColor(pPartialTicks);
 
+        Quaternionf quaternion = new Quaternionf(0, 0, 0, 1);
+        quaternion.mul(Axis.YP.rotationDegrees(this.rotationYaw));
+
         PoseStack pose = new PoseStack();
         pose.pushPose();
         pose.translate(x, y, z);
         pose.scale(quadSize, quadSize, quadSize);
+        pose.rotateAround(quaternion, 0, 1, 0);
 
         //RenderSystem.disableDepthTest();
         //RenderSystem.depthMask(false);
-        Minecraft.getInstance().getItemRenderer().render(itemStack, ItemDisplayContext.GUI, false, pose, renderBuffers.bufferSource(), j, OverlayTexture.NO_OVERLAY, bakedModel);
+        Minecraft.getInstance().getItemRenderer().render(itemStack, ItemDisplayContext.GROUND, false, pose, renderBuffers.bufferSource(), j, OverlayTexture.NO_OVERLAY, bakedModel);
         renderBuffers.bufferSource().endBatch();
     }
 
