@@ -42,10 +42,6 @@ public class ScreenParticleRenderer {
         return instance;
     }
 
-    public void init() {
-
-    }
-
     public void checkSetup() {
         if (needsInit) {
             needsInit = false;

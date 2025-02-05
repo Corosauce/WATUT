@@ -24,6 +24,8 @@ public class ScreenData {
     private final AtomicBoolean isBufferReady = new AtomicBoolean(false);
     private byte[] texturePixelDataPartial = null;
 
+    //private byte[] texturePixelDataDiff = null;
+
     private long gameTicksSinceFirstPacket = 0;
     private long gameTicksSinceLastScreenSend = 0;
     private long gameTicksSinceLastScreenReceiveAndRender = 0;
@@ -194,4 +196,12 @@ public class ScreenData {
     public void setLastScreen(Screen lastScreen) {
         this.lastScreen = lastScreen;
     }
+
+    /*public byte[] getTexturePixelDataDiff() {
+        return texturePixelDataDiff;
+    }
+
+    public void setTexturePixelDataDiff(byte[] texturePixelDataDiff) {
+        this.texturePixelDataDiff = texturePixelDataDiff;
+    }*/
 }

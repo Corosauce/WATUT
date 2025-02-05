@@ -126,8 +126,78 @@ public class RenderHelper {
 
     public static ByteBufferProcessor processor = new ByteBufferProcessor(buffer -> {
         ByteBuffer processed = compress(buffer);
+
+        //TODO: testing
+        /*byte[] newData = new byte[buffer.remaining()];
+        buffer.get(newData);
+        if (WatutMod.getPlayerStatusManagerClient().getStatusLocal().getScreenData().getTexturePixelDataDiff() != null) {
+            byte[] prevData = WatutMod.getPlayerStatusManagerClient().getStatusLocal().getScreenData().getTexturePixelDataDiff();
+
+            List<PixelDifference> diff = calculateDifferences(prevData, newData);
+            ByteBuffer diffBuffer = ByteBuffer.allocate(diff.size() * (4 + 4)); //size = rgba + int
+            for (PixelDifference pixelDifference : diff) {
+                //List<Byte> list = new ArrayList<>();
+                byte[] bytes = new byte[10];
+                //TODO: its not actually storing the bytes
+                bytes = new byte[encodeIndex(pixelDifference.index, bytes)];
+                //diffBuffer.putInt(pixelDifference.index);
+                diffBuffer.put(bytes);
+                diffBuffer.put(pixelDifference.rgba);
+            }
+            diffBuffer.flip();
+            //CULog.dbg("diff size " + diff.size() * (4 + 4));
+            CULog.dbg("diff size " + diffBuffer.limit());
+            ByteBuffer processed2 = compress(diffBuffer);
+            CULog.dbg("diff size compressed " + processed2.limit());
+        }
+
+        WatutMod.getPlayerStatusManagerClient().getStatusLocal().getScreenData().setTexturePixelDataDiff(newData);*/
+
         return processed;
     });
+
+    /*public static int encodeIndex(int index, byte[] encodedBytes) {
+        int position = 0; // Keep track of the number of bytes written
+
+        while ((index & ~0x7F) != 0) { // If more than 7 bits are needed
+            encodedBytes[position++] = (byte) ((index & 0x7F) | 0x80); // Store 7 bits, set MSB
+            index >>>= 7; // Shift to process the next 7 bits
+        }
+        encodedBytes[position++] = (byte) (index & 0x7F); // Store the last 7 bits
+
+        return position; // Return the number of bytes written
+    }
+
+    // Method to calculate differences between two images
+    public static List<PixelDifference> calculateDifferences(byte[] image1, byte[] image2) {
+        if (image1.length != image2.length) {
+            throw new IllegalArgumentException("Images must have the same size!");
+        }
+
+        List<PixelDifference> differences = new ArrayList<>();
+
+        for (int i = 0; i < image1.length; i += 4) { // RGBA = 4 bytes per pixel
+            if (image1[i] != image2[i] || image1[i + 1] != image2[i + 1] ||
+                    image1[i + 2] != image2[i + 2] || image1[i + 3] != image2[i + 3]) {
+                // Store the pixel difference
+                differences.add(new PixelDifference(i, new byte[] {
+                        image2[i], image2[i + 1], image2[i + 2], image2[i + 3]
+                }));
+            }
+        }
+
+        return differences;
+    }
+
+    static class PixelDifference {
+        int index; // The index of the pixel in the byte array
+        byte[] rgba; // The new RGBA value
+
+        PixelDifference(int index, byte[] rgba) {
+            this.index = index;
+            this.rgba = rgba;
+        }
+    }*/
 
     public static void guiRender(GuiGraphics guiGraphics) {
         long gameTime = 0;

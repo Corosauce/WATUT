@@ -1222,7 +1222,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             status.getScreenData().setHeight(data.getInt(WatutNetworking.NBTDataPlayerScreenHeight));
             long gameTime = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
             int timeout = 10;
-            CULog.dbg("compressed pixel data size in bytes: " + pixelData.length + " - " + packetIndex + " of " + packetCount);
+
+            //CULog.dbg("compressed pixel data size in bytes: " + pixelData.length + " - " + packetIndex + " of " + packetCount + " roughly total " + (pixelData.length * packetCount));
+
             if (packetCount > 1) {
                 if (packetIndex == 0) {
                     status.getScreenData().setGameTicksSinceFirstPacket(gameTime);
