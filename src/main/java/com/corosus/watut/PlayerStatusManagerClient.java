@@ -517,6 +517,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                         } else if (this.getStatus(player).getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_TYPING) {
                             particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_typing.getSpriteSet());
                         }
+                        //particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.inventory.getSpriteSet());
                     }
                 }
                 if (ConfigClient.showPlayerActiveNonChatGui) {

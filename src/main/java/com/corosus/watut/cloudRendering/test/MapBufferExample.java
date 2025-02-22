@@ -109,7 +109,7 @@ public class MapBufferExample {
             GLFW.glfwPollEvents();
 
             GL33.glBindBuffer(GL33.GL_ARRAY_BUFFER, 0);
-            System.out.println("ms time after glDrawArrays: " + (System.currentTimeMillis() - tickStart));
+            //System.out.println("ms time after glDrawArrays: " + (System.currentTimeMillis() - tickStart));
         }
     }
 

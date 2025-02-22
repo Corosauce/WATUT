@@ -104,7 +104,7 @@ public class BufferDataExample {
             // Update the buffer data with new vertex data
             //GL33.glBufferSubData(GL33.GL_ARRAY_BUFFER, 0, vertexBuffer);
             GL33.glBufferData(GL33.GL_ARRAY_BUFFER, vertexBuffer, GL33.GL_DYNAMIC_DRAW);
-            System.out.println("ms time after glBufferData: " + (System.currentTimeMillis() - tickStart));
+            //System.out.println("ms time after glBufferData: " + (System.currentTimeMillis() - tickStart));
 
             GL33.glEnableVertexAttribArray(0);
             //only needed to be done once
@@ -121,7 +121,7 @@ public class BufferDataExample {
 
             GL33.glBindBuffer(GL33.GL_ARRAY_BUFFER, 0);
             GL30.glBindVertexArray(0);
-            System.out.println("ms time after glDrawArrays: " + (System.currentTimeMillis() - tickStart));
+            //System.out.println("ms time after glDrawArrays: " + (System.currentTimeMillis() - tickStart));
         //}
     }
 
