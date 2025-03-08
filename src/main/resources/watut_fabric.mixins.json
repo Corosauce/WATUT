@@ -15,7 +15,8 @@
     "client.TextureAtlasUpload",
     "client.PostChainResize",
     "client.GameRendererReloadShaders",
-    "client.ParticleEngineMixinFabric"
+    "client.ParticleEngineMixinFabric",
+    "client.NativeImageAccessor"
   ],
   "mixins": [
     "PlayerLoggedIn",

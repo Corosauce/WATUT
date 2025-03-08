@@ -126,7 +126,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             gameTime = Minecraft.getInstance().level.getGameTime();
         }
 
-        if (!selfPlayerStatus.isIdle()) {
+        if (/*!selfPlayerStatus.isIdle()*/selfPlayerStatus.getTicksSinceLastAction() < (20 * 5)) {
             if (selfPlayerStatus.getScreenData().getGameTicksSinceLastScreenSend() + ConfigServerSyncedToClient.tickSendRateOfGUIUpdates < gameTime) {
                 if (Minecraft.getInstance().screen != null && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
                     //System.out.println("? " + selfPlayerStatus.getScreenData().getLastScreen());
@@ -567,7 +567,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 ParticleRotating particle = null;
                 Vec3 posParticle = getParticlePosition(player);
 
-                boolean useChatIdleForTestingOtherGUIs = true;
+                boolean useChatIdleForTestingOtherGUIs = false;
                 boolean newRender = RenderHelper.useDynamicGUISystem() && !playerStatus.isPlayerGuiDontSendDetailedGUIInfo();
 
                 if (ConfigClient.showPlayerActiveChatGui) {
@@ -730,7 +730,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                             ((ParticleStaticLoD) particle).setParticleFromDistanceToCamera((float) distToCamera);
                         }
 
-                        //particle.setAlpha(0.4F);
+                        //particle.setAlpha(0.99F);
                         //particle.setBrightness(1F);
                     } else {
                         particle.setAlpha(0.5F);

@@ -3,7 +3,7 @@ package com.corosus.watut;
 import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.config.ConfigCommon;
 import com.corosus.watut.config.ConfigServer;
-import com.ibm.icu.impl.Pair;
+import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -232,12 +232,12 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         }
 
         Pair<List<ItemStack>, List<ItemStack>> listsPlayer = processInventorySnapshots(playerStatus.getInventorySnapshotPlayer().itemStackList, inventorySnapshotPlayerPost.itemStackList);
-        List<ItemStack> playerAddedItems = listsPlayer.first;
-        List<ItemStack> playerRemovedItems = listsPlayer.second;
+        List<ItemStack> playerAddedItems = listsPlayer.getFirst();
+        List<ItemStack> playerRemovedItems = listsPlayer.getSecond();
 
         Pair<List<ItemStack>, List<ItemStack>> listsContainer = processInventorySnapshots(playerStatus.getInventorySnapshotContainer().itemStackList, inventorySnapshotContainerPost.itemStackList);
-        List<ItemStack> containerAddedItems = listsContainer.first;
-        List<ItemStack> containerRemovedItems = listsContainer.second;
+        List<ItemStack> containerAddedItems = listsContainer.getFirst();
+        List<ItemStack> containerRemovedItems = listsContainer.getSecond();
 
 
         CULog.dbg("playerAddedItems " + playerAddedItems);

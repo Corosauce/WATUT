@@ -5,6 +5,7 @@ import com.corosus.watut.PlayerStatus;
 import com.corosus.watut.WatutMod;
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigServerSyncedToClient;
+import com.corosus.watut.mixin.client.NativeImageAccessor;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -42,31 +43,13 @@ public class RenderHelper {
     public static Field guiMapPrimaryScaleFBO;
     public static Field colorTextureId;
 
-    //hack into NativeImage to directly inject pixel data, working around its requirements for a PNG format parse
-    public static Field pixelsField;
-
     //shaders enable check support
     public static Class irisConfig;
     public static Class iris;
     public static Method getIrisConfig;
     public static Method areShadersEnabled;
 
-    static {
-        try {
-            pixelsField = NativeImage.class.getDeclaredField("pixels");
-            pixelsField.setAccessible(true);
-        } catch (NoSuchFieldException e) {
-            try {
-                pixelsField = NativeImage.class.getDeclaredField("f_84964_");
-                pixelsField.setAccessible(true);
-            } catch (NoSuchFieldException ex) {
-                CULog.log("watut: unable to get pixels field for injecting data, watut dynamic guis wont work");
-                e.printStackTrace();
-            }
-
-        }
-    }
-
+    //i dont want to depend build against an api, so i do this instead like the silly bitch that i am
     static {
         try {
             guiMap = Class.forName("xaero.map.gui.GuiMap");
@@ -85,7 +68,18 @@ public class RenderHelper {
             areShadersEnabled = irisConfig.getDeclaredMethod("areShadersEnabled");
         } catch (ClassNotFoundException e) {
             //e.printStackTrace();
-            CULog.log("watut: oculus not installed or mod structure changed");
+            try {
+                iris = Class.forName("net.coderbot.iris.Iris");
+                irisConfig = Class.forName("net.coderbot.iris.config.IrisConfig");
+                getIrisConfig = iris.getDeclaredMethod("getIrisConfig");
+                areShadersEnabled = irisConfig.getDeclaredMethod("areShadersEnabled");
+            } catch (ClassNotFoundException ex) {
+                CULog.log("watut: oculus not installed or mod structure changed");
+                //throw new RuntimeException(ex);
+            } catch (NoSuchMethodException ex) {
+                //throw new RuntimeException(ex);
+                CULog.log("watut: oculus not installed or mod structure changed");
+            }
         } catch (NoSuchMethodException e) {
             CULog.log("watut: oculus not installed or mod structure changed");
         }
@@ -101,6 +95,8 @@ public class RenderHelper {
             }
             if (improvedFramebuffer != null) {
                 colorTextureId = improvedFramebuffer.getDeclaredField("colorTextureId");
+            } else {
+                CULog.log("watut: xaero minimap not installed or mod structure changed");
             }
         } catch (NoSuchFieldException e) {
             CULog.log("watut: xaero minimap not installed or mod structure changed");
@@ -229,17 +225,11 @@ public class RenderHelper {
                         CULog.dbg("screendata image resized to " + screenData.getWidth() + " " + screenData.getHeight());
                     }
                 }
-
-                try {
-                    if (pixelsField != null) {
-                        long nativeImagePixelMemoryAddress = (Long) pixelsField.get(screenData.getImage().getPixels());
-                        if (nativeImagePixelMemoryAddress != -1) {
-                            MemoryUtil.memCopy(MemoryUtil.memAddress(screenData.getDecompressionBuffer()), nativeImagePixelMemoryAddress,
-                                    screenData.getWidth() * screenData.getHeight() * ScreenParticleRenderer.bytesPerPixel);
-                        }
-                    }
-                } catch (IllegalAccessException e) {
-                    e.printStackTrace();
+                //hack into NativeImage to directly inject pixel data, working around its requirements for a PNG format parse
+                long nativeImagePixelMemoryAddress = ((NativeImageAccessor)((Object)screenData.getImage().getPixels())).pixels();
+                if (nativeImagePixelMemoryAddress != -1) {
+                    MemoryUtil.memCopy(MemoryUtil.memAddress(screenData.getDecompressionBuffer()), nativeImagePixelMemoryAddress,
+                            screenData.getWidth() * screenData.getHeight() * ScreenParticleRenderer.bytesPerPixel);
                 }
 
                 screenData.getImage().upload();
@@ -263,7 +253,6 @@ public class RenderHelper {
     }
 
     public static boolean useDynamicGUISystem() {
-        if (pixelsField == null) return false;
         if (ConfigServerSyncedToClient.useOldSimpleGUIVisual) return false;
         if (ConfigClient.dontSendDetailedGUIInfo) return false;
         return true;

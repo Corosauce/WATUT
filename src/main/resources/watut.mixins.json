@@ -9,7 +9,8 @@
     "client.ScreenRenderBackground",
     "client.ScreenRenderWithTooltip",
     "client.PostChainResize",
-    "client.ParticleEngineMixin"
+    "client.ParticleEngineMixin",
+    "client.NativeImageAccessor"
   ],
   "mixins": [
     "AbstractContainerMenuDoClick",

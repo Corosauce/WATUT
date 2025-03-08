@@ -5,7 +5,6 @@ import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigCommon;
 import com.corosus.watut.config.ConfigServer;
 import com.corosus.watut.config.CustomArmCorrections;
-import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.players.PlayerList;
 import org.apache.commons.io.FileUtils;
