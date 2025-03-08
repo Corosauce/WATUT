@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-@Mixin(PlayerTabOverlay.class)
+@Mixin(value = PlayerTabOverlay.class, priority = 999)
 public abstract class RenderPingIconInject {
 
     /*@Inject(method = "renderPingIcon", at = @At(value = "TAIL"))
@@ -20,7 +20,7 @@ public abstract class RenderPingIconInject {
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/client/gui/components/PlayerTabOverlay;renderPingIcon(Lnet/minecraft/client/gui/GuiGraphics;IIILnet/minecraft/client/multiplayer/PlayerInfo;)V"))
     public void renderPingIcon(PlayerTabOverlay playerTabOverlay, GuiGraphics pGuiGraphics, int p_281809_, int p_282801_, int pY, PlayerInfo pPlayerInfo) {
-        if (!WatutMod.getPlayerStatusManagerClient().renderPingIconHook((PlayerTabOverlay)(Object)this, pGuiGraphics, p_281809_, p_282801_, pY, pPlayerInfo)) {
+        if (WatutMod.getPlayerStatusManagerClient().renderPingIconHook((PlayerTabOverlay)(Object)this, pGuiGraphics, p_281809_, p_282801_, pY, pPlayerInfo)) {
             playerTabOverlay.renderPingIcon(pGuiGraphics, p_281809_, p_282801_, pY, pPlayerInfo);
         }
     }
