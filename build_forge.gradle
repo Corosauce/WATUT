@@ -168,6 +168,7 @@ dependencies {
     implementation fg.deobf("curse.maven:architectury-419699:5137938")
     implementation fg.deobf("curse.maven:embeddium-908741:5681725")
     implementation fg.deobf("curse.maven:oculus-581495:6020952")
+    //implementation fg.deobf("curse.maven:better-ping-display-292038:4594106")
 
     implementation fg.deobf("com.corosus.coroutil:coroutil-forge:${project.minecraft_version}-${project.coroutil_version}")
 

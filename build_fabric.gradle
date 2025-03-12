@@ -74,7 +74,7 @@ loom {
 sourceSets {
 	main {
 		java {
-            exclude "com/corosus/${project.mod_id}/api/forge/**"
+			exclude "com/corosus/${project.mod_id}/api/forge/**"
 			exclude "com/corosus/${project.mod_id}/loader/forge/**"
 		}
 	}
@@ -90,7 +90,7 @@ processResources {
 	filesMatching("fabric.mod.json") {
 		expand "mod_id": project.mod_id, "version": project.version, "mod_name": project.mod_name, "mod_description": project.mod_description, "mod_authors": project.mod_authors, "mod_license": project.mod_license
 	}
-	
+
 	exclude("META-INF/mods.toml")
 	exclude("META-INF/accesstransformer.cfg")
 }

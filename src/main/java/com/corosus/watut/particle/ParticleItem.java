@@ -1,5 +1,6 @@
 package com.corosus.watut.particle;
 
+import com.corosus.coroutil.util.CULog;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -17,7 +18,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+
 public class ParticleItem extends ParticleRotating {
+
+    public static HashSet<String> itemBlacklist = new HashSet<>();
 
     public BakedModel bakedModel;
     public ItemStack itemStack;
@@ -91,6 +98,9 @@ public class ParticleItem extends ParticleRotating {
     }
 
     public void render(VertexConsumer pBuffer, Camera pRenderInfo, float pPartialTicks) {
+
+        if (itemBlacklist.contains(this.itemStack.getItem().toString())) return;
+
         Vec3 vec3 = pRenderInfo.getPosition();
         float f = (float)(Mth.lerp(pPartialTicks, this.xo, this.x));
         float f1 = (float)(Mth.lerp(pPartialTicks, this.yo, this.y));
@@ -128,8 +138,15 @@ public class ParticleItem extends ParticleRotating {
 
         //RenderSystem.disableDepthTest();
         //RenderSystem.depthMask(false);
-        Minecraft.getInstance().getItemRenderer().render(itemStack, ItemDisplayContext.GROUND, false, pose, renderBuffers.bufferSource(), j, OverlayTexture.NO_OVERLAY, bakedModel);
-        renderBuffers.bufferSource().endBatch();
+        try {
+            Minecraft.getInstance().getItemRenderer().render(itemStack, ItemDisplayContext.GROUND, false, pose, renderBuffers.bufferSource(), j, OverlayTexture.NO_OVERLAY, bakedModel);
+            renderBuffers.bufferSource().endBatch();
+        } catch (Exception exception) {
+            CULog.err("ERROR, exception trying to render item: " + this.itemStack.getItem().toString() + " - adding to ParticleItem render blacklist for this minecraft session");
+            itemBlacklist.add(this.itemStack.getItem().toString());
+            exception.printStackTrace();
+        }
+
     }
 
 }
