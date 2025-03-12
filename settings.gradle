@@ -16,6 +16,9 @@ pluginManagement {
 			name = 'Spongepowered (Mixin)'
 			url = 'https://repo.spongepowered.org/repository/maven-public/'
 		}
+		maven {
+			url "https://maven.firstdark.dev/releases"
+		}
         mavenCentral()
         gradlePluginPortal()
     }
