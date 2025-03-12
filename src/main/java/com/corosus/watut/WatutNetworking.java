@@ -37,15 +37,6 @@ public abstract class WatutNetworking {
 
     //server to client config
     public static String NBTDataServerConfig = "serverConfig";
-    public static String NBTData_useOldSimpleGUIVisual = "useOldSimpleGUIVisual";
-    public static String NBTData_tickSendRateOfGUIUpdates = "tickSendRateOfGUIUpdates";
-    public static String NBTData_blurLevel = "blurLevel";
-    public static String NBTData_sizeRadiusInPixelsToShow = "sizeRadiusInPixelsToShow";
-    public static String NBTData_dynamicGuiShowClientsEntireScreen = "dynamicGuiShowClientsEntireScreen";
-    public static String NBTData_dynamicGuiDisableBackgroundRendering = "dynamicGuiDisableBackgroundRendering";
-    public static String NBTData_showItemsBeingTransferredBetweenPlayerAndContainer = "showItemsBeingTransferredBetweenPlayerAndContainer";
-    public static String NBTData_distanceRequiredToShowGUIInfo = "distanceRequiredToShowGUIInfo";
-    public static String NBTData_dynamicGuiDontSendConstantGUIUpdates = "dynamicGuiDontSendConstantGUIUpdates";
 
 
     private static WatutNetworking instance;

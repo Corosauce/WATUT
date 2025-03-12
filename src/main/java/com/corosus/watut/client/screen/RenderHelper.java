@@ -4,9 +4,8 @@ import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.PlayerStatus;
 import com.corosus.watut.WatutMod;
 import com.corosus.watut.config.ConfigClient;
-import com.corosus.watut.config.ConfigServerSyncedToClient;
+import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
 import com.corosus.watut.mixin.client.NativeImageAccessor;
-import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexSorting;
@@ -253,7 +252,7 @@ public class RenderHelper {
     }
 
     public static boolean useDynamicGUISystem() {
-        if (ConfigServerSyncedToClient.useOldSimpleGUIVisual) return false;
+        if (ConfigServerControlledSyncedToClient.dynamicGuiUseOldSimpleGUIVisual) return false;
         if (ConfigClient.dontSendDetailedGUIInfo) return false;
         return true;
     }
@@ -293,7 +292,7 @@ public class RenderHelper {
             RenderSystem.clear(16640, Minecraft.ON_OSX);
 
             if (Minecraft.getInstance().screen != null) {
-                if (ConfigServerSyncedToClient.dynamicGuiDisableBackgroundRendering) {
+                if (ConfigServerControlledSyncedToClient.dynamicGuiDisableBackgroundRendering) {
                     ScreenParticleRenderer.isRenderingParticleGUI = true;
                     ScreenParticleRenderer.isRenderingParticleGUI2 = true;
                 }
@@ -335,7 +334,7 @@ public class RenderHelper {
             RenderSystem.clear(16640, Minecraft.ON_OSX);
 
             double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
-            if (ConfigServerSyncedToClient.dynamicGuiShowClientsEntireScreen) {
+            if (ConfigServerControlledSyncedToClient.dynamicGuiShowClientsEntireScreen) {
                 guiScale = 1;
             }
             int croppedWidth = (int) (ScreenParticleRenderer.getInstance().widthScaledDown * guiScale);

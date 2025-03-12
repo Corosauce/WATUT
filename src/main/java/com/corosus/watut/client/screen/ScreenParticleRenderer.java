@@ -2,7 +2,7 @@ package com.corosus.watut.client.screen;
 
 import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.PlayerStatusManagerClient;
-import com.corosus.watut.config.ConfigServerSyncedToClient;
+import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
 import com.mojang.blaze3d.pipeline.MainTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -57,7 +57,7 @@ public class ScreenParticleRenderer {
         mainRenderTarget.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
         mainRenderTarget.clear(Minecraft.ON_OSX);
 
-        if (ConfigServerSyncedToClient.dynamicGuiShowClientsEntireScreen) {
+        if (ConfigServerControlledSyncedToClient.dynamicGuiShowClientsEntireScreen) {
             widthScaledDown = width;
             heightScaledDown = height;
         } else {
@@ -82,7 +82,7 @@ public class ScreenParticleRenderer {
 
         int widthToUse = defaultWidthScaledDown;
         int heightToUse = defaultHeightScaledDown;
-        if (ConfigServerSyncedToClient.dynamicGuiShowClientsEntireScreen) {
+        if (ConfigServerControlledSyncedToClient.dynamicGuiShowClientsEntireScreen) {
             widthToUse = width;
             heightToUse = height;
         }
@@ -211,7 +211,7 @@ public class ScreenParticleRenderer {
         }
 
         if (PlayerStatusManagerClient.positionTexBlurHorizontal.BLUR_LEVEL != null) {
-            PlayerStatusManagerClient.positionTexBlurHorizontal.BLUR_LEVEL.set((float)(RenderHelper.xaeroWorldMapTextureID != -1 ? 0 : ConfigServerSyncedToClient.blurLevel));
+            PlayerStatusManagerClient.positionTexBlurHorizontal.BLUR_LEVEL.set((float)(RenderHelper.xaeroWorldMapTextureID != -1 ? 0 : ConfigServerControlledSyncedToClient.dynamicGuiBlurLevel));
         }
 
         Matrix4f matrix4f = pose.last().pose();
@@ -256,11 +256,11 @@ public class ScreenParticleRenderer {
 
         //visual cutoff radius
         if (PlayerStatusManagerClient.positionTexBlurVertical.RADIUS != null) {
-            PlayerStatusManagerClient.positionTexBlurVertical.RADIUS.set((float) ConfigServerSyncedToClient.sizeRadiusInPixelsToShow);
+            PlayerStatusManagerClient.positionTexBlurVertical.RADIUS.set((float) ConfigServerControlledSyncedToClient.dynamicGuiSizeRadiusInPixelsToShow);
         }
 
         if (PlayerStatusManagerClient.positionTexBlurVertical.BLUR_LEVEL != null) {
-            PlayerStatusManagerClient.positionTexBlurVertical.BLUR_LEVEL.set((float)ConfigServerSyncedToClient.blurLevel);
+            PlayerStatusManagerClient.positionTexBlurVertical.BLUR_LEVEL.set((float)ConfigServerControlledSyncedToClient.dynamicGuiBlurLevel);
         }
 
         Matrix4f matrix4f = pose.last().pose();

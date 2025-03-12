@@ -8,6 +8,9 @@ import com.corosus.watut.WatutMod;
 
 public class ConfigClient implements IConfigCategory {
 
+    @ConfigComment("SETTING THESE CLIENT SIDE SETTINGS TO FALSE WILL OVERRIDE ANY OF THE SAME SERVER SETTINGS THAT ARE SET TO TRUE (for your client only)")
+    public static boolean dummySetting = true;
+
     @ConfigComment("Sends relative mouse position and clicking")
     public static boolean sendMouseInfo = true;
     @ConfigComment("Sends a calculated rate of typing. If off, uses a default value on server")
@@ -41,7 +44,7 @@ public class ConfigClient implements IConfigCategory {
     @ConfigComment("Show the chat typing Gui in world")
     public static boolean showPlayerActiveChatGui = true;
 
-    @ConfigComment("If there isnt an exact Gui available for what the player is using, it will show the Chest Gui. If this is false, it will show nothing, lots of modded Guis will use this for now")
+    @ConfigComment("This is for the older non dynamic GUI only. If there isnt an exact Gui available for what the player is using, it will show the Chest Gui. If this is false, it will show nothing, lots of modded Guis will use this for now")
     public static boolean showPlayerActiveGuiIfNotExactMatch = true;
 
     @ConfigComment("Show 'Player is typing...' on the chat screen")

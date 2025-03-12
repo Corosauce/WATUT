@@ -4,9 +4,7 @@ import com.corosus.watut.client.CustomParticleEngine;
 import com.corosus.watut.client.screen.RenderHelper;
 import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.client.screen.ScreenParticleRenderer;
-import com.corosus.watut.config.ConfigClient;
-import com.corosus.watut.config.ConfigServerSyncedToClient;
-import com.corosus.watut.config.CustomArmCorrections;
+import com.corosus.watut.config.*;
 import com.corosus.watut.math.Lerpables;
 import com.corosus.watut.particle.*;
 import com.ibm.icu.impl.Pair;
@@ -127,10 +125,10 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
 
         if (/*!selfPlayerStatus.isIdle()*/selfPlayerStatus.getTicksSinceLastAction() < (20 * 5)) {
-            if (selfPlayerStatus.getScreenData().getGameTicksSinceLastScreenSend() + ConfigServerSyncedToClient.tickSendRateOfGUIUpdates < gameTime) {
+            if (selfPlayerStatus.getScreenData().getGameTicksSinceLastScreenSend() + ConfigServerControlledSyncedToClient.dynamicGuiTickSendRateOfGUIUpdates < gameTime) {
                 if (Minecraft.getInstance().screen != null && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
                     //System.out.println("? " + selfPlayerStatus.getScreenData().getLastScreen());
-                    if (!ConfigServerSyncedToClient.dynamicGuiDontSendConstantGUIUpdates || selfPlayerStatus.getScreenData().getLastScreen() != Minecraft.getInstance().screen) {
+                    if (!ConfigServerControlledSyncedToClient.dynamicGuiDontSendConstantGUIUpdates || selfPlayerStatus.getScreenData().getLastScreen() != Minecraft.getInstance().screen) {
                         selfPlayerStatus.getScreenData().setGameTicksSinceLastScreenSend(gameTime);
                         selfPlayerStatus.getScreenData().setNeedsNewRenderToPixelData(true);
 
@@ -460,7 +458,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     public void onGuiRender() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen instanceof ChatScreen && mc.getConnection() != null && ConfigClient.screenTypingVisible) {
+        if (mc.screen instanceof ChatScreen && mc.getConnection() != null && ConfigClient.screenTypingVisible && ConfigServerControlledSyncedToClient.screenTypingVisible) {
             ChatScreen chat = (ChatScreen) mc.screen;
             GuiGraphics guigraphics = new GuiGraphics(mc, mc.renderBuffers().bufferSource());
             int height = chat.height + 26;
@@ -548,7 +546,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         if (shouldAnimate(player) && !player.isInvisible()) {
             if (idleParticleChangeOrGone) {
-                if (ConfigClient.showIdleStatesInPlayerAboveHead && playerStatus.isIdle()) {
+                if (ConfigClient.showIdleStatesInPlayerAboveHead && ConfigServerControlledSyncedToClient.showIdleStatesInPlayerAboveHead && playerStatus.isIdle()) {
                     ParticleRotating particle = new ParticleStatic((ClientLevel) player.level(), player.position().x, player.position().y + idleY, player.position().z, ParticleRegistry.idle.getSprite());
                     if (particle != null) {
                         playerStatus.setParticleIdle(particle);
@@ -570,7 +568,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 boolean useChatIdleForTestingOtherGUIs = false;
                 boolean newRender = RenderHelper.useDynamicGUISystem() && !playerStatus.isPlayerGuiDontSendDetailedGUIInfo();
 
-                if (ConfigClient.showPlayerActiveChatGui) {
+                if (ConfigClient.showPlayerActiveChatGui && ConfigServerControlledSyncedToClient.showPlayerActiveChatGui) {
                     if (PlayerStatus.PlayerGuiState.isTypingGui(this.getStatus(player).getPlayerGuiState())) {
                         if (this.getStatus(player).getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_FOCUSED) {
                             particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_idle.getSpriteSet());
@@ -586,7 +584,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                         }
                     }
                 }
-                if (ConfigClient.showPlayerActiveNonChatGui) {
+                if (ConfigClient.showPlayerActiveNonChatGui && ConfigServerControlledSyncedToClient.showPlayerActiveNonChatGui) {
                     TextureAtlasSprite sprite = null;
                     float brightness = 0.7F;
                     int subSizeX = 0;
@@ -752,7 +750,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     }
 
     public boolean renderPingIconHook(PlayerTabOverlay playerTabOverlay, GuiGraphics pGuiGraphics, int p_281809_, int p_282801_, int pY, PlayerInfo pPlayerInfo) {
-        if (Minecraft.getInstance().particleEngine == null || pPlayerInfo == null || pPlayerInfo.getProfile() == null || !ConfigClient.showIdleStatesInPlayerList) return false;
+        if (Minecraft.getInstance().particleEngine == null || pPlayerInfo == null || pPlayerInfo.getProfile() == null || !ConfigClient.showIdleStatesInPlayerList || !ConfigServerControlledSyncedToClient.showIdleStatesInPlayerList) return false;
         PlayerStatus playerStatus = getStatus(pPlayerInfo.getProfile().getId());
         if (playerStatus.isIdle()) {
             pGuiGraphics.pose().pushPose();
@@ -768,7 +766,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     }
 
     public void setupRotationsHook(EntityModel model, Entity pEntity, float pLimbSwing, float pLimbSwingAmount, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch) {
-        if (!ConfigClient.showPlayerAnimations) return;
+        if (!ConfigClient.showPlayerAnimations || !ConfigServerControlledSyncedToClient.showPlayerAnimations) return;
         Minecraft mc = Minecraft.getInstance();
         boolean inOwnInventory = pEntity == mc.player && (mc.screen instanceof EffectRenderingInventoryScreen) && pEntity.isAlive();
         //boolean isRealPlayer = pEntity.tickCount > 10;
@@ -844,7 +842,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 playerModel.hat.xRot = playerModel.head.xRot;
                 playerModel.hat.yRot = playerModel.head.yRot;
 
-                if (ConfigClient.showPlayerAnimation_Typing && playerStatus.getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_TYPING) {
+                if (ConfigClient.showPlayerAnimation_Typing && ConfigServerControlledSyncedToClient.showPlayerAnimation_Typing && playerStatus.getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_TYPING) {
                     float amp = playerStatus.getTypingAmplifierSmooth();
                     float typeAngle = (float) ((Math.toRadians(Math.sin((pAgeInTicks * 1F) % 360) * 15 * amp)));
                     float typeAngle2 = (float) ((Math.toRadians(-Math.sin((pAgeInTicks * 1F) % 360) * 15 * amp)));
@@ -869,7 +867,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 if (adjLeftArm.z != Float.MAX_VALUE) playerModel.leftArm.zRot -= adjLeftArm.z;
                 if (adjLeftArm.z != Float.MAX_VALUE) playerModel.leftSleeve.zRot -= adjLeftArm.z;
 
-                if (ConfigClient.showPlayerAnimation_Idle && playerStatus.isIdle()) {
+                if (ConfigClient.showPlayerAnimation_Idle && ConfigServerControlledSyncedToClient.showPlayerAnimation_Idle && playerStatus.isIdle()) {
                     float angle = (float) ((Math.toRadians(Math.sin((pAgeInTicks * 0.05F) % 360) * 15)));
                     float angle2 = (float) ((Math.toRadians(Math.cos((pAgeInTicks * 0.05F) % 360) * 7)));
                     playerModel.head.xRot += angle2;
@@ -902,9 +900,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         boolean typing = playerStatus.getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_TYPING;
         boolean idle = playerStatus.isIdle();
 
-        if (!ConfigClient.showPlayerAnimation_Gui) pointing = false;
-        if (!ConfigClient.showPlayerAnimation_Typing) typing = false;
-        if (!ConfigClient.showPlayerAnimation_Idle) idle = false;
+        if (!ConfigClient.showPlayerAnimation_Gui || !ConfigServerControlledSyncedToClient.showPlayerAnimation_Gui) pointing = false;
+        if (!ConfigClient.showPlayerAnimation_Typing || !ConfigServerControlledSyncedToClient.showPlayerAnimation_Typing) typing = false;
+        if (!ConfigClient.showPlayerAnimation_Idle || !ConfigServerControlledSyncedToClient.showPlayerAnimation_Idle) idle = false;
 
         if (becauseMousePress) {
             playerStatus.setNewLerp(armMouseTickRate * 0.5F);
@@ -1053,7 +1051,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         Minecraft mc = Minecraft.getInstance();
         float x = pos.first;
         float y = pos.second;
-        if (mc.level.getNearestPlayer(mc.player.getX(), mc.player.getY(), mc.player.getZ(), ConfigServerSyncedToClient.distanceRequiredToShowGUIInfo, (entity) -> entity != mc.player) != null) {
+        if (mc.level.getNearestPlayer(mc.player.getX(), mc.player.getY(), mc.player.getZ(), ConfigServerControlledSyncedToClient.distanceRequiredToShowGUIInfo, (entity) -> entity != mc.player) != null) {
             if (getStatusLocal().getScreenPosPercentX() != x || getStatusLocal().getScreenPosPercentY() != y || getStatusLocal().isPressing() != pressed) {
                 CompoundTag data = new CompoundTag();
                 data.putFloat(WatutNetworking.NBTDataPlayerMouseX, x);
@@ -1153,7 +1151,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             setPoseTarget(uuid, differentPress);
             if (pressed && differentPress) {
                 Player player = Minecraft.getInstance().level.getPlayerByUUID(uuid);
-                if (player != null && ConfigClient.playMouseClickSounds && player != Minecraft.getInstance().player) {
+                if (player != null && ConfigClient.playMouseClickSounds && ConfigServerControlledSyncedToClient.playMouseClickSounds && player != Minecraft.getInstance().player) {
                     WatutMod.dbg("play sound for " + uuid + " name " + player.getDisplayName().getString());
                     player.level().playLocalSound(player.getOnPos(), SoundEvents.CHICKEN_EGG, SoundSource.PLAYERS, 0.05F, 0.1F, false);
                 }
@@ -1172,7 +1170,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 }
                 setPoseTarget(uuid, false);
                 Player player = Minecraft.getInstance().level.getPlayerByUUID(uuid);
-                if (player != null && ConfigClient.playScreenOpenSounds && player != Minecraft.getInstance().player) {
+                if (player != null && ConfigClient.playScreenOpenSounds && ConfigServerControlledSyncedToClient.playScreenOpenSounds && player != Minecraft.getInstance().player) {
                     PlayerStatus.PlayerGuiState playerGuiStatePrev = statusPrev.getPlayerGuiState();
                     if (PlayerStatus.PlayerGuiState.isSoundMakerGui(playerGuiState) || PlayerStatus.PlayerGuiState.isSoundMakerGui(playerGuiStatePrev) || playerGuiState == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiState == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiState == PlayerStatus.PlayerGuiState.MISC ||
                             playerGuiStatePrev == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiStatePrev == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiStatePrev == PlayerStatus.PlayerGuiState.MISC) {
@@ -1293,15 +1291,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     public void receiveServerConfig(CompoundTag nbt) {
 
         CULog.dbg("receiving server config sync");
-        if (nbt.contains(WatutNetworking.NBTData_useOldSimpleGUIVisual)) ConfigServerSyncedToClient.useOldSimpleGUIVisual = nbt.getBoolean(WatutNetworking.NBTData_useOldSimpleGUIVisual);
-        if (nbt.contains(WatutNetworking.NBTData_tickSendRateOfGUIUpdates)) ConfigServerSyncedToClient.tickSendRateOfGUIUpdates = nbt.getInt(WatutNetworking.NBTData_tickSendRateOfGUIUpdates);
-        if (nbt.contains(WatutNetworking.NBTData_blurLevel)) ConfigServerSyncedToClient.blurLevel = nbt.getInt(WatutNetworking.NBTData_blurLevel);
-        if (nbt.contains(WatutNetworking.NBTData_sizeRadiusInPixelsToShow)) ConfigServerSyncedToClient.sizeRadiusInPixelsToShow = nbt.getDouble(WatutNetworking.NBTData_sizeRadiusInPixelsToShow);
-        if (nbt.contains(WatutNetworking.NBTData_dynamicGuiShowClientsEntireScreen)) ConfigServerSyncedToClient.dynamicGuiShowClientsEntireScreen = nbt.getBoolean(WatutNetworking.NBTData_dynamicGuiShowClientsEntireScreen);
-        if (nbt.contains(WatutNetworking.NBTData_dynamicGuiDisableBackgroundRendering)) ConfigServerSyncedToClient.dynamicGuiDisableBackgroundRendering = nbt.getBoolean(WatutNetworking.NBTData_dynamicGuiDisableBackgroundRendering);
-        if (nbt.contains(WatutNetworking.NBTData_showItemsBeingTransferredBetweenPlayerAndContainer)) ConfigServerSyncedToClient.showItemsBeingTransferredBetweenPlayerAndContainer = nbt.getBoolean(WatutNetworking.NBTData_showItemsBeingTransferredBetweenPlayerAndContainer);
-        if (nbt.contains(WatutNetworking.NBTData_dynamicGuiDontSendConstantGUIUpdates)) ConfigServerSyncedToClient.dynamicGuiDontSendConstantGUIUpdates = nbt.getBoolean(WatutNetworking.NBTData_dynamicGuiDontSendConstantGUIUpdates);
-        if (nbt.contains(WatutNetworking.NBTData_distanceRequiredToShowGUIInfo)) ConfigServerSyncedToClient.distanceRequiredToShowGUIInfo = nbt.getInt(WatutNetworking.NBTData_distanceRequiredToShowGUIInfo);
+        ConfigServerSyncHelper.getInstance().updateSyncableConfigOnClient(nbt);
 
         //update buffers carefully if needed
         ScreenParticleRenderer.getInstance().resizeScaledDown(ScreenParticleRenderer.getInstance().width, ScreenParticleRenderer.getInstance().height);

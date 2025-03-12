@@ -2,7 +2,8 @@ package com.corosus.watut;
 
 import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.config.ConfigCommon;
-import com.corosus.watut.config.ConfigServer;
+import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
+import com.corosus.watut.config.ConfigServerSyncHelper;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -72,7 +73,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         if (data.contains(WatutNetworking.NBTDataPlayerGuiStatus) || data.contains(WatutNetworking.NBTDataPlayerIdleTicks) || data.contains(WatutNetworking.NBTDataPlayerChatStatus)/* || data.contains(WatutNetworking.NBTDataPlayerScreenCompressedPixelData)*/) {
             WatutNetworking.instance().serverSendToClientAll(data);
         } else {
-            WatutNetworking.instance().serverSendToClientNear(data, player.position(), ConfigServer.distanceRequiredToShowGUIInfo, player.level());
+            WatutNetworking.instance().serverSendToClientNear(data, player.position(), ConfigServerControlledSyncedToClient.distanceRequiredToShowGUIInfo, player.level());
         }
     }
 
@@ -126,17 +127,8 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     }
 
     public CompoundTag getServerConfigNBT() {
-        CompoundTag nbt = new CompoundTag();
+        CompoundTag nbt = ConfigServerSyncHelper.getInstance().getSyncableConfigOnServer();
         nbt.putBoolean(WatutNetworking.NBTDataServerConfig, true);
-        nbt.putBoolean(WatutNetworking.NBTData_useOldSimpleGUIVisual, ConfigServer.dynamicGuiUseOldSimpleGUIVisual);
-        nbt.putInt(WatutNetworking.NBTData_tickSendRateOfGUIUpdates, ConfigServer.dynamicGuiTickSendRateOfGUIUpdates);
-        nbt.putInt(WatutNetworking.NBTData_blurLevel, ConfigServer.dynamicGuiBlurLevel);
-        nbt.putDouble(WatutNetworking.NBTData_sizeRadiusInPixelsToShow, ConfigServer.dynamicGuiSizeRadiusInPixelsToShow);
-        nbt.putBoolean(WatutNetworking.NBTData_dynamicGuiShowClientsEntireScreen, ConfigServer.dynamicGuiShowClientsEntireScreen);
-        nbt.putBoolean(WatutNetworking.NBTData_dynamicGuiDisableBackgroundRendering, ConfigServer.dynamicGuiDisableBackgroundRendering);
-        nbt.putBoolean(WatutNetworking.NBTData_showItemsBeingTransferredBetweenPlayerAndContainer, ConfigServer.showItemsBeingTransferredBetweenPlayerAndContainer);
-        nbt.putBoolean(WatutNetworking.NBTData_dynamicGuiDontSendConstantGUIUpdates, ConfigServer.dynamicGuiDontSendConstantGUIUpdates);
-        nbt.putInt(WatutNetworking.NBTData_distanceRequiredToShowGUIInfo, ConfigServer.distanceRequiredToShowGUIInfo);
         return nbt;
     }
 
@@ -145,7 +137,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     }
 
     public void sendItemMove(Player player, Level level, ItemStack itemStack, float fromX, float fromY, float fromZ, float toX, float toY, float toZ) {
-        if (level.getNearestPlayer(fromX, fromY, fromZ, ConfigServer.distanceRequiredToShowGUIInfo, (entity) -> entity != player) != null) {
+        if (level.getNearestPlayer(fromX, fromY, fromZ, ConfigServerControlledSyncedToClient.distanceRequiredToShowGUIInfo, (entity) -> entity != player) != null) {
             CompoundTag data = new CompoundTag();
             data.put(WatutNetworking.NBTDataItemTransferItemStack, itemStack.save(new CompoundTag()));
             data.putFloat(WatutNetworking.NBTDataItemTransferFromX, fromX);
@@ -158,7 +150,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
             //CULog.dbg("sending mouse status from client for " + Minecraft.getInstance().player.getUUID());
             //CULog.dbg("data: " + data);
             //WatutNetworking.instance().serverSendToClientNear(data);
-            WatutNetworking.instance().serverSendToClientNear(data, new Vec3(fromX, fromY, fromZ), ConfigServer.distanceRequiredToShowGUIInfo, level);
+            WatutNetworking.instance().serverSendToClientNear(data, new Vec3(fromX, fromY, fromZ), ConfigServerControlledSyncedToClient.distanceRequiredToShowGUIInfo, level);
         }
     }
 
@@ -185,7 +177,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     public void doClickPre(AbstractContainerMenu abstractContainerMenu, int pSlotId, int pButton, ClickType pClickType, Player player) {
         //System.out.println("? " + pClickType);
 
-        if (!ConfigServer.showItemsBeingTransferredBetweenPlayerAndContainer) return;
+        if (!ConfigServerControlledSyncedToClient.showItemsBeingTransferredBetweenPlayerAndContainer) return;
         if (FakePlayerHelper.isFakePlayer(player)) return;
         PlayerStatus playerStatus = getStatus(player);
         if (playerStatus.isPlayerGuiDontSendItemInfo()) return;
@@ -200,7 +192,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     }
 
     public void useBlock(Player player, BlockPos pos) {
-        if (!ConfigServer.showItemsBeingTransferredBetweenPlayerAndContainer) return;
+        if (!ConfigServerControlledSyncedToClient.showItemsBeingTransferredBetweenPlayerAndContainer) return;
         if (FakePlayerHelper.isFakePlayer(player)) return;
         PlayerStatus playerStatus = getStatus(player);
         if (playerStatus.isPlayerGuiDontSendItemInfo()) return;
@@ -208,8 +200,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     }
 
     public void doClickPost(AbstractContainerMenu abstractContainerMenu, int pSlotId, int pButton, ClickType pClickType, Player player) {
-        //TODO: click type handling, handle actual point when item moves
-        if (!ConfigServer.showItemsBeingTransferredBetweenPlayerAndContainer) return;
+        if (!ConfigServerControlledSyncedToClient.showItemsBeingTransferredBetweenPlayerAndContainer) return;
         if (FakePlayerHelper.isFakePlayer(player)) return;
         PlayerStatus playerStatus = getStatus(player);
         if (playerStatus.isPlayerGuiDontSendItemInfo()) return;
