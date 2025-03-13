@@ -2,6 +2,7 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'net.neoforged.moddev' version '1.0.14'
+    id "com.hypherionmc.modutils.modpublisher" version "2.1.6"
 }
 
 tasks.named('wrapper', Wrapper).configure {
@@ -217,5 +218,121 @@ idea {
     module {
         downloadSources = true
         downloadJavadoc = true
+    }
+}
+
+publisher {
+    // Setup the required API keys. You only need to define the keys for
+    // the platforms you plan on uploading to
+    apiKeys {
+        // Modrinth Token
+        modrinth System.getenv("MODRINTH_TOKEN")
+        // Curseforge Token
+        curseforge System.getenv("CURSE_TOKEN")
+        // GitHub Token
+        //github System.getenv("GITHUB_TOKEN")
+    }
+
+    // Enable Debug mode. When enabled, no files will actually be uploaded
+    setDebug(false)
+
+    // Curseforge Project ID
+    setCurseID("945479")
+
+    // Modrinth Project ID
+    setModrinthID("what-are-they-up-to")
+
+    // Type of release. beta, alpha or release
+    // You can also use VersionType.BETA, VersionType.ALPHA or VersionType.RELEASE
+    setVersionType("release")
+
+    // Changelog. This can be a file, string, OR, gist/github url
+    // For example: markdown.md, or "This is my changelog"
+    // Or: https://raw.githubusercontent.com/hypherionmc/changelogs/changelog.md
+    // Or https://gist.githubusercontent.com/hypherionmc/92f825d3c9337964cc77c9c8c9bf65e6/raw/ceeaaee5b98c688a23398864fe480b84796a1651/test_gist.md
+    setChangelog("https://raw.githubusercontent.com/Corosauce/WATUT/refs/heads/1.21.0/changelog.md")
+
+    // Required for Modrinth/GitHub
+    setProjectVersion("${project.version}")
+
+    // Fancy display name for the upload.
+    // Will default to the project version if not set
+    setDisplayName("${project.mod_id}-fabric-${project.mod_version}.jar")
+
+    // The supported game versions
+    setGameVersions("${project.minecraft_version}")
+
+    // The modloaders your upload supports.
+    // This can also be an Enum from ModLoader,
+    // like setLoaders(ModLoader.FABRIC, ModLoader.FORGE)
+    //setLoaders("forge", "fabric")
+    setLoaders("fabric")
+
+    // The new Curseforge Environment tag. Optional
+    // Valid values are "server", "client" or "both"
+    // You can also use CurseEnvironment.BOTH, or CurseEnvironment.SERVER or CurseEnvironment.CLIENT
+    setCurseEnvironment("both")
+
+    // Upload the release, but keep it "private" until you are ready
+    // Unreleased feature on CurseForge, working on Modrinth
+    setIsManualRelease(false)
+
+    // The file to be uploaded. This can be a file, task, or string.
+    // setArtifact("build/libs/mymod.jar")
+    // setArtifact(jar.getArchiveFile().get())
+    // If this is a task, the task specified will be executed before publishing
+    //setArtifact(jar)
+    //setArtifact("build/libs/watut-fabric-1.20.1-1.2.1.jar")
+    setArtifact("build/libs/${project.mod_id}-fabric-${project.mod_version}.jar")
+
+    // Override the artifact uploaded to modrinth
+    // setPlatformArtifact(Platform.Modrinth, "build/libs/mymod.jar")
+    // setPlatformArtifact(Platform.Modrinth, jar.getArchiveFile().get())
+    // If this is a task, the task specified will be executed before publishing
+    // Valid platforms are modrinth, curseforge and github
+    //setPlatformArtifact("modrinth", modrinthJar)
+
+    // Disable the built in Fractureizer scanner
+    setDisableMalwareScanner(true)
+
+    // Add supported java versions. Currently only used by CurseForge
+    // Supports anything that can be parsed using JavaVersion.toVersion()
+    setJavaVersions(JavaVersion.VERSION_21, 21)
+
+    // Safety check to check if the artifact contains a valid mod metadata entry,
+    // which could possibly mean that the jar is empty
+    setDisableEmptyJarCheck(true)
+
+    // Additional files to upload. Same as artifact, this can be a task, file or string
+    //addAdditionalFile(jar, secondJar)
+
+    // Additional files to upload with a custom display name and changelog.
+    // Currently only supported on Curseforge
+    /*addAdditionalFile {
+        // File, Task or String
+        artifact jar
+        displayName "Some Name"
+        changelog "Hello Changelog"
+    }*/
+
+    modrinthDepends {
+        required "coroutil"
+
+        /*// Single dependency
+        required "fabric-api"
+
+        // Optional dependency
+        optional 'optional-dep'
+
+        // Your mod is not compatible with this mod
+        incompatible 'breaks-with'
+
+        // Your mod embeds this dependency
+        embedded 'fabric-api'*/
+    }
+
+// Curse Dependencies
+    curseDepends {
+        required "coroutil"
     }
 }
