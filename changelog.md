@@ -1,2 +1,1 @@
-Add error catching to ParticleItem with a blacklist to prevent further exceptions, prevents some rare reported crashes with specific set of mods or possibly specific item.
-Implement system that dynamically syncs all settings in ConfigServerControlledSyncedToClient from server to client into same class for easy use. Add new server controlled configs for more admin control.
+Fix console spam.
