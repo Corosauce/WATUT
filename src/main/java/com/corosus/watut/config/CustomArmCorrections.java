@@ -1,5 +1,6 @@
 package com.corosus.watut.config;
 
+import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.WatutMod;
 import com.google.gson.Gson;
 import com.ibm.icu.impl.Pair;
@@ -22,7 +23,7 @@ public class CustomArmCorrections {
         try (FileReader reader = new FileReader("./config/" + WatutMod.configJSONName)) {
             heldItemArmAdjustmentLists = gson.fromJson(reader, HeldItemArmAdjustmentLists.class);
         } catch (IOException e) {
-            System.out.println("FAILED TO LOAD watut-item-arm-adjustments.json, check its formatting!");
+            CULog.err("FAILED TO LOAD watut-item-arm-adjustments.json, check its formatting!");
             e.printStackTrace();
             return false;
         }

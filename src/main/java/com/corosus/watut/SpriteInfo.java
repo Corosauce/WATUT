@@ -1,5 +1,6 @@
 package com.corosus.watut;
 
+import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.spritesets.SpriteSetPlayer;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -43,7 +44,7 @@ public class SpriteInfo {
                 if (textureAtlasSprite != null) {
                     list.add(textureAtlasSprite);
                 } else {
-                    System.out.println("failed to find " + getResLocationName(i));
+                    CULog.dbg("failed to find " + getResLocationName(i));
                 }
             }
             this.spriteSetPlayer.setList(list);
@@ -51,7 +52,7 @@ public class SpriteInfo {
         } else {
             sprite = textureAtlas.getSprite(getResLocationName());
             if (sprite == null) {
-                System.out.println("failed to find " + getResLocationName());
+                CULog.dbg("failed to find " + getResLocationName());
             }
         }
     }

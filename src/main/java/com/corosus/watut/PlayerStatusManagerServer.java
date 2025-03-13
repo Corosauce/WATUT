@@ -231,12 +231,12 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         List<ItemStack> containerRemovedItems = listsContainer.getSecond();
 
 
-        CULog.dbg("playerAddedItems " + playerAddedItems);
+        /*CULog.dbg("playerAddedItems " + playerAddedItems);
         CULog.dbg("playerRemovedItems " + playerRemovedItems);
         CULog.dbg("containerAddedItems " + containerAddedItems);
         CULog.dbg("containerRemovedItems " + containerRemovedItems);
         CULog.dbg("getInventorySnapshotCarriedPre " + playerStatus.getInventorySnapshotCarried().itemStackList);
-        CULog.dbg("getInventorySnapshotCarriedPost " + inventorySnapshotCarriedPost.itemStackList);
+        CULog.dbg("getInventorySnapshotCarriedPost " + inventorySnapshotCarriedPost.itemStackList);*/
 
         /**
          * v2 compare:
@@ -250,7 +250,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
          */
 
         if (pClickType == ClickType.PICKUP) {
-            CULog.dbg("? " + abstractContainerMenu.getCarried());
+            //CULog.dbg("? " + abstractContainerMenu.getCarried());
 
 
             //if (!abstractContainerMenu.getCarried().isEmpty()) {
@@ -279,7 +279,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
                 ItemStack prevCarried = playerStatus.getInventorySnapshotCarried().itemStackList.get(0);
                 for (ItemStack itemStackAdded : playerAddedItems) {
                     if (ItemStack.isSameItem(prevCarried, itemStackAdded)) {
-                        System.out.println("to player");
+                        //CULog.dbg("to player");
                         //prevent zipping to player if it was picked up from player inv
                         if (!playerStatus.isCarriedItemFromPlayerInventory()) {
                             sendItemMove(player, itemStackAdded, false);
@@ -296,7 +296,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
 
                 for (ItemStack itemStackAdded : containerAddedItems) {
                     if (ItemStack.isSameItem(prevCarried, itemStackAdded)) {
-                        System.out.println("to container");
+                        //CULog.dbg("to container");
                         //prevent zipping to player if it was picked up from player inv
                         if (playerStatus.isCarriedItemFromPlayerInventory()) {
                             sendItemMove(player, itemStackAdded, true);

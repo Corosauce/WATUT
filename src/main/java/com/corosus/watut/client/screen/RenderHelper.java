@@ -490,7 +490,7 @@ public class RenderHelper {
 
         // Use a direct buffer for decompressed data
         if (decompressionBuffer == null) {
-            System.out.println("make new buffer");
+            //CULog.dbg("make new buffer");
             decompressionBuffer = ByteBuffer.allocateDirect(expectedSize); // Allocate space for expected size
             screenData.setDecompressionBuffer(decompressionBuffer);
         } else {
