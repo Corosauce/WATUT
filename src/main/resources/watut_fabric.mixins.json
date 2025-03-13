@@ -1,21 +1,28 @@
 {
   "required": false,
   "package": "com.corosus.watut.mixin",
-  "compatibilityLevel": "JAVA_17",
+  "compatibilityLevel": "JAVA_21",
   "refmap": "watut.refmap.json",
   "client": [
     "client.SetupRotationsInject",
     "client.RenderPingIconInject",
+    "client.ScreenRenderBackground",
+    "client.ScreenRenderWithTooltip",
     "client.GuiRender",
     "client.KeyboardHandlerKeyPress",
     "client.MinecraftTick",
     "client.MouseHandlerOnPress",
-    "client.TextureAtlasUpload"/*,
-    "client.ScreenRenderWithTooltip"*/
+    "client.TextureAtlasUpload",
+    "client.PostChainResize",
+    "client.GameRendererReloadShaders",
+    "client.ParticleEngineMixinFabric",
+    "client.NativeImageAccessor"
   ],
   "mixins": [
     "PlayerLoggedIn",
-    "PlayerTick"
+    "PlayerTick",
+    "AbstractContainerMenuDoClick",
+    "BlockBehaviorUse"
   ],
   "injectors": {
     "defaultRequire": 0

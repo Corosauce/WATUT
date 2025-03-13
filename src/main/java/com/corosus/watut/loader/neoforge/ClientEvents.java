@@ -1,7 +1,5 @@
 package com.corosus.watut.loader.neoforge;
 
-import com.corosus.coroutil.command.CommandCoroConfigClient;
-import com.corosus.modconfig.CoroConfigRegistry;
 import com.corosus.watut.ParticleRegistry;
 import com.corosus.watut.WatutMod;
 import com.corosus.watut.command.CommandWatutReloadJSON;

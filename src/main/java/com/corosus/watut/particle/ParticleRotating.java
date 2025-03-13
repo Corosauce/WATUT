@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -23,30 +24,59 @@ public abstract class ParticleRotating extends TextureSheetParticle {
     public float rotationPitch;
     public float prevRotationRoll;
     public float rotationRoll;
+    public float brightness = 1F;
 
     //removes particle once hits 0, other things should reset this to keep it spawned
     public int despawnCountdown = 40;
 
 
+    public static ParticleRenderType CUSTOM = new ParticleRenderType() {
+        @Override
+        public @Nullable BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
+            RenderSystem.depthMask(true);
+            RenderSystem.disableBlend();
+            return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+        }
+
+        public void begin(BufferBuilder p_107469_, TextureManager p_107470_) {
+            RenderSystem.depthMask(true);
+            RenderSystem.disableBlend();
+        }
+
+        public String toString() {
+            return "CUSTOM";
+        }
+    };
+
     public static ParticleRenderType PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL = new ParticleRenderType() {
-        public BufferBuilder begin(Tesselator p_107455_, TextureManager p_107456_) {
+        public @Nullable BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
             RenderSystem.depthMask(true);
             RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
-            //RenderSystem.bindTexture(ScreenCapturing.mainRenderTarget.getColorTextureId());
-            //RenderSystem._setShaderTexture(0, ScreenCapturing.mainRenderTarget.getColorTextureId());
+            //RenderSystem.setShaderTexture(0, 219);
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             RenderSystem.disableCull();
-            return p_107455_.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+            return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
         }
-
-        /*public void end(Tesselator p_107458_) {
-            p_107458_.end();
-            RenderSystem.enableCull();
-        }*/
 
         public String toString() {
             return "PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL";
+        }
+    };
+
+    public static ParticleRenderType TERRAIN_SHEET_TRANSLUCENT_NO_FACE_CULL = new ParticleRenderType() {
+        public @Nullable BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
+            RenderSystem.depthMask(true);
+            RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_BLOCKS);
+            RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
+            RenderSystem.disableCull();
+            RenderSystem.disableDepthTest();
+            return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+        }
+
+        public String toString() {
+            return "TERRAIN_SHEET_TRANSLUCENT_NO_FACE_CULL";
         }
     };
 
@@ -136,5 +166,13 @@ public abstract class ParticleRotating extends TextureSheetParticle {
         this.xo = pX;
         this.yo = pY;
         this.zo = pZ;
+    }
+
+    public float getBrightness() {
+        return brightness;
+    }
+
+    public void setBrightness(float brightness) {
+        this.brightness = brightness;
     }
 }

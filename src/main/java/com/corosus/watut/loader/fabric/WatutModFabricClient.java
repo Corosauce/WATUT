@@ -4,7 +4,6 @@ import com.corosus.coroutil.config.ConfigCoroUtil;
 import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.WatutMod;
 import com.corosus.watut.WatutNetworking;
-import com.corosus.watut.network.PacketNBTFromClient;
 import com.corosus.watut.network.PacketNBTFromServer;
 import com.corosus.watut.particle.ParticleRotating;
 import net.fabricmc.api.ClientModInitializer;
@@ -24,8 +23,15 @@ public class WatutModFabricClient implements ClientModInitializer {
 			CompoundTag nbt = buf.readNbt();
 			client.execute(() -> {
 				try {
-					UUID uuid = UUID.fromString(nbt.getString(WatutNetworking.NBTDataPlayerUUID));
-					WatutMod.getPlayerStatusManagerClient().receiveAny(uuid, nbt);
+					if (nbt.contains(WatutNetworking.NBTDataPlayerUUID)) {
+						UUID uuid = UUID.fromString(nbt.getString(WatutNetworking.NBTDataPlayerUUID));
+						WatutMod.getPlayerStatusManagerClient().receiveAny(uuid, nbt);
+					} else if (nbt.contains(WatutNetworking.NBTDataServerConfig)) {
+						WatutMod.getPlayerStatusManagerClient().receiveServerConfig(nbt);
+					} else if (nbt.contains(WatutNetworking.NBTDataItemTransferItemStack)) {
+						WatutMod.getPlayerStatusManagerClient().receiveItemMove(nbt);
+					}
+
 				} catch (Exception ex) {
 					CULog.dbg("WATUT ERROR: packet with invalid uuid sent from server");
 					CULog.dbg("full nbt data: " + nbt);
@@ -35,12 +41,19 @@ public class WatutModFabricClient implements ClientModInitializer {
 				}
 			});
 		});*/
+
 		ClientPlayNetworking.registerGlobalReceiver(PacketNBTFromServer.TYPE, (payload, ctx) -> {
 			CompoundTag nbt = payload.nbt();
 			ctx.client().execute(() -> {
 				try {
-					UUID uuid = UUID.fromString(nbt.getString(WatutNetworking.NBTDataPlayerUUID));
-					WatutMod.getPlayerStatusManagerClient().receiveAny(uuid, nbt);
+					if (nbt.contains(WatutNetworking.NBTDataPlayerUUID)) {
+						UUID uuid = UUID.fromString(nbt.getString(WatutNetworking.NBTDataPlayerUUID));
+						WatutMod.getPlayerStatusManagerClient().receiveAny(uuid, nbt);
+					} else if (nbt.contains(WatutNetworking.NBTDataServerConfig)) {
+						WatutMod.getPlayerStatusManagerClient().receiveServerConfig(nbt);
+					} else if (nbt.contains(WatutNetworking.NBTDataItemTransferItemStack)) {
+						WatutMod.getPlayerStatusManagerClient().receiveItemMove(nbt);
+					}
 				} catch (Exception ex) {
 					CULog.dbg("WATUT ERROR: packet with invalid uuid sent from server");
 					CULog.dbg("full nbt data: " + nbt);

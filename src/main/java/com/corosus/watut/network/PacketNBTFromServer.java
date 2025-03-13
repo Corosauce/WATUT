@@ -36,8 +36,14 @@ public record PacketNBTFromServer(CompoundTag nbt) implements PacketBase
 	{
 
 		try {
-			UUID uuid = UUID.fromString(nbt.getString(WatutNetworking.NBTDataPlayerUUID));
-			WatutMod.getPlayerStatusManagerClient().receiveAny(uuid, nbt);
+			if (nbt.contains(WatutNetworking.NBTDataPlayerUUID)) {
+				UUID uuid = UUID.fromString(nbt.getString(WatutNetworking.NBTDataPlayerUUID));
+				WatutMod.getPlayerStatusManagerClient().receiveAny(uuid, nbt);
+			} else if (nbt.contains(WatutNetworking.NBTDataServerConfig)) {
+				WatutMod.getPlayerStatusManagerClient().receiveServerConfig(nbt);
+			} else if (nbt.contains(WatutNetworking.NBTDataItemTransferItemStack)) {
+				WatutMod.getPlayerStatusManagerClient().receiveItemMove(nbt);
+			}
 		} catch (Exception ex) {
 			CULog.dbg("WATUT ERROR: packet with invalid uuid sent from server");
 			CULog.dbg("full nbt data: " + nbt);
@@ -46,11 +52,6 @@ public record PacketNBTFromServer(CompoundTag nbt) implements PacketBase
 			}
 		}
 	}
-
-	/*@Override
-	public ResourceLocation id() {
-		return WatutMod.PACKET_ID_NBT_FROM_SERVER;
-	}*/
 
 	@Override
 	public Type<? extends CustomPacketPayload> type() {

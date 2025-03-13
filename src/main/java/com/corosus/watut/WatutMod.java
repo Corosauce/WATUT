@@ -3,6 +3,7 @@ package com.corosus.watut;
 import com.corosus.modconfig.CoroConfigRegistry;
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigCommon;
+import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
 import com.corosus.watut.config.CustomArmCorrections;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.players.PlayerList;
@@ -24,9 +25,6 @@ public abstract class WatutMod
 
     public static String configJSONName = "watut-item-arm-adjustments.json";
 
-    public static final ResourceLocation PACKET_ID_NBT_FROM_SERVER = ResourceLocation.fromNamespaceAndPath(MODID, "nbt_from_server");
-    public static final ResourceLocation PACKET_ID_NBT_FROM_CLIENT = ResourceLocation.fromNamespaceAndPath(MODID, "nbt_from_client");
-
     private static WatutMod instance;
 
     public static WatutMod instance() {
@@ -46,6 +44,7 @@ public abstract class WatutMod
     public WatutMod() {
         instance = this;
         CoroConfigRegistry.instance().addConfigFile(MODID, new ConfigCommon());
+        CoroConfigRegistry.instance().addConfigFile(MODID, new ConfigServerControlledSyncedToClient());
         CoroConfigRegistry.instance().addConfigFile(MODID, new ConfigClient());
 
         generateJsonConfigFile(configJSONName);
@@ -78,6 +77,10 @@ public abstract class WatutMod
             ex.printStackTrace();
         }
         return "";
+    }
+
+    public void loadConfigs() {
+
     }
 
     public abstract PlayerList getPlayerList();

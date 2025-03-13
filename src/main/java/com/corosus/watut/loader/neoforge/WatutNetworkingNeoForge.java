@@ -1,10 +1,9 @@
 package com.corosus.watut.loader.neoforge;
 
+import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.WatutModClient;
 import com.corosus.watut.WatutNetworking;
-import com.corosus.watut.network.PacketBase;
-import com.corosus.watut.network.PacketNBTFromClient;
-import com.corosus.watut.network.PacketNBTFromServer;
+import com.corosus.watut.network.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;

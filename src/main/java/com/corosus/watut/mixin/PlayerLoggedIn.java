@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class PlayerLoggedIn {
 
     @Inject(method = "placeNewPlayer", at = @At("TAIL"))
-    private void placeNewPlayer(Connection pNetManager, ServerPlayer pPlayer, CommonListenerCookie cookie, CallbackInfo info) {
-        WatutMod.getPlayerStatusManagerServer().playerLoggedIn(pPlayer);
+    private void placeNewPlayer(Connection connection, ServerPlayer player, CommonListenerCookie cookie, CallbackInfo ci) {
+        WatutMod.getPlayerStatusManagerServer().playerLoggedIn(player);
     }
 }

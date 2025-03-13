@@ -1,14 +1,22 @@
 {
   "required": false,
   "package": "com.corosus.watut.mixin",
-  "compatibilityLevel": "JAVA_17",
+  "compatibilityLevel": "JAVA_21",
   "refmap": "watut.refmap.json",
   "client": [
     "client.SetupRotationsInject",
     "client.RenderPingIconInject",
-    "client.GuiRender"/*,
-    "client.GuiGraphicsInnerBlit",
-    "client.ScreenRenderWithTooltip"*/
+    "client.GuiRender",
+    "client.ScreenRenderBackground",
+    "client.ScreenRenderWithTooltip",
+    "client.PostChainResize",
+    "client.GameRendererReloadShaders",
+    "client.ParticleEngineMixin",
+    "client.NativeImageAccessor"
+  ],
+  "mixins": [
+    "AbstractContainerMenuDoClick",
+    "BlockBehaviorUse"
   ],
   "injectors": {
     "defaultRequire": 0

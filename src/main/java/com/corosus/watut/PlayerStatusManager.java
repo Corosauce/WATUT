@@ -1,6 +1,8 @@
 package com.corosus.watut;
 
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -11,8 +13,6 @@ public class PlayerStatusManager {
 
     //** DEBUG VAL **/
     protected boolean singleplayerTesting = false;
-
-    protected int nearbyPlayerDataSendDist = 10;
 
     public void tickPlayer(Player player) {
         singleplayerTesting = false;
@@ -56,6 +56,20 @@ public class PlayerStatusManager {
 
     public void playerLoggedIn(Player player) {
 
+    }
+
+    public Vec3 getBodyAngle(Player player) {
+        return this.calculateViewVector(player.getXRot(), player.yBodyRot);
+    }
+
+    public Vec3 calculateViewVector(float pXRot, float pYRot) {
+        float f = pXRot * ((float)Math.PI / 180F);
+        float f1 = -pYRot * ((float)Math.PI / 180F);
+        float f2 = Mth.cos(f1);
+        float f3 = Mth.sin(f1);
+        float f4 = Mth.cos(f);
+        float f5 = Mth.sin(f);
+        return new Vec3((double)(f3 * f4), (double)(-f5), (double)(f2 * f4));
     }
 
 }

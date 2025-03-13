@@ -4,10 +4,6 @@ pluginManagement {
             name = 'Fabric'
             url = 'https://maven.fabricmc.net/'
         }
-		maven { 
-            name = 'Forge'
-			url = 'https://maven.minecraftforge.net/' 
-		}
 		maven {
 			name = 'Parchment'
 			url = 'https://maven.parchmentmc.org/'

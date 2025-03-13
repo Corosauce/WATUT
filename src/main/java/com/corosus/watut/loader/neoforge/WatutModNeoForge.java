@@ -50,6 +50,7 @@ public class WatutModNeoForge extends WatutMod {
 
     @Override
     public PlayerList getPlayerList() {
+        if (ServerLifecycleHooks.getCurrentServer() == null) return null;
         return ServerLifecycleHooks.getCurrentServer().getPlayerList();
     }
 

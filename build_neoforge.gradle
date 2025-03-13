@@ -132,6 +132,8 @@ dependencies {
 
     implementation ("com.corosus.coroutil:coroutil-neoforge:${project.minecraft_version}.0-${project.coroutil_version}")
 
+    implementation ("curse.maven:journeymap-32274:5950315")
+
     //implementation("curse.maven:forge-config-api-port-fabric-547434:5577288")
     implementation 'com.electronwill.night-config:core:3.6.5'
     implementation 'com.electronwill.night-config:toml:3.6.5'

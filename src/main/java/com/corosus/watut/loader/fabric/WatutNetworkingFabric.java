@@ -1,5 +1,6 @@
 package com.corosus.watut.loader.fabric;
 
+import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.WatutMod;
 import com.corosus.watut.WatutNetworking;
 import com.corosus.watut.network.PacketNBTFromClient;
@@ -56,7 +57,6 @@ public class WatutNetworkingFabric extends WatutNetworking {
         FriendlyByteBuf buf = PacketByteBufs.create();
         buf.writeNbt(data);
         for (ServerPlayer player : PlayerLookup.around((ServerLevel) level, pos, dist)) {
-            //ServerPlayNetworking.send(player, NBT_PACKET_ID, buf);
             ServerPlayNetworking.send(player, new PacketNBTFromServer(data));
         }
         /*HANDLER.send(PacketDistributor.NEAR.with(() ->

@@ -1,10 +1,10 @@
 package com.corosus.watut;
 
+import com.corosus.watut.client.CustomParticleEngine;
+import com.corosus.watut.client.screen.RenderHelper;
 import com.corosus.coroutil.util.CULog;
-import com.corosus.watut.client.screen.RenderCall;
-import com.corosus.watut.client.screen.RenderCallType;
-import com.corosus.watut.config.ConfigClient;
-import com.corosus.watut.config.CustomArmCorrections;
+import com.corosus.watut.client.screen.ScreenParticleRenderer;
+import com.corosus.watut.config.*;
 import com.corosus.watut.math.Lerpables;
 import com.corosus.watut.particle.*;
 import com.ibm.icu.impl.Pair;
@@ -23,8 +23,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ReloadableResourceManager;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
@@ -32,10 +31,12 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
+import java.nio.ByteBuffer;
 import java.util.*;
 
 public class PlayerStatusManagerClient extends PlayerStatusManager {
@@ -63,7 +64,20 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     private boolean wasMousePressed = false;
     private int mousePressedCountdown = 0;
 
+    public static ShaderInstanceBlur positionTexBlur;
+    public static ShaderInstanceBlur positionTexBlurHorizontal;
+    public static ShaderInstanceBlur positionTexBlurVertical;
+    public static ShaderInstanceBlur particle;
 
+    private static CustomParticleEngine customParticleEngine;
+
+    public static CustomParticleEngine getParticleEngine() {
+        if (customParticleEngine == null) {
+            customParticleEngine = new CustomParticleEngine(Minecraft.getInstance().level, Minecraft.getInstance().getTextureManager());
+            ((ReloadableResourceManager)Minecraft.getInstance().getResourceManager()).registerReloadListener(customParticleEngine);
+        }
+        return customParticleEngine;
+    }
 
     public void tickGame() {
         steadyTickCounter++;
@@ -101,8 +115,36 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             }
             selfPlayerStatus.reset();
             selfPlayerStatusPrev.reset();
+            selfPlayerStatus.getScreenData().setGameTicksSinceLastScreenSend(0);
         }
         lastLevel = level;
+
+        long gameTime = 0;
+        if (Minecraft.getInstance().level != null) {
+            gameTime = Minecraft.getInstance().level.getGameTime();
+        }
+
+        if (/*!selfPlayerStatus.isIdle()*/selfPlayerStatus.getTicksSinceLastAction() < (20 * 5)) {
+            if (selfPlayerStatus.getScreenData().getGameTicksSinceLastScreenSend() + ConfigServerControlledSyncedToClient.dynamicGuiTickSendRateOfGUIUpdates < gameTime) {
+                if (Minecraft.getInstance().screen != null && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
+                    //System.out.println("? " + selfPlayerStatus.getScreenData().getLastScreen());
+                    if (!ConfigServerControlledSyncedToClient.dynamicGuiDontSendConstantGUIUpdates || selfPlayerStatus.getScreenData().getLastScreen() != Minecraft.getInstance().screen) {
+                        selfPlayerStatus.getScreenData().setGameTicksSinceLastScreenSend(gameTime);
+                        selfPlayerStatus.getScreenData().setNeedsNewRenderToPixelData(true);
+
+                    }
+                }
+                selfPlayerStatus.getScreenData().setLastScreen(Minecraft.getInstance().screen);
+            }
+
+            if (Minecraft.getInstance().screen == null) {
+                selfPlayerStatus.getScreenData().setGameTicksSinceLastScreenSend(0);
+            }
+        }
+
+        /*if (JSONLoader.RELOAD_LIVE_OFTEN && level != null && level.getGameTime() % 100 == 0) {
+            JSONLoader.getInstance().loadFiles();
+        }*/
     }
 
     public void tickPlayerClient(Player player) {
@@ -325,19 +367,32 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     public Pair<Float, Float> getMousePos() {
         Minecraft mc = Minecraft.getInstance();
+        double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+        //not actual max, just doing some guestimation work
+        double guiScaleMax = 4;
         double xPercent = (mc.mouseHandler.xpos() / mc.getWindow().getScreenWidth()) - 0.5;
         double yPercent = (mc.mouseHandler.ypos() / mc.getWindow().getScreenHeight()) - 0.5;
+
         //TODO: factor in clients gui scale, aka a ratio of gui covering screen, adjust hand move scale accordingly
+        //i wanted to do this, but its not possible without other comprimises, eg:
+        //journeymap ignores guiscale
+        //if i used a baseline of a typical gui windows with a 176 width, and factored in gui scale, i could maybe pull it off
+        //but then JEI is still off the side where id have capped the mouse movement because on gui scale one there is SO much extra room
+        //maybe just do a lazy gui scale 4 / actual gui scale and hope thats good enough
+        //yep seems good enough
+
         //emphasize the movements
-        double emphasis = 1.5;
-        //emphasis = 3;
-        double edgeLimit = 0.5;
+        //double emphasis = 1.5;
+        //double emphasis = 1.0;
+        double emphasis = guiScaleMax / guiScale;
+        double edgeLimit = 0.75;
         double edgeLimitYLower = 0.2;
         xPercent *= emphasis;
         yPercent *= emphasis;
         xPercent = Math.max(Math.min(xPercent, edgeLimit), -edgeLimit);
+        yPercent = Math.max(Math.min(yPercent, edgeLimit), -edgeLimit);
         //prevent hand in pants
-        yPercent = Math.min(yPercent, edgeLimitYLower);
+        //yPercent = Math.min(yPercent, edgeLimitYLower);
         return Pair.of((float) xPercent, (float) yPercent);
     }
 
@@ -403,7 +458,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     public void onGuiRender() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen instanceof ChatScreen && mc.getConnection() != null && ConfigClient.screenTypingVisible) {
+        if (mc.screen instanceof ChatScreen && mc.getConnection() != null && ConfigClient.screenTypingVisible && ConfigServerControlledSyncedToClient.screenTypingVisible) {
             ChatScreen chat = (ChatScreen) mc.screen;
             GuiGraphics guigraphics = new GuiGraphics(mc, mc.renderBuffers().bufferSource());
             int height = chat.height + 26;
@@ -491,11 +546,15 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         if (shouldAnimate(player) && !player.isInvisible()) {
             if (idleParticleChangeOrGone) {
-                if (ConfigClient.showIdleStatesInPlayerAboveHead && playerStatus.isIdle()) {
+                if (ConfigClient.showIdleStatesInPlayerAboveHead && ConfigServerControlledSyncedToClient.showIdleStatesInPlayerAboveHead && playerStatus.isIdle()) {
                     ParticleRotating particle = new ParticleStatic((ClientLevel) player.level(), player.position().x, player.position().y + idleY, player.position().z, ParticleRegistry.idle.getSprite());
                     if (particle != null) {
                         playerStatus.setParticleIdle(particle);
-                        Minecraft.getInstance().particleEngine.add(particle);
+                        //if (particle instanceof ParticleDynamic) {
+                            getParticleEngine().add(particle);
+                        /*} else {
+                            Minecraft.getInstance().particleEngine.add(particle);
+                        }*/
                         particle.setQuadSize((float) quadSize);
 
                         WatutMod.dbg("spawning idle particle for " + player.getUUID());
@@ -506,29 +565,35 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 ParticleRotating particle = null;
                 Vec3 posParticle = getParticlePosition(player);
 
-                if (ConfigClient.showPlayerActiveChatGui) {
+                boolean useChatIdleForTestingOtherGUIs = true;
+                boolean newRender = RenderHelper.useDynamicGUISystem() && !playerStatus.isPlayerGuiDontSendDetailedGUIInfo();
+
+                if (ConfigClient.showPlayerActiveChatGui && ConfigServerControlledSyncedToClient.showPlayerActiveChatGui) {
                     if (PlayerStatus.PlayerGuiState.isTypingGui(this.getStatus(player).getPlayerGuiState())) {
                         if (this.getStatus(player).getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_FOCUSED) {
                             particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_idle.getSpriteSet());
-                            /*if (playerStatus.getScreenData().getParticleRenderType() != null) {
-                                particle = new ParticleDynamic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, playerStatus.getScreenData().getParticleRenderType(), 0.7F);
-                            }*/
+                            if (useChatIdleForTestingOtherGUIs) {
+                                if (newRender && playerStatus.getScreenData().getParticleRenderType() != null) {
+                                    particle = new ParticleDynamic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, playerStatus.getScreenData().getParticleRenderType(), 0.7F);
+                                } else {
+                                    particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.inventory.getSpriteSet());
+                                }
+                            }
                         } else if (this.getStatus(player).getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_TYPING) {
                             particle = new ParticleAnimated((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chat_typing.getSpriteSet());
                         }
                     }
                 }
-                if (ConfigClient.showPlayerActiveNonChatGui) {
+                if (ConfigClient.showPlayerActiveNonChatGui && ConfigServerControlledSyncedToClient.showPlayerActiveNonChatGui) {
                     TextureAtlasSprite sprite = null;
                     float brightness = 0.7F;
                     int subSizeX = 0;
                     int subSizeY = 0;
-                    boolean newRender = false;
                     if (newRender) {
                         if (this.getStatus(player).getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && this.getStatus(player).getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
-                            /*if (playerStatus.getScreenData().getParticleRenderType() != null) {
+                            if (playerStatus.getScreenData().getParticleRenderType() != null) {
                                 particle = new ParticleDynamic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, playerStatus.getScreenData().getParticleRenderType(), 0.7F);
-                            }*/
+                            }
                         }
                     } else {
                         if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.INVENTORY) {
@@ -540,10 +605,10 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                         } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHEST) {
                             particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chest.getSpriteSet());
                         } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.EDIT_BOOK) {
-                            particle = new ParticleStatic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.book.getSprite(), 0.7F);
-                            /*if (playerStatus.getScreenData().getParticleRenderType() != null) {
+                            //particle = new ParticleStatic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.book.getSprite(), 0.7F);
+                            if (playerStatus.getScreenData().getParticleRenderType() != null) {
                                 particle = new ParticleDynamic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, playerStatus.getScreenData().getParticleRenderType(), 0.7F);
-                            }*/
+                            }
                         } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.EDIT_SIGN) {
                             particle = new ParticleStatic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.sign.getSprite(), 0.7F);
                         } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.ENCHANTING_TABLE) {
@@ -605,7 +670,11 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 }
                 if (particle != null) {
                     playerStatus.setParticle(particle);
-                    Minecraft.getInstance().particleEngine.add(particle);
+                    //if (particle instanceof ParticleDynamic) {
+                        getParticleEngine().add(particle);
+                    /*} else {
+                        Minecraft.getInstance().particleEngine.add(particle);
+                    }*/
                 }
             } else {
 
@@ -642,13 +711,25 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     if (Minecraft.getInstance().cameraEntity != null) {
                         double distToCamera = Minecraft.getInstance().cameraEntity.distanceTo(player);
                         double distToCameraCapped = Math.max(3F, Math.min(10F, distToCamera));
+                        double distToCameraCapped2 = Math.max(3F, Math.min(6F, distToCamera));
                         //Watut.dbg(distToCamera);
-                        float alpha = (float) Math.max(0.35F, 1F - (distToCameraCapped / 10F));
+                        //float alpha = (float) Math.max(0.35F, 1F - (distToCameraCapped / 10F));
+                        float alpha = (float) Math.max(0.35F, 1F - (distToCameraCapped / 10F)) + 0.15F;
+                        float brightness = (float) Math.max(0.55F, 1F - (distToCameraCapped / 10F)) + 0.15F;
+                        float huh = (float) Math.max(0.0F, 1F - (distToCameraCapped2 / 6F));
+                        quadSize = 0.3F + ((Math.sin((stableTime / 10F) % 360) * 0.01F) * huh);
                         particle.setAlpha(alpha);
+                        particle.setBrightness(brightness);
+                        particle.setQuadSize((float) quadSize);
+                        //particle.setBrightness(1);
+                        //particle.setAlpha(1);
 
                         if (particle instanceof ParticleStaticLoD) {
                             ((ParticleStaticLoD) particle).setParticleFromDistanceToCamera((float) distToCamera);
                         }
+
+                        //particle.setAlpha(0.99F);
+                        //particle.setBrightness(1F);
                     } else {
                         particle.setAlpha(0.5F);
                     }
@@ -668,47 +749,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
     }
 
-    public void hookStartScreenRender() {
-        /*PlayerStatus playerStatusLocal = getStatusLocal();
-
-        if (playerStatusLocal.getLastScreenCaptured() != playerStatusLocal.getPlayerGuiState() || (Minecraft.getInstance().level != null && Minecraft.getInstance().level.getGameTime() % 10 == 0)) {
-            playerStatusLocal.setLastScreenCaptured(playerStatusLocal.getPlayerGuiState());
-            if (playerStatusLocal.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && playerStatusLocal.getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
-                playerStatusLocal.getScreenData().startCapture();
-            }
-        }*/
-    }
-
-    public void hookStopScreenRender() {
-        /*PlayerStatus playerStatusLocal = getStatusLocal();
-        if (playerStatusLocal.getScreenData().isCapturing()) {
-            playerStatusLocal.getScreenData().stopCapture();
-
-            sendScreenRenderData(playerStatusLocal);
-        }*/
-    }
-
-    public void hookInnerBlit(ResourceLocation pAtlasLocation, int pX1, int pX2, int pY1, int pY2, int pBlitOffset, float pMinU, float pMaxU, float pMinV, float pMaxV) {
-        /*PlayerStatus playerStatusLocal = getStatusLocal();
-        if (playerStatusLocal.getScreenData().isCapturing()) {
-            RenderCall renderCall = new RenderCall(RenderCallType.INNER_BLIT);
-            renderCall.innerBlit(pAtlasLocation, pX1, pX2, pY1, pY2, pBlitOffset, pMinU, pMaxU, pMinV, pMaxV);
-            playerStatusLocal.getScreenData().addRenderCall(renderCall);
-        }*/
-
-    }
-
-    public void hookInnerBlit(ResourceLocation pAtlasLocation, int pX1, int pX2, int pY1, int pY2, int pBlitOffset, float pMinU, float pMaxU, float pMinV, float pMaxV, float pRed, float pGreen, float pBlue, float pAlpha) {
-        /*PlayerStatus playerStatusLocal = getStatusLocal();
-        if (playerStatusLocal.getScreenData().isCapturing()) {
-            RenderCall renderCall = new RenderCall(RenderCallType.INNER_BLIT2);
-            renderCall.innerBlit(pAtlasLocation, pX1, pX2, pY1, pY2, pBlitOffset, pMinU, pMaxU, pMinV, pMaxV, pRed, pGreen, pBlue, pAlpha);
-            playerStatusLocal.getScreenData().addRenderCall(renderCall);
-        }*/
-    }
-
     public boolean renderPingIconHook(PlayerTabOverlay playerTabOverlay, GuiGraphics pGuiGraphics, int p_281809_, int p_282801_, int pY, PlayerInfo pPlayerInfo) {
-        if (Minecraft.getInstance().particleEngine == null || pPlayerInfo == null || pPlayerInfo.getProfile() == null || !ConfigClient.showIdleStatesInPlayerList) return false;
+        if (Minecraft.getInstance().particleEngine == null || pPlayerInfo == null || pPlayerInfo.getProfile() == null || !ConfigClient.showIdleStatesInPlayerList || !ConfigServerControlledSyncedToClient.showIdleStatesInPlayerList) return false;
         PlayerStatus playerStatus = getStatus(pPlayerInfo.getProfile().getId());
         if (playerStatus.isIdle()) {
             pGuiGraphics.pose().pushPose();
@@ -724,7 +766,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     }
 
     public void setupRotationsHook(EntityModel model, Entity pEntity, float pLimbSwing, float pLimbSwingAmount, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch) {
-        if (!ConfigClient.showPlayerAnimations) return;
+        if (!ConfigClient.showPlayerAnimations || !ConfigServerControlledSyncedToClient.showPlayerAnimations) return;
         Minecraft mc = Minecraft.getInstance();
         boolean inOwnInventory = pEntity == mc.player && (mc.screen instanceof EffectRenderingInventoryScreen) && pEntity.isAlive();
         //boolean isRealPlayer = pEntity.tickCount > 10;
@@ -800,7 +842,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 playerModel.hat.xRot = playerModel.head.xRot;
                 playerModel.hat.yRot = playerModel.head.yRot;
 
-                if (ConfigClient.showPlayerAnimation_Typing && playerStatus.getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_TYPING) {
+                if (ConfigClient.showPlayerAnimation_Typing && ConfigServerControlledSyncedToClient.showPlayerAnimation_Typing && playerStatus.getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_TYPING) {
                     float amp = playerStatus.getTypingAmplifierSmooth();
                     float typeAngle = (float) ((Math.toRadians(Math.sin((pAgeInTicks * 1F) % 360) * 15 * amp)));
                     float typeAngle2 = (float) ((Math.toRadians(-Math.sin((pAgeInTicks * 1F) % 360) * 15 * amp)));
@@ -825,7 +867,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 if (adjLeftArm.z != Float.MAX_VALUE) playerModel.leftArm.zRot -= adjLeftArm.z;
                 if (adjLeftArm.z != Float.MAX_VALUE) playerModel.leftSleeve.zRot -= adjLeftArm.z;
 
-                if (ConfigClient.showPlayerAnimation_Idle && playerStatus.isIdle()) {
+                if (ConfigClient.showPlayerAnimation_Idle && ConfigServerControlledSyncedToClient.showPlayerAnimation_Idle && playerStatus.isIdle()) {
                     float angle = (float) ((Math.toRadians(Math.sin((pAgeInTicks * 0.05F) % 360) * 15)));
                     float angle2 = (float) ((Math.toRadians(Math.cos((pAgeInTicks * 0.05F) % 360) * 7)));
                     playerModel.head.xRot += angle2;
@@ -858,9 +900,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         boolean typing = playerStatus.getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_TYPING;
         boolean idle = playerStatus.isIdle();
 
-        if (!ConfigClient.showPlayerAnimation_Gui) pointing = false;
-        if (!ConfigClient.showPlayerAnimation_Typing) typing = false;
-        if (!ConfigClient.showPlayerAnimation_Idle) idle = false;
+        if (!ConfigClient.showPlayerAnimation_Gui || !ConfigServerControlledSyncedToClient.showPlayerAnimation_Gui) pointing = false;
+        if (!ConfigClient.showPlayerAnimation_Typing || !ConfigServerControlledSyncedToClient.showPlayerAnimation_Typing) typing = false;
+        if (!ConfigClient.showPlayerAnimation_Idle || !ConfigServerControlledSyncedToClient.showPlayerAnimation_Idle) idle = false;
 
         if (becauseMousePress) {
             playerStatus.setNewLerp(armMouseTickRate * 0.5F);
@@ -878,9 +920,15 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             double yPercent = playerStatus.getScreenPosPercentY();
             double x = Math.toRadians(90) - Math.toRadians(22.5) - yPercent;
             double y = -Math.toRadians(15) + xPercent;
+            double xHead = Math.toRadians(22.5) + yPercent;
+            double yHead = xPercent;
 
             playerStatus.getLerpTarget().rightArm.yRot = (float) y;
             playerStatus.getLerpTarget().rightArm.xRot = (float) -x;
+
+            playerStatus.getLerpTarget().head.yRot = (float) yHead * 0.5F;
+            //playerStatus.getLerpTarget().head.xRot = (float) ((-x * 0.5F) + Math.toRadians(90));
+            playerStatus.getLerpTarget().head.xRot = (float) xHead * 0.5F;
 
             if (playerStatus.isPressing()) {
                 Vec3 vec = calculateViewVector((float) Math.toDegrees(y), (float) Math.toDegrees(x));
@@ -931,25 +979,12 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     public Vec3 getParticlePosition(Player player) {
         Vec3 pos = player.position();
-        float distFromFace = 0.75F;
+        //float distFromFace = 0.75F;
+        float distFromFace = 0.85F;
         //float distFromFace = -3.5F;
         Vec3 lookVec = getBodyAngle(player).scale(distFromFace);
         return new Vec3(pos.x + lookVec.x, pos.y + 1.2D, pos.z + lookVec.z);
-        //return new Vec3(pos.x + lookVec.x, pos.y + 2D, pos.z + lookVec.z);
-    }
-
-    public Vec3 getBodyAngle(Player player) {
-        return this.calculateViewVector(player.getXRot(), player.yBodyRot);
-    }
-
-    public Vec3 calculateViewVector(float pXRot, float pYRot) {
-        float f = pXRot * ((float)Math.PI / 180F);
-        float f1 = -pYRot * ((float)Math.PI / 180F);
-        float f2 = Mth.cos(f1);
-        float f3 = Mth.sin(f1);
-        float f4 = Mth.cos(f);
-        float f5 = Mth.sin(f);
-        return new Vec3((double)(f3 * f4), (double)(-f5), (double)(f2 * f4));
+        //return new Vec3(pos.x + lookVec.x - 2, pos.y + 1.2D, pos.z + lookVec.z);
     }
 
     public PlayerStatus getStatusLocal() {
@@ -988,8 +1023,10 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         if (getStatusLocal().getPlayerGuiState() != playerStatus || force) {
             CompoundTag data = new CompoundTag();
             data.putInt(WatutNetworking.NBTDataPlayerGuiStatus, playerStatus.ordinal());
-            CULog.dbg("sending status from client: " + playerStatus + " for " + Minecraft.getInstance().player.getUUID());
-            CULog.dbg("data: " + data);
+            data.putBoolean(WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo, ConfigClient.dontSendDetailedGUIInfo);
+            data.putBoolean(WatutNetworking.NBTDataPlayerGuiDontSendItemInfo, ConfigClient.dontSendItemInfo);
+            //CULog.dbg("sending status from client: " + playerStatus + " for " + Minecraft.getInstance().player.getUUID());
+            //CULog.dbg("data: " + data);
             WatutNetworking.instance().clientSendToServer(data);
         }
         getStatusLocal().setPlayerGuiState(playerStatus);
@@ -1003,8 +1040,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         if (getStatusLocal().getPlayerChatState() != playerStatus || force) {
             CompoundTag data = new CompoundTag();
             data.putInt(WatutNetworking.NBTDataPlayerChatStatus, playerStatus.ordinal());
-            CULog.dbg("sending chat status from client: " + playerStatus + " for " + Minecraft.getInstance().player.getUUID());
-            CULog.dbg("data: " + data);
+            //CULog.dbg("sending chat status from client: " + playerStatus + " for " + Minecraft.getInstance().player.getUUID());
+            //CULog.dbg("data: " + data);
             WatutNetworking.instance().clientSendToServer(data);
         }
         getStatusLocal().setPlayerChatState(playerStatus);
@@ -1014,16 +1051,23 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         Minecraft mc = Minecraft.getInstance();
         float x = pos.first;
         float y = pos.second;
-        if (mc.level.getNearestPlayer(mc.player.getX(), mc.player.getY(), mc.player.getZ(), nearbyPlayerDataSendDist, (entity) -> entity != mc.player) != null) {
+
+        boolean testSingleplayer = false;
+
+        if (testSingleplayer || mc.level.getNearestPlayer(mc.player.getX(), mc.player.getY(), mc.player.getZ(), ConfigServerControlledSyncedToClient.distanceRequiredToShowGUIInfo, (entity) -> entity != mc.player) != null) {
             if (getStatusLocal().getScreenPosPercentX() != x || getStatusLocal().getScreenPosPercentY() != y || getStatusLocal().isPressing() != pressed) {
                 CompoundTag data = new CompoundTag();
                 data.putFloat(WatutNetworking.NBTDataPlayerMouseX, x);
                 data.putFloat(WatutNetworking.NBTDataPlayerMouseY, y);
                 data.putBoolean(WatutNetworking.NBTDataPlayerMousePressed, pressed);
 
-                CULog.dbg("sending mouse status from client for " + Minecraft.getInstance().player.getUUID());
-                CULog.dbg("data: " + data);
+                //data.putInt("testIndex", i);
+
+
+                //CULog.dbg("sending mouse status from client for " + Minecraft.getInstance().player.getUUID());
+                //CULog.dbg("data: " + data);
                 WatutNetworking.instance().clientSendToServer(data);
+
             }
         }
         getStatusLocal().setScreenPosPercentX(x);
@@ -1032,46 +1076,65 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     }
 
     public void sendScreenRenderData(PlayerStatus status) {
-        /*CompoundTag data = new CompoundTag();
-        CompoundTag nbtRenderCalls = new CompoundTag();
+        CompoundTag data = new CompoundTag();
 
-        int renderCallIndex = 0;
-        for (RenderCall renderCall : status.getScreenData().getListRenderCalls()) {
-            CompoundTag nbtRenderCall = new CompoundTag();
-            CompoundTag nbtParams = new CompoundTag();
-            int paramIndex = 0;
-            for (Object object : renderCall.getListParams()) {
-                if (object instanceof ResourceLocation) {
-                    nbtParams.putString("param_" + paramIndex, ((ResourceLocation)object).toString());
-                } else if (object instanceof Integer) {
-                    nbtParams.putInt("param_" + paramIndex, (Integer) object);
-                } else if (object instanceof Float) {
-                    nbtParams.putFloat("param_" + paramIndex, (Float) object);
+        int packetSizeLimit = 31000;
+        int sizeByteCount = status.getScreenData().getTexturePixelData().remaining();
+        int sizeByteCountLimit = status.getScreenData().getTexturePixelData().limit();
+
+        if (status.getScreenData().getTexturePixelData() != null) {
+            byte[] inputBytes = new byte[sizeByteCount];
+            status.getScreenData().getTexturePixelData().get(inputBytes);
+            if (sizeByteCountLimit < packetSizeLimit) {
+                data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataSize, status.getScreenData().getTexturePixelData().capacity());
+                data.putInt(WatutNetworking.NBTDataPlayerScreenWidth, ScreenParticleRenderer.getInstance().widthScaledDown);
+                data.putInt(WatutNetworking.NBTDataPlayerScreenHeight, ScreenParticleRenderer.getInstance().heightScaledDown);
+                data.putByteArray(WatutNetworking.NBTDataPlayerScreenCompressedPixelData, inputBytes);
+
+                data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount, 1);
+                data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex, 1);
+
+                WatutNetworking.instance().clientSendToServer(data);
+            } else {
+                int packetCount = Mth.ceil((float)sizeByteCount / (float)packetSizeLimit);
+
+                int packetBytesIndex = 0;
+
+                for (int i = 0; i < packetCount; i++) {
+                    byte[] inputBytesPartial;
+                    if (packetBytesIndex + packetSizeLimit < sizeByteCount) {
+                        inputBytesPartial = Arrays.copyOfRange(inputBytes, packetBytesIndex, packetBytesIndex + packetSizeLimit);
+                    } else {
+                        inputBytesPartial = Arrays.copyOfRange(inputBytes, packetBytesIndex, sizeByteCount);
+                    }
+                    packetBytesIndex += inputBytesPartial.length;
+
+                    //WE MUST USE NEW NBT FOR EACH PACKET OR WE ARE CHANGING THE ONE ALREADY ABOUT TO GET SEND AND THATS BREAKS THINGS - this cost me 5 hours of debugging
+                    data = new CompoundTag();
+                    data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataSize, status.getScreenData().getTexturePixelData().capacity());
+                    data.putInt(WatutNetworking.NBTDataPlayerScreenWidth, ScreenParticleRenderer.getInstance().widthScaledDown);
+                    data.putInt(WatutNetworking.NBTDataPlayerScreenHeight, ScreenParticleRenderer.getInstance().heightScaledDown);
+
+                    data.putByteArray(WatutNetworking.NBTDataPlayerScreenCompressedPixelData, inputBytesPartial);
+
+                    data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount, packetCount);
+                    data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex, i);
+
+                    WatutNetworking.instance().clientSendToServer(data);
+
                 }
-                paramIndex++;
             }
-            nbtRenderCall.put("params", nbtParams);
-            nbtRenderCall.putInt("renderCallType", renderCall.getRenderCallType().ordinal());
-
-            nbtRenderCalls.put("renderCall_" + renderCallIndex, nbtRenderCall);
-            renderCallIndex++;
-
-            //System.out.println("client pack sent params: " + renderCall.getListParams());
         }
 
-        data.put(WatutNetworking.NBTDataPlayerScreenRenderCalls, nbtRenderCalls);
 
-        //System.out.println("send screen data");
-
-        WatutNetworking.instance().clientSendToServer(data);*/
     }
 
     public void sendTyping(PlayerStatus status) {
         CompoundTag data = new CompoundTag();
         data.putFloat(WatutNetworking.NBTDataPlayerTypingAmp, status.getTypingAmplifier());
 
-        CULog.dbg("sending typing amp from client for " + Minecraft.getInstance().player.getUUID());
-        CULog.dbg("data: " + data);
+        //CULog.dbg("sending typing amp from client for " + Minecraft.getInstance().player.getUUID());
+        //CULog.dbg("data: " + data);
         WatutNetworking.instance().clientSendToServer(data);
     }
 
@@ -1079,8 +1142,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         CompoundTag data = new CompoundTag();
         data.putInt(WatutNetworking.NBTDataPlayerIdleTicks, status.getTicksSinceLastAction());
 
-        CULog.dbg("sending idle ticks from client for " + Minecraft.getInstance().player.getUUID());
-        CULog.dbg("data: " + data);
+        //CULog.dbg("sending idle ticks from client for " + Minecraft.getInstance().player.getUUID());
+        //CULog.dbg("data: " + data);
         WatutNetworking.instance().clientSendToServer(data);
     }
 
@@ -1101,7 +1164,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             setPoseTarget(uuid, differentPress);
             if (pressed && differentPress) {
                 Player player = Minecraft.getInstance().level.getPlayerByUUID(uuid);
-                if (player != null && ConfigClient.playMouseClickSounds && player != Minecraft.getInstance().player) {
+                if (player != null && ConfigClient.playMouseClickSounds && ConfigServerControlledSyncedToClient.playMouseClickSounds && player != Minecraft.getInstance().player) {
                     WatutMod.dbg("play sound for " + uuid + " name " + player.getDisplayName().getString());
                     player.level().playLocalSound(player.getOnPos(), SoundEvents.CHICKEN_EGG, SoundSource.PLAYERS, 0.05F, 0.1F, false);
                 }
@@ -1111,6 +1174,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         if (data.contains(WatutNetworking.NBTDataPlayerGuiStatus)) {
             PlayerStatus.PlayerGuiState playerGuiState = PlayerStatus.PlayerGuiState.get(data.getInt(WatutNetworking.NBTDataPlayerGuiStatus));
             status.setPlayerGuiState(playerGuiState);
+            if (data.contains(WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo)) status.setPlayerGuiDontSendDetailedGUIInfo(data.getBoolean(WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo));
+            if (data.contains(WatutNetworking.NBTDataPlayerGuiDontSendItemInfo)) status.setPlayerGuiDontSendItemInfo(data.getBoolean(WatutNetworking.NBTDataPlayerGuiDontSendItemInfo));
             if (status.getPlayerGuiState() != statusPrev.getPlayerGuiState()) {
                 WatutMod.dbg("New gui player state and new pose target set relating to: " + status.getPlayerGuiState() + " for " + uuid);
                 if (statusPrev.getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
@@ -1118,7 +1183,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 }
                 setPoseTarget(uuid, false);
                 Player player = Minecraft.getInstance().level.getPlayerByUUID(uuid);
-                if (player != null && ConfigClient.playScreenOpenSounds && player != Minecraft.getInstance().player) {
+                if (player != null && ConfigClient.playScreenOpenSounds && ConfigServerControlledSyncedToClient.playScreenOpenSounds && player != Minecraft.getInstance().player) {
                     PlayerStatus.PlayerGuiState playerGuiStatePrev = statusPrev.getPlayerGuiState();
                     if (PlayerStatus.PlayerGuiState.isSoundMakerGui(playerGuiState) || PlayerStatus.PlayerGuiState.isSoundMakerGui(playerGuiStatePrev) || playerGuiState == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiState == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiState == PlayerStatus.PlayerGuiState.MISC ||
                             playerGuiStatePrev == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiStatePrev == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiStatePrev == PlayerStatus.PlayerGuiState.MISC) {
@@ -1127,6 +1192,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 }
             }
         }
+
+        
 
         if (data.contains(WatutNetworking.NBTDataPlayerChatStatus)) {
             PlayerStatus.PlayerChatState state = PlayerStatus.PlayerChatState.get(data.getInt(WatutNetworking.NBTDataPlayerChatStatus));
@@ -1157,44 +1224,102 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             }
         }
 
-        /*if (data.contains(WatutNetworking.NBTDataPlayerScreenRenderCalls)) {
-            status.getScreenData().getListRenderCalls().clear();
-            //System.out.println("receiving screen data");
-            CompoundTag nbtRenderCalls = data.getCompound(WatutNetworking.NBTDataPlayerScreenRenderCalls);
-            int renderCallIndex = 0;
-            while (true) {
-                if (nbtRenderCalls.contains("renderCall_" + renderCallIndex)) {
-                    CompoundTag nbtRenderCall = nbtRenderCalls.getCompound("renderCall_" + renderCallIndex);
-                    RenderCallType renderCallType = RenderCallType.get(nbtRenderCall.getInt("renderCallType"));
-                    CompoundTag params = nbtRenderCall.getCompound("params");
-                    int paramIndex = 0;
-                    List<Object> listParams = new ArrayList<>();
-                    while (true) {
-                        if (params.contains("param_" + paramIndex)) {
-                            if (params.getTagType("param_" + paramIndex) == Tag.TAG_STRING) {
-                                listParams.add(new ResourceLocation(params.getString("param_" + paramIndex)));
-                            } else if (params.getTagType("param_" + paramIndex) == Tag.TAG_INT) {
-                                listParams.add(params.getInt("param_" + paramIndex));
-                            } else if (params.getTagType("param_" + paramIndex) == Tag.TAG_FLOAT) {
-                                listParams.add(params.getFloat("param_" + paramIndex));
-                            }
-                        } else {
-                            break;
-                        }
-                        paramIndex++;
-                    }
-                    RenderCall renderCall = new RenderCall(renderCallType);
-                    renderCall.getListParams().addAll(listParams);
-                    status.getScreenData().addRenderCall(renderCall);
-                    //System.out.println("client pack received params: " + listParams.size());
+        //CULog.dbg("client receive packet index " + data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex) + " of " + data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount));
+
+        //if (true) return;
+
+        if (data.contains(WatutNetworking.NBTDataPlayerScreenCompressedPixelData)) {
+            byte[] pixelData = data.getByteArray(WatutNetworking.NBTDataPlayerScreenCompressedPixelData);
+            int decompressedSize = data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataSize);
+            int packetCount = data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount);
+            int packetIndex = data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex);
+            status.getScreenData().setWidth(data.getInt(WatutNetworking.NBTDataPlayerScreenWidth));
+            status.getScreenData().setHeight(data.getInt(WatutNetworking.NBTDataPlayerScreenHeight));
+            long gameTime = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
+            int timeout = 10;
+
+            //CULog.dbg("compressed pixel data size in bytes: " + pixelData.length + " - " + packetIndex + " of " + packetCount + " roughly total " + (pixelData.length * packetCount));
+
+            if (packetCount > 1) {
+                if (packetIndex == 0) {
+                    status.getScreenData().setGameTicksSinceFirstPacket(gameTime);
+                    status.getScreenData().setLastIndexReceived(0);
+                    status.getScreenData().setTexturePixelDataPartial(pixelData);
                 } else {
-                    break;
+                    if (packetIndex != status.getScreenData().getLastIndexReceived() + 1) {
+                        CULog.dbg("ERROR: packet index incorrect, aborting packet processing");
+                    } else {
+                        status.getScreenData().setLastIndexReceived(packetIndex);
+                        if (gameTime > status.getScreenData().getGameTicksSinceFirstPacket() + timeout) {
+                            //packet timeout waiting for other pieces, abort and reset state
+                            //actually dont think i have to do anything, if a new packetIndex 0 comes in it forces a fresh set
+                            //CULog.dbg("watut packet took too long to come in, stop waiting and reset");
+                        } else {
+                            if (pixelData.length > 0) {
+                                byte[] dataBytes = status.getScreenData().getTexturePixelDataPartial();
+                                byte[] combined = new byte[dataBytes.length + pixelData.length];
+                                System.arraycopy(dataBytes, 0, combined, 0, dataBytes.length);
+                                System.arraycopy(pixelData, 0, combined, dataBytes.length, pixelData.length);
+                                status.getScreenData().setTexturePixelDataPartial(combined);
+
+                                if (packetIndex == packetCount-1) {
+                                    try {
+                                        if (status.getScreenData().getTexturePixelDataPartial() != null) {
+                                            status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(status.getScreenData().getTexturePixelDataPartial()), decompressedSize));
+                                            status.getScreenData().markNeedsNewRenderFromPixelData(true);
+                                            status.getScreenData().getIsBufferReady().set(true);
+                                        } else {
+                                            CULog.dbg("getTexturePixelDataPartial() null!");
+                                        }
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+
+                            }
+                        }
+                    }
+
                 }
-                renderCallIndex++;
+            } else {
+                try {
+                    status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(pixelData), decompressedSize));
+                    status.getScreenData().markNeedsNewRenderFromPixelData(true);
+                    status.getScreenData().getIsBufferReady().set(true);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
-            status.getScreenData().markNeedsNewRender(true);
-            //System.out.println("received screen data");
-        }*/
+        }
+    }
+
+    public void receiveItemMove(CompoundTag data) {
+        if (data.contains(WatutNetworking.NBTDataItemTransferItemStack)) {
+
+            ItemStack itemStack = ItemStack.parseOptional(Minecraft.getInstance().level.registryAccess(), data.getCompound(WatutNetworking.NBTDataItemTransferItemStack));
+            ParticleItem particleItem = new ParticleItem(Minecraft.getInstance().level, 1, itemStack,
+                    Minecraft.getInstance().renderBuffers(),
+                    Minecraft.getInstance().getEntityRenderDispatcher(),
+                    data.getFloat(WatutNetworking.NBTDataItemTransferFromX),
+                    data.getFloat(WatutNetworking.NBTDataItemTransferFromY),
+                    data.getFloat(WatutNetworking.NBTDataItemTransferFromZ),
+                    data.getFloat(WatutNetworking.NBTDataItemTransferToX),
+                    data.getFloat(WatutNetworking.NBTDataItemTransferToY),
+                    data.getFloat(WatutNetworking.NBTDataItemTransferToZ));
+            //Minecraft.getInstance().particleEngine.add(particleItem);
+            getParticleEngine().add(particleItem);
+
+        }
+    }
+
+    public void receiveServerConfig(CompoundTag nbt) {
+
+        CULog.dbg("receiving server config sync");
+        ConfigServerSyncHelper.getInstance().updateSyncableConfigOnClient(nbt);
+
+        //update buffers carefully if needed
+        ScreenParticleRenderer.getInstance().resizeScaledDown(ScreenParticleRenderer.getInstance().width, ScreenParticleRenderer.getInstance().height);
+
     }
 
 }

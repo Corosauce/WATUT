@@ -1,5 +1,8 @@
 package com.corosus.watut.particle;
 
+import com.corosus.watut.client.screen.ScreenParticleRenderer;
+import com.corosus.watut.config.ConfigClient;
+import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Camera;
@@ -30,6 +33,7 @@ public class ParticleDynamic extends ParticleRotating {
         this.gravity = 0.0F;
         this.setSize(0.2F, 0.2F);
         this.quadSize = 0.5F;
+        //this.quadSize = 1F;
         this.xd = 0;
         this.yd = 0;
         this.zd = 0;
@@ -61,7 +65,7 @@ public class ParticleDynamic extends ParticleRotating {
         if (useCustomRotation) {
             quaternion = new Quaternionf(0, 0, 0, 1);
             quaternion.mul(Axis.YP.rotationDegrees(Mth.lerp(pPartialTicks, this.prevRotationYaw, rotationYaw)));
-            quaternion.mul(Axis.XP.rotationDegrees(Mth.lerp(pPartialTicks, this.prevRotationPitch, rotationPitch)));
+            quaternion.mul(Axis.XP.rotationDegrees(Mth.lerp(pPartialTicks, this.prevRotationPitch, rotationPitch)/* + 180*/));
             quaternion.mul(Axis.ZP.rotationDegrees(Mth.lerp(pPartialTicks, this.prevRotationRoll, rotationRoll)));
         } else {
             if (this.roll == 0.0F) {
@@ -73,8 +77,10 @@ public class ParticleDynamic extends ParticleRotating {
         }
 
         //Vector3f[] avector3f = new Vector3f[]{new Vector3f(-1.0F, -1.0F, 0.0F), new Vector3f(-1.0F, 1.0F, 0.0F), new Vector3f(1.0F, 1.0F, 0.0F), new Vector3f(1.0F, -1.0F, 0.0F)};
-        float aspectRatio = 1920F/1080F;
+        //float aspectRatio = 1920F/1080F;
+        float aspectRatio = (float) ScreenParticleRenderer.getInstance().widthScaledDown / (float)ScreenParticleRenderer.getInstance().heightScaledDown;
         float height = 1F / aspectRatio;
+        //height = 1;
         Vector3f[] avector3f = new Vector3f[]{
                 new Vector3f(-1.0F, height, 0.0F),
                 new Vector3f(-1.0F, -height, 0.0F),
@@ -85,8 +91,12 @@ public class ParticleDynamic extends ParticleRotating {
         for(int i = 0; i < 4; ++i) {
             Vector3f vector3f = avector3f[i];
             vector3f.rotate(quaternion);
-            //vector3f.mul(f3 * 3F);
-            vector3f.mul(f3 * 7F);
+            //vector3f.mul(f3 * 6F);
+            if (ConfigServerControlledSyncedToClient.dynamicGuiShowClientsEntireScreen) {
+                vector3f.mul((float) (f3 * 4F * ConfigClient.particleSizeScale));
+            } else {
+                vector3f.mul((float) (f3 * 2F * ConfigClient.particleSizeScale));
+            }
             vector3f.add(f, f1, f2);
         }
 
@@ -101,6 +111,7 @@ public class ParticleDynamic extends ParticleRotating {
         float v1 = 1;
 
         int j = this.getLightColor(pPartialTicks);
+        float extraDark = this.getBrightness();
         pBuffer.addVertex(avector3f[0].x(), avector3f[0].y(), avector3f[0].z()).setUv(u1, v1).setColor(this.rCol, this.gCol, this.bCol, this.alpha).setLight(j);
         pBuffer.addVertex(avector3f[1].x(), avector3f[1].y(), avector3f[1].z()).setUv(u1, v0).setColor(this.rCol, this.gCol, this.bCol, this.alpha).setLight(j);
         pBuffer.addVertex(avector3f[2].x(), avector3f[2].y(), avector3f[2].z()).setUv(u0, v0).setColor(this.rCol, this.gCol, this.bCol, this.alpha).setLight(j);
