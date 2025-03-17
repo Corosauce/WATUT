@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.8-SNAPSHOT'
+    id 'fabric-loom' version '1.9-SNAPSHOT'
     id 'maven-publish'
     id "com.hypherionmc.modutils.modpublisher" version "2.1.6"
 }
@@ -63,7 +63,7 @@ dependencies {
 
     //include(modImplementation("ForgeConfigAPIPort:ForgeConfigAPIPort:v8.0.0-1.20.1-Fabric"))
     //using https://www.curseforge.com/minecraft/mc-mods/forge-config-api-port-fabric/files/4583000
-    include(modImplementation("curse.maven:forge-config-api-port-fabric-547434:5982389"))
+    include(modImplementation("curse.maven:forge-config-api-port-fabric-547434:5982393"))
     implementation 'com.electronwill.night-config:core:3.7.3'
     implementation 'com.electronwill.night-config:toml:3.7.3'
     //include(modImplementation("fuzs.forgeconfigapiport:forgeconfigapiport-fabric:v8.0.0-1.20.1-Fabric"))
@@ -170,7 +170,7 @@ publisher {
     // For example: markdown.md, or "This is my changelog"
     // Or: https://raw.githubusercontent.com/hypherionmc/changelogs/changelog.md
     // Or https://gist.githubusercontent.com/hypherionmc/92f825d3c9337964cc77c9c8c9bf65e6/raw/ceeaaee5b98c688a23398864fe480b84796a1651/test_gist.md
-    setChangelog("https://raw.githubusercontent.com/Corosauce/WATUT/refs/heads/1.21.3/changelog.md")
+    setChangelog("https://raw.githubusercontent.com/Corosauce/WATUT/refs/heads/1.21.4/changelog.md")
 
     // Required for Modrinth/GitHub
     setProjectVersion("${project.version}")

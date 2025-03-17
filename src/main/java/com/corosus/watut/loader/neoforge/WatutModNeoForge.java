@@ -1,6 +1,7 @@
 package com.corosus.watut.loader.neoforge;
 
 
+import com.corosus.coroutil.util.MultiLoaderUtil;
 import com.corosus.watut.ShaderRegistry;
 import com.corosus.watut.ShaderReloader;
 import com.corosus.watut.WatutMod;
@@ -40,8 +41,7 @@ public class WatutModNeoForge extends WatutMod {
             NeoForge.EVENT_BUS.addListener(clientEvents::onGameTick);
             NeoForge.EVENT_BUS.addListener(clientEvents::onKey);
             NeoForge.EVENT_BUS.addListener(clientEvents::onMouse);
-
-            ((ReloadableResourceManager)Minecraft.getInstance().getResourceManager()).registerReloadListener(new ShaderReloader());
+            container.getEventBus().addListener(clientEvents::reload);
 
             //container.getEventBus().register(new RegisterShadersEvent());
             /*ShaderRegistry.instance = new ShaderRegistry();
@@ -53,6 +53,8 @@ public class WatutModNeoForge extends WatutMod {
     }
 
     private void setup(final FMLCommonSetupEvent event) {
+
+
 
     }
 

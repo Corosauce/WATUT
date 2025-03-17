@@ -1,5 +1,6 @@
 package com.corosus.watut.particle;
 
+import com.corosus.watut.client.ParticleRenderTypeOld;
 import com.corosus.watut.client.screen.ScreenParticleRenderer;
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
@@ -15,18 +16,18 @@ import org.joml.Vector3f;
 
 public class ParticleDynamic extends ParticleRotating {
 
-    public ParticleRenderType particleRenderType;
+    public ParticleRenderTypeOld particleRenderType;
 
-    public ParticleRenderType getRenderType() {
+    public ParticleRenderTypeOld getRenderTypeOld() {
         return particleRenderType;
     }
 
 
-    public ParticleDynamic(ClientLevel pLevel, double pX, double pY, double pZ, ParticleRenderType particleRenderType) {
+    public ParticleDynamic(ClientLevel pLevel, double pX, double pY, double pZ, ParticleRenderTypeOld particleRenderType) {
         this(pLevel, pX, pY, pZ, particleRenderType, 1F);
     }
 
-    public ParticleDynamic(ClientLevel pLevel, double pX, double pY, double pZ, ParticleRenderType particleRenderType, float brightness) {
+    public ParticleDynamic(ClientLevel pLevel, double pX, double pY, double pZ, ParticleRenderTypeOld particleRenderType, float brightness) {
         super(pLevel, pX, pY, pZ);
         this.particleRenderType = particleRenderType;
         this.lifetime = Integer.MAX_VALUE;

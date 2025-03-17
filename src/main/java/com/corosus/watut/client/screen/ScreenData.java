@@ -1,6 +1,7 @@
 package com.corosus.watut.client.screen;
 
 import com.corosus.watut.PlayerStatusManagerClient;
+import com.corosus.watut.client.ParticleRenderTypeOld;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -33,7 +34,7 @@ public class ScreenData {
     private long gameTicksSinceLastScreenSend = 0;
     private long gameTicksSinceLastScreenReceiveAndRender = 0;
 
-    private ParticleRenderType particleRenderType;
+    private ParticleRenderTypeOld particleRenderType;
 
     private boolean needsNewRenderFromPixelData = false;
 
@@ -51,7 +52,7 @@ public class ScreenData {
 
     public void initClient() {
 
-        this.particleRenderType = new ParticleRenderType() {
+        this.particleRenderType = new ParticleRenderTypeOld() {
             public @Nullable BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
                 //oculus breaks our shader for some reason
                 if (RenderHelper.isShadersEnabled() || testing) {
@@ -91,11 +92,11 @@ public class ScreenData {
         this.texturePixelData = texturePixelData;
     }
 
-    public ParticleRenderType getParticleRenderType() {
+    public ParticleRenderTypeOld getParticleRenderType() {
         return particleRenderType;
     }
 
-    public void setParticleRenderType(ParticleRenderType particleRenderType) {
+    public void setParticleRenderType(ParticleRenderTypeOld particleRenderType) {
         this.particleRenderType = particleRenderType;
     }
 

@@ -1,5 +1,6 @@
 package com.corosus.watut;
 
+import com.corosus.coroutil.util.MultiLoaderUtil;
 import com.corosus.watut.client.CustomParticleEngine;
 import com.corosus.watut.client.screen.RenderHelper;
 import com.corosus.coroutil.util.CULog;
@@ -77,7 +78,12 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     public static CustomParticleEngine getParticleEngine() {
         if (customParticleEngine == null) {
             customParticleEngine = new CustomParticleEngine(Minecraft.getInstance().level, Minecraft.getInstance().getTextureManager());
-            ((ReloadableResourceManager)Minecraft.getInstance().getResourceManager()).registerReloadListener(customParticleEngine);
+            if (!MultiLoaderUtil.instance().isNeoForge()) {
+                ((ReloadableResourceManager)Minecraft.getInstance().getResourceManager()).registerReloadListener(customParticleEngine);
+
+                //TODO: 1.21.4 relocate, this works for now though
+                ((ReloadableResourceManager) Minecraft.getInstance().getResourceManager()).registerReloadListener(new ShaderReloader());
+            }
         }
         return customParticleEngine;
     }

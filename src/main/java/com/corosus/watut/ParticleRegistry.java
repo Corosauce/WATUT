@@ -1,6 +1,17 @@
 package com.corosus.watut;
 
+import com.corosus.watut.client.screen.RenderHelper;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.Util;
+import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.client.renderer.CoreShaders;
+import net.minecraft.client.renderer.RenderStateShard;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.TriState;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -70,5 +81,58 @@ public class ParticleRegistry {
         for (SpriteInfo info : ParticleRegistry.particles) {
             info.setupSprites(textureAtlas);
         }
+    }
+
+    //TESTING - learning render types, shards, new particlerendertypes
+
+    //this is the best one i think TransparencyStateShard, because it actually does nothing and lets me add whatever
+    /*public static final RenderStateShard.TransparencyStateShard NO_TRANSPARENCY = new RenderStateShard.TransparencyStateShard(
+            "no_transparency", () -> RenderSystem.disableBlend(), () -> {
+    });
+
+    public static final RenderStateShard.TransparencyStateShard DYNAMIC_TEXTURE = new RenderStateShard.TransparencyStateShard(
+            "no_transparency", () -> {
+        //oculus breaks our shader for some reason
+        if (RenderHelper.isShadersEnabled()) {
+            RenderSystem.setShader(CoreShaders.PARTICLE);
+        } else {
+            RenderSystem.setShader(PlayerStatusManagerClient.particle.getProgram());
+        }
+        RenderSystem.setShaderTexture(0, getImage().getId());
+
+        RenderSystem.depthMask(true);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableCull();
+    }, () -> {
+        RenderSystem.enableCull();
+    });*/
+
+    static {
+
+        ResourceLocation test = ResourceLocation.parse("test");
+
+        /**
+         * setTransparencyState
+         * setShaderState
+         * etc
+         * these are just templates, they all are run in an order, i should put what relevant bits that i can in correctly eg set shader via setShaderState
+         * then just put the leftovers in setTransparencyState maybe, unless its order is an issue
+         */
+
+        //TODO: buffer size var? 1536
+
+        /*RenderType TEST_TYPE = RenderType.create("dynamic_texture", DefaultVertexFormat.PARTICLE,
+                    VertexFormat.Mode.QUADS, 1536, false, false,
+                    RenderType.CompositeState.builder()
+                            //our generic state use, for now
+                            .setTransparencyState(DYNAMIC_TEXTURE)
+                            //.setShaderState(RenderType.PARTICLE_SHADER)
+                            //.setTextureState(new RenderStateShard.TextureStateShard(test, TriState.FALSE, false))
+                            //.setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY).setOutputState(RenderType.PARTICLES_TARGET)
+                            //.setLightmapState(RenderType.LIGHTMAP).setWriteMaskState(RenderType.COLOR_DEPTH_WRITE)
+                            .createCompositeState(false));
+
+        ParticleRenderType TERRAIN_SHEET = new ParticleRenderType("TERRAIN_SHEET", TEST_TYPE);*/
     }
 }

@@ -1,15 +1,16 @@
 package com.corosus.watut.particle;
 
 import com.corosus.coroutil.util.CULog;
+import com.corosus.watut.client.ParticleRenderTypeOld;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.renderer.RenderBuffers;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.util.Mth;
@@ -18,15 +19,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 
 public class ParticleItem extends ParticleRotating {
 
     public static HashSet<String> itemBlacklist = new HashSet<>();
 
     public BakedModel bakedModel;
+    public ItemStackRenderState scratchItemStackRenderState;
     public ItemStack itemStack;
     private final RenderBuffers renderBuffers;
     private final EntityRenderDispatcher entityRenderDispatcher;
@@ -53,7 +53,11 @@ public class ParticleItem extends ParticleRotating {
         this.yTo = yTo;
         this.zTo = zTo;
         this.setColor(this.getColorRed() * brightness, this.getColorGreen() * brightness, this.getColorBlue() * brightness);
-        this.bakedModel = Minecraft.getInstance().getItemRenderer().getModel(itemStack, Minecraft.getInstance().level, null, 0);
+
+        scratchItemStackRenderState = new ItemStackRenderState();
+        Minecraft.getInstance()
+                .getItemModelResolver()
+                .updateForTopItem(this.scratchItemStackRenderState, itemStack, ItemDisplayContext.GROUND, false, level, null, 0);
         this.itemStack = itemStack;
         this.entityRenderDispatcher = entityRenderDispatcher;
         this.rotationYaw = pLevel.getRandom().nextFloat() * 360;
@@ -61,7 +65,7 @@ public class ParticleItem extends ParticleRotating {
     }
 
     @Override
-    public ParticleRenderType getRenderType() {
+    public ParticleRenderTypeOld getRenderTypeOld() {
         return TERRAIN_SHEET_TRANSLUCENT_NO_FACE_CULL;
     }
 
@@ -132,14 +136,15 @@ public class ParticleItem extends ParticleRotating {
 
         PoseStack pose = new PoseStack();
         pose.pushPose();
-        pose.translate(x, y, z);
+        pose.translate(x, y - 0.15, z);
         pose.scale(quadSize, quadSize, quadSize);
         pose.rotateAround(quaternion, 0, 1, 0);
 
         //RenderSystem.disableDepthTest();
         //RenderSystem.depthMask(false);
         try {
-            Minecraft.getInstance().getItemRenderer().render(itemStack, ItemDisplayContext.GROUND, false, pose, renderBuffers.bufferSource(), j, OverlayTexture.NO_OVERLAY, bakedModel);
+            //Minecraft.getInstance().getItemRenderer().render(itemStack, ItemDisplayContext.GROUND, false, pose, renderBuffers.bufferSource(), j, OverlayTexture.NO_OVERLAY, bakedModel);
+            this.scratchItemStackRenderState.render(pose, renderBuffers.bufferSource(), 15728880, OverlayTexture.NO_OVERLAY);
             renderBuffers.bufferSource().endBatch();
         } catch (Exception exception) {
             CULog.err("ERROR, exception trying to render item: " + this.itemStack.getItem().toString() + " - adding to ParticleItem render blacklist for this minecraft session");

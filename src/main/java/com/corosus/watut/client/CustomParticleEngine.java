@@ -14,7 +14,6 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.*;
 import net.minecraft.client.renderer.CoreShaders;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.SpriteLoader;
@@ -23,8 +22,6 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.core.particles.ParticleGroup;
 import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.core.particles.ParticleType;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
@@ -34,8 +31,6 @@ import net.minecraft.util.GsonHelper;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.world.entity.Entity;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -58,14 +53,14 @@ public class CustomParticleEngine implements PreparableReloadListener {
    private static final FileToIdConverter PARTICLE_LISTER = FileToIdConverter.json("particles");
    private static final ResourceLocation PARTICLES_ATLAS_INFO = ResourceLocation.parse("particles");
    private static final int MAX_PARTICLES_PER_LAYER = 16384;
-   private static final List<ParticleRenderType> RENDER_ORDER = ImmutableList.of(ParticleRenderType.TERRAIN_SHEET, ParticleRenderType.PARTICLE_SHEET_OPAQUE, ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT, ParticleRenderType.CUSTOM);
+   private static final List<ParticleRenderTypeOld> RENDER_ORDER = ImmutableList.of();
    protected ClientLevel level;
-   private final Map<ParticleRenderType, Queue<Particle>> particles = Maps.newTreeMap(makeParticleRenderTypeComparator(RENDER_ORDER));
+   private final Map<ParticleRenderTypeOld, Queue<ParticleRotating>> particles = Maps.newTreeMap(makeParticleRenderTypeOldComparator(RENDER_ORDER));
    private final Queue<TrackingEmitter> trackingEmitters = Queues.newArrayDeque();
    private final TextureManager textureManager;
    private final RandomSource random = RandomSource.create();
    private final Map<ResourceLocation, ParticleProvider<?>> providers = new java.util.HashMap<>();
-   private final Queue<Particle> particlesToAdd = Queues.newArrayDeque();
+   private final Queue<ParticleRotating> particlesToAdd = Queues.newArrayDeque();
    private final Map<ResourceLocation, CustomParticleEngine.MutableSpriteSet> spriteSets = Maps.newHashMap();
    public final TextureAtlas textureAtlas;
    private final Object2IntOpenHashMap<ParticleGroup> trackedParticleCounts = new Object2IntOpenHashMap<>();
@@ -77,9 +72,9 @@ public class CustomParticleEngine implements PreparableReloadListener {
       this.textureManager = p_107300_;
    }
 
-   public static Comparator<ParticleRenderType> makeParticleRenderTypeComparator(List<ParticleRenderType> renderOrder)
+   public static Comparator<ParticleRenderTypeOld> makeParticleRenderTypeOldComparator(List<ParticleRenderTypeOld> renderOrder)
    {
-      Comparator<ParticleRenderType> vanillaComparator = Comparator.comparingInt(renderOrder::indexOf);
+      Comparator<ParticleRenderTypeOld> vanillaComparator = Comparator.comparingInt(renderOrder::indexOf);
       return (typeOne, typeTwo) ->
       {
          boolean vanillaOne = renderOrder.contains(typeOne);
@@ -183,7 +178,7 @@ public class CustomParticleEngine implements PreparableReloadListener {
       }
    }
 
-   public void add(Particle p_107345_) {
+   public void add(ParticleRotating p_107345_) {
       Optional<ParticleGroup> optional = p_107345_.getParticleGroup();
       if (optional.isPresent()) {
          if (this.hasSpaceInParticleLimit(optional.get())) {
@@ -215,10 +210,10 @@ public class CustomParticleEngine implements PreparableReloadListener {
          this.trackingEmitters.removeAll(list);
       }
 
-      Particle particle;
+      ParticleRotating particle;
       if (!this.particlesToAdd.isEmpty()) {
          while((particle = this.particlesToAdd.poll()) != null) {
-            this.particles.computeIfAbsent(particle.getRenderType(), (p_107347_) -> {
+            this.particles.computeIfAbsent(particle.getRenderTypeOld(), (p_107347_) -> {
                return EvictingQueue.create(16384);
             }).add(particle);
          }
@@ -226,9 +221,9 @@ public class CustomParticleEngine implements PreparableReloadListener {
 
    }
 
-   private void tickParticleList(Collection<Particle> p_107385_) {
+   private void tickParticleList(Collection<ParticleRotating> p_107385_) {
       if (!p_107385_.isEmpty()) {
-         Iterator<Particle> iterator = p_107385_.iterator();
+         Iterator<ParticleRotating> iterator = p_107385_.iterator();
 
          while(iterator.hasNext()) {
             Particle particle = iterator.next();
@@ -266,7 +261,7 @@ public class CustomParticleEngine implements PreparableReloadListener {
    }
 
    public void render(LightTexture lightTexture, Camera camera, float partialTick) {
-      lightTexture.turnOnLightLayer();
+      if (lightTexture != null) lightTexture.turnOnLightLayer();
       RenderSystem.enableDepthTest();
       //TODO porting: is this even needed with the particle render order fix???
       RenderSystem.activeTexture(org.lwjgl.opengl.GL13.GL_TEXTURE2);
@@ -277,7 +272,7 @@ public class CustomParticleEngine implements PreparableReloadListener {
        * - related: see classic forge issue of the item pickup particle breaking depth testing and darkening particles
        * -- https://github.com/MinecraftForge/MinecraftForge/pull/8378/files
        * --- detailed breakdown: https://github.com/Asek3/Oculus/issues/149#issuecomment-1727945597
-       * I cant precompute the render order because ParticleDynamic uses a new ParticleRenderType per player and I don't want to keep recomputing the render order.
+       * I cant precompute the render order because ParticleDynamic uses a new ParticleRenderTypeOld per player and I don't want to keep recomputing the render order.
        * This solution works enough and should avoid any performance overhead
        *
        * If I switch to using vanilla particle renderer, my ParticleItem renders for forge, but not for fabric, didn't dig into why.
@@ -287,7 +282,7 @@ public class CustomParticleEngine implements PreparableReloadListener {
 
       RenderSystem.depthMask(true);
       RenderSystem.disableBlend();
-      lightTexture.turnOffLightLayer();
+      if (lightTexture != null) lightTexture.turnOffLightLayer();
    }
 
    public void render(LightTexture lightTexture, Camera camera, float partialTick, boolean pickupParticleMode) {
@@ -297,19 +292,19 @@ public class CustomParticleEngine implements PreparableReloadListener {
        * - related: see classic forge issue of the item pickup particle breaking depth testing and darkening particles
        * -- https://github.com/MinecraftForge/MinecraftForge/pull/8378/files
        * --- detailed breakdown: https://github.com/Asek3/Oculus/issues/149#issuecomment-1727945597
-       * I cant precompute the render order because ParticleDynamic uses a new ParticleRenderType per player and I don't want to keep recomputing the render order.
+       * I cant precompute the render order because ParticleDynamic uses a new ParticleRenderTypeOld per player and I don't want to keep recomputing the render order.
        * This solution works enough and should avoid any performance overhead
        *
        * If I switch to using vanilla particle renderer, my ParticleItem renders for forge, but not for fabric, didn't dig into why.
        */
-      for (ParticleRenderType particlerendertype : this.particles.keySet()) { // Neo: allow custom IParticleRenderType's
-         if (particlerendertype == ParticleRenderType.NO_RENDER/* || !renderTypePredicate.test(particlerendertype)*/) continue;
+      for (ParticleRenderTypeOld particlerendertype : this.particles.keySet()) { // Neo: allow custom IParticleRenderTypeOld's
+         //if (particlerendertype == ParticleRenderTypeOld.NO_RENDER/* || !renderTypePredicate.test(particlerendertype)*/) continue;
          if (pickupParticleMode) {
             if (particlerendertype != ParticleRotating.TERRAIN_SHEET_TRANSLUCENT_NO_FACE_CULL) continue;
          } else {
             if (particlerendertype == ParticleRotating.TERRAIN_SHEET_TRANSLUCENT_NO_FACE_CULL) continue;
          }
-         Queue<Particle> queue = this.particles.get(particlerendertype);
+         Queue<ParticleRotating> queue = this.particles.get(particlerendertype);
          if (queue != null && !queue.isEmpty()) {
             RenderSystem.setShader(CoreShaders.PARTICLE);
             Tesselator tesselator = Tesselator.getInstance();

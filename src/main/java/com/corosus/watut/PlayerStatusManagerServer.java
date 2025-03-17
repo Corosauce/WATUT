@@ -7,6 +7,7 @@ import com.corosus.watut.config.ConfigServerSyncHelper;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
@@ -142,7 +143,17 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         boolean singleplayerTesting = false;
         if (singleplayerTesting || level.getNearestPlayer(fromX, fromY, fromZ, ConfigServerControlledSyncedToClient.distanceRequiredToShowGUIInfo, (entity) -> entity != player) != null) {
             CompoundTag data = new CompoundTag();
-            data.put(WatutNetworking.NBTDataItemTransferItemStack, itemStack.save(level.registryAccess()));
+            Tag itemData = itemStack.save(level.registryAccess());
+            /**
+             * If the itemstack contains too much data, play it safe and convert it to a simple version, might cause incorrect appearance issues
+             */
+            CULog.dbg("size " + itemData.sizeInBytes());
+            if (itemData.sizeInBytes() > 31000) {
+                CULog.dbg("itemstack too large for sending, using simple version");
+                itemStack = getSimpleItemStack(itemStack);
+                itemData = itemStack.save(level.registryAccess());
+            }
+            data.put(WatutNetworking.NBTDataItemTransferItemStack, itemData);
             data.putFloat(WatutNetworking.NBTDataItemTransferFromX, fromX);
             data.putFloat(WatutNetworking.NBTDataItemTransferFromY, fromY);
             data.putFloat(WatutNetworking.NBTDataItemTransferFromZ, fromZ);
@@ -368,17 +379,17 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
 
             if (!ItemStack.isSameItem(stackPre, stackPost)) {
                 if (stackPre.isEmpty() && !stackPost.isEmpty()) {
-                    addedItems.add(getSimpleItemStack(stackPost));
+                    addedItems.add(stackPost.copy());
                 } else if (!stackPre.isEmpty() && stackPost.isEmpty()) {
-                    removedItems.add(getSimpleItemStack(stackPre));
+                    removedItems.add(stackPre.copy());
                 }
             } else {
                 if (stackPre.getCount() > stackPost.getCount()) {
-                    ItemStack stack = getSimpleItemStack(stackPre);
+                    ItemStack stack = stackPre.copy();
                     stack.setCount(stackPre.getCount() - stackPost.getCount());
                     removedItems.add(stack);
                 } else if (stackPre.getCount() < stackPost.getCount()) {
-                    ItemStack stack = getSimpleItemStack(stackPost);
+                    ItemStack stack = stackPost.copy();
                     stack.setCount(stackPost.getCount() - stackPre.getCount());
                     addedItems.add(stack);
                 }

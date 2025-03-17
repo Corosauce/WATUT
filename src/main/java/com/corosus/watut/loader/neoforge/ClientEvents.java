@@ -1,12 +1,12 @@
 package com.corosus.watut.loader.neoforge;
 
 import com.corosus.watut.ParticleRegistry;
+import com.corosus.watut.PlayerStatusManagerClient;
+import com.corosus.watut.ShaderReloader;
 import com.corosus.watut.WatutMod;
 import com.corosus.watut.command.CommandWatutReloadJSON;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
-import net.neoforged.neoforge.client.event.TextureAtlasStitchedEvent;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.neoforge.client.event.*;
 
 public class ClientEvents {
 
@@ -28,6 +28,11 @@ public class ClientEvents {
 
     public void onKey(InputEvent.Key event) {
         WatutMod.getPlayerStatusManagerClient().onKey();
+    }
+
+    public void reload(AddClientReloadListenersEvent event) {
+        event.addListener(ResourceLocation.parse(WatutMod.MODID + ":particles"), PlayerStatusManagerClient.getParticleEngine());
+        event.addListener(ResourceLocation.parse(WatutMod.MODID + ":shaders"), new ShaderReloader());
     }
 
 }

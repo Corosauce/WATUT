@@ -1,5 +1,6 @@
 package com.corosus.watut.particle;
 
+import com.corosus.watut.client.ParticleRenderTypeOld;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import com.mojang.math.Axis;
@@ -30,7 +31,7 @@ public abstract class ParticleRotating extends TextureSheetParticle {
     public int despawnCountdown = 40;
 
 
-    public static ParticleRenderType CUSTOM = new ParticleRenderType() {
+    public static ParticleRenderTypeOld CUSTOM = new ParticleRenderTypeOld() {
         @Override
         public @Nullable BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
             RenderSystem.depthMask(true);
@@ -48,7 +49,7 @@ public abstract class ParticleRotating extends TextureSheetParticle {
         }
     };
 
-    public static ParticleRenderType PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL = new ParticleRenderType() {
+    public static ParticleRenderTypeOld PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL = new ParticleRenderTypeOld() {
         public @Nullable BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
             RenderSystem.depthMask(true);
             RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
@@ -64,7 +65,7 @@ public abstract class ParticleRotating extends TextureSheetParticle {
         }
     };
 
-    public static ParticleRenderType TERRAIN_SHEET_TRANSLUCENT_NO_FACE_CULL = new ParticleRenderType() {
+    public static ParticleRenderTypeOld TERRAIN_SHEET_TRANSLUCENT_NO_FACE_CULL = new ParticleRenderTypeOld() {
         public @Nullable BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
             RenderSystem.depthMask(true);
             RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_BLOCKS);
@@ -117,6 +118,10 @@ public abstract class ParticleRotating extends TextureSheetParticle {
     }
 
     public ParticleRenderType getRenderType() {
+        return null;
+    }
+
+    public ParticleRenderTypeOld getRenderTypeOld() {
         return PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL;
     }
 
