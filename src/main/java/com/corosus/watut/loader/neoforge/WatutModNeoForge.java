@@ -41,8 +41,6 @@ public class WatutModNeoForge extends WatutMod {
             NeoForge.EVENT_BUS.addListener(clientEvents::onKey);
             NeoForge.EVENT_BUS.addListener(clientEvents::onMouse);
 
-            ((ReloadableResourceManager)Minecraft.getInstance().getResourceManager()).registerReloadListener(new ShaderReloader());
-
             //container.getEventBus().register(new RegisterShadersEvent());
             /*ShaderRegistry.instance = new ShaderRegistry();
             container.getEventBus().addListener(ShaderRegistry::reload);*/

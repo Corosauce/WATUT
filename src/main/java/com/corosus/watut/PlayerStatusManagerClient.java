@@ -1,10 +1,13 @@
 package com.corosus.watut;
 
+import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.client.CustomParticleEngine;
 import com.corosus.watut.client.screen.RenderHelper;
-import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.client.screen.ScreenParticleRenderer;
-import com.corosus.watut.config.*;
+import com.corosus.watut.config.ConfigClient;
+import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
+import com.corosus.watut.config.ConfigServerSyncHelper;
+import com.corosus.watut.config.CustomArmCorrections;
 import com.corosus.watut.math.Lerpables;
 import com.corosus.watut.particle.*;
 import com.ibm.icu.impl.Pair;
@@ -21,8 +24,6 @@ import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
-import net.minecraft.client.renderer.ShaderProgram;
-import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.nbt.CompoundTag;
@@ -78,6 +79,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         if (customParticleEngine == null) {
             customParticleEngine = new CustomParticleEngine(Minecraft.getInstance().level, Minecraft.getInstance().getTextureManager());
             ((ReloadableResourceManager)Minecraft.getInstance().getResourceManager()).registerReloadListener(customParticleEngine);
+            ((ReloadableResourceManager) Minecraft.getInstance().getResourceManager()).registerReloadListener(new ShaderReloader());
         }
         return customParticleEngine;
     }

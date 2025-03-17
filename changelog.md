@@ -1,1 +1,1 @@
-Update v1.2.3 to 1.21.3
+Fix resource reloading breaking dynamic gui rendering for fabric
