@@ -1,13 +1,19 @@
 package com.corosus.watut.loader.neoforge;
 
 
+import com.corosus.watut.ShaderRegistry;
+import com.corosus.watut.ShaderReloader;
 import com.corosus.watut.WatutMod;
+import net.minecraft.client.Minecraft;
+import net.minecraft.server.packs.resources.ReloadableResourceManager;
 import net.minecraft.server.players.PlayerList;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -35,6 +41,14 @@ public class WatutModNeoForge extends WatutMod {
             NeoForge.EVENT_BUS.addListener(clientEvents::onKey);
             NeoForge.EVENT_BUS.addListener(clientEvents::onMouse);
 
+            ((ReloadableResourceManager)Minecraft.getInstance().getResourceManager()).registerReloadListener(new ShaderReloader());
+
+            //container.getEventBus().register(new RegisterShadersEvent());
+            /*ShaderRegistry.instance = new ShaderRegistry();
+            container.getEventBus().addListener(ShaderRegistry::reload);*/
+            //container.getEventBus().addListener(ShaderRegistry.instance);
+
+            ShaderRegistry.init();
         }
     }
 

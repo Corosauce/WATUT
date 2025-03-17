@@ -18,7 +18,7 @@ public class ScreenRenderBackground {
             cancellable = true
     )
     private void renderBackground(CallbackInfo ci) {
-        if (ScreenParticleRenderer.isRenderingParticleGUI) {
+        if (ScreenParticleRenderer.isRenderingParticleGUI2) {
             ci.cancel();
         }
     }
@@ -54,7 +54,7 @@ public class ScreenRenderBackground {
             cancellable = true
     )
     private void renderBackground3(CallbackInfo ci) {
-        if (ScreenParticleRenderer.isRenderingParticleGUI) {
+        if (ScreenParticleRenderer.isRenderingParticleGUI2) {
             ci.cancel();
         }
     }

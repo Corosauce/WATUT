@@ -4,8 +4,8 @@
         "srcrgb": "srcalpha",
         "dstrgb": "1-srcalpha"
     },
-    "vertex": "watut:particle",
-    "fragment": "watut:particle",
+    "vertex": "watut:core/particle",
+    "fragment": "watut:core/particle",
     "attributes": [
         "Position",
         "UV0",

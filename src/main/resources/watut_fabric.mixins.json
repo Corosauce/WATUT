@@ -13,10 +13,11 @@
     "client.MinecraftTick",
     "client.MouseHandlerOnPress",
     "client.TextureAtlasUpload",
-    "client.PostChainResize",
-    "client.GameRendererReloadShaders",
+    "client.GameRendererResize",
     "client.ParticleEngineMixinFabric",
-    "client.NativeImageAccessor"
+    "client.NativeImageAccessor",
+    "client.RenderTargetBindWrite",
+    "client.RenderStateShardSetup"
   ],
   "mixins": [
     "PlayerLoggedIn",

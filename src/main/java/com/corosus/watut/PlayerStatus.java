@@ -1,5 +1,6 @@
 package com.corosus.watut;
 
+import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.client.screen.ScreenData;
 import com.corosus.watut.math.Lerpables;
 import net.minecraft.client.particle.Particle;
@@ -374,6 +375,7 @@ public class PlayerStatus {
 
     public ScreenData getScreenData() {
         if (screenData == null) {
+            CULog.dbg("new screen data");
             screenData = new ScreenData();
         }
         return screenData;

@@ -8,6 +8,7 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.client.renderer.CoreShaders;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
@@ -46,17 +47,19 @@ public class ScreenData {
     //since gui states are kinda old system and require specifically adding support for a screen, we use this instead to track true differences now
     private Screen lastScreen;
 
+    public static boolean testing = false;
+
     public void initClient() {
 
         this.particleRenderType = new ParticleRenderType() {
             public @Nullable BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
                 //oculus breaks our shader for some reason
-                if (RenderHelper.isShadersEnabled()) {
-                    RenderSystem.setShader(GameRenderer::getParticleShader);
+                if (RenderHelper.isShadersEnabled() || testing) {
+                    RenderSystem.setShader(CoreShaders.PARTICLE);
                 } else {
-                    RenderSystem.setShader(() -> PlayerStatusManagerClient.particle);
+                    RenderSystem.setShader(PlayerStatusManagerClient.particle.getProgram());
                 }
-                RenderSystem._setShaderTexture(0, getImage().getId());
+                RenderSystem.setShaderTexture(0, getImage().getId());
 
                 RenderSystem.depthMask(true);
                 RenderSystem.enableBlend();

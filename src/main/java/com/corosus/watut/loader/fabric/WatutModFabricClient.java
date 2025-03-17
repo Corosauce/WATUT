@@ -2,6 +2,7 @@ package com.corosus.watut.loader.fabric;
 
 import com.corosus.coroutil.config.ConfigCoroUtil;
 import com.corosus.coroutil.util.CULog;
+import com.corosus.watut.ShaderRegistry;
 import com.corosus.watut.WatutMod;
 import com.corosus.watut.WatutNetworking;
 import com.corosus.watut.network.PacketNBTFromServer;
@@ -68,6 +69,8 @@ public class WatutModFabricClient implements ClientModInitializer {
 		render_order.addAll(ParticleEngine.RENDER_ORDER);
 		render_order.add(ParticleRotating.PARTICLE_SHEET_TRANSLUCENT_NO_FACE_CULL);
 		ParticleEngine.RENDER_ORDER = render_order;
+
+		ShaderRegistry.init();
 	}
 
 }

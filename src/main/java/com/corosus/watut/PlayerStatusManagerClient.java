@@ -21,6 +21,9 @@ import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.renderer.ShaderProgram;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.packs.resources.ReloadableResourceManager;
@@ -64,10 +67,10 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     private boolean wasMousePressed = false;
     private int mousePressedCountdown = 0;
 
-    public static ShaderInstanceBlur positionTexBlur;
-    public static ShaderInstanceBlur positionTexBlurHorizontal;
-    public static ShaderInstanceBlur positionTexBlurVertical;
-    public static ShaderInstanceBlur particle;
+    public static ShaderProgramBlur positionTexBlur;
+    public static ShaderProgramBlur positionTexBlurHorizontal;
+    public static ShaderProgramBlur positionTexBlurVertical;
+    public static ShaderProgramBlur particle;
 
     private static CustomParticleEngine customParticleEngine;
 
@@ -176,7 +179,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             if (mc.screen instanceof ChatScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.CHAT_SCREEN);
                 //sendGuiStatus(PlayerStatus.PlayerGuiState.ENCHANTING_TABLE);
-            } else if (mc.screen instanceof EffectRenderingInventoryScreen) {
+            } else if (mc.screen instanceof InventoryScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.INVENTORY);
             } else if (mc.screen instanceof CraftingScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.CRAFTING);
@@ -565,7 +568,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 ParticleRotating particle = null;
                 Vec3 posParticle = getParticlePosition(player);
 
-                boolean useChatIdleForTestingOtherGUIs = true;
+                boolean useChatIdleForTestingOtherGUIs = false;
                 boolean newRender = RenderHelper.useDynamicGUISystem() && !playerStatus.isPlayerGuiDontSendDetailedGUIInfo();
 
                 if (ConfigClient.showPlayerActiveChatGui && ConfigServerControlledSyncedToClient.showPlayerActiveChatGui) {
@@ -758,17 +761,32 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             TextureAtlasSprite sprite = ParticleRegistry.idle.getSprite();
             int x = (int) (Minecraft.getInstance().particleEngine.textureAtlas.width * sprite.getU0());
             int y = (int) (Minecraft.getInstance().particleEngine.textureAtlas.height * sprite.getV0());
-            pGuiGraphics.blit(sprite.atlasLocation(), p_282801_ + p_281809_ - 11, pY, x, y, 10, 8, Minecraft.getInstance().particleEngine.textureAtlas.width, Minecraft.getInstance().particleEngine.textureAtlas.height);
+            pGuiGraphics.blit(net.minecraft.client.renderer.RenderType::guiTextured, sprite.atlasLocation(), p_282801_ + p_281809_ - 11, pY, x, y, 10, 8, Minecraft.getInstance().particleEngine.textureAtlas.width, Minecraft.getInstance().particleEngine.textureAtlas.height);
             pGuiGraphics.pose().popPose();
             return true;
         }
         return false;
     }
 
-    public void setupRotationsHook(EntityModel model, Entity pEntity, float pLimbSwing, float pLimbSwingAmount, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch) {
+    public void setupRotationsHook(EntityModel model, PlayerRenderState renderState) {
+        //CULog.dbg("name: " + renderState.id);
+        //LivingEntityRenderer l;
+        //renderState.id;
+        Entity ent = Minecraft.getInstance().level.getEntity(renderState.id);
+        if (ent == null) {
+            return;
+        }
+        Entity pEntity = ent;
+        float pAgeInTicks = renderState.ageInTicks;
+        /*if (ent != null) {
+            CULog.dbg("? " + renderState.id + " - " + ent.getStringUUID());
+        } else {
+            CULog.dbg("nope " + renderState.id);
+        }*/
+
         if (!ConfigClient.showPlayerAnimations || !ConfigServerControlledSyncedToClient.showPlayerAnimations) return;
         Minecraft mc = Minecraft.getInstance();
-        boolean inOwnInventory = pEntity == mc.player && (mc.screen instanceof EffectRenderingInventoryScreen) && pEntity.isAlive();
+        boolean inOwnInventory = pEntity == mc.player && (mc.screen instanceof InventoryScreen) && pEntity.isAlive();
         //boolean isRealPlayer = pEntity.tickCount > 10;
         boolean isRealPlayer = pEntity.level().players().contains(pEntity);
         if (model instanceof PlayerModel playerModel && pEntity instanceof Player player && isRealPlayer && ((!inOwnInventory && shouldAnimate((Player) pEntity)) || singleplayerTesting)) {
@@ -830,42 +848,42 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 playerModel.head.xRot = Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().head.xRot, playerStatus.getLerpTarget().head.xRot);
                 playerModel.head.zRot = Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().head.zRot, playerStatus.getLerpTarget().head.zRot);
 
-                playerModel.rightSleeve.yRot = playerModel.rightArm.yRot;
+                /*playerModel.rightSleeve.yRot = playerModel.rightArm.yRot;
                 playerModel.rightSleeve.xRot = playerModel.rightArm.xRot;
                 playerModel.rightSleeve.x = playerModel.rightArm.x;
                 playerModel.rightSleeve.y = playerModel.rightArm.y;
-                playerModel.rightSleeve.z = playerModel.rightArm.z;
+                playerModel.rightSleeve.z = playerModel.rightArm.z;*/
 
-                playerModel.leftSleeve.yRot = playerModel.leftArm.yRot;
-                playerModel.leftSleeve.xRot = playerModel.leftArm.xRot;
+                /*playerModel.leftSleeve.yRot = playerModel.leftArm.yRot;
+                playerModel.leftSleeve.xRot = playerModel.leftArm.xRot;*/
 
-                playerModel.hat.xRot = playerModel.head.xRot;
-                playerModel.hat.yRot = playerModel.head.yRot;
+                //playerModel.hat.xRot = playerModel.head.xRot;
+                //playerModel.hat.yRot = playerModel.head.yRot;
 
                 if (ConfigClient.showPlayerAnimation_Typing && ConfigServerControlledSyncedToClient.showPlayerAnimation_Typing && playerStatus.getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_TYPING) {
                     float amp = playerStatus.getTypingAmplifierSmooth();
                     float typeAngle = (float) ((Math.toRadians(Math.sin((pAgeInTicks * 1F) % 360) * 15 * amp)));
                     float typeAngle2 = (float) ((Math.toRadians(-Math.sin((pAgeInTicks * 1F) % 360) * 15 * amp)));
                     if (adjRightArm.x != Float.MAX_VALUE) playerModel.rightArm.xRot -= typeAngle;
-                    if (adjRightArm.x != Float.MAX_VALUE) playerModel.rightSleeve.xRot -= typeAngle;
+                    //if (adjRightArm.x != Float.MAX_VALUE) playerModel.rightSleeve.xRot -= typeAngle;
                     if (adjLeftArm.x != Float.MAX_VALUE) playerModel.leftArm.xRot -= typeAngle2;
-                    if (adjLeftArm.x != Float.MAX_VALUE) playerModel.leftSleeve.xRot -= typeAngle2;
+                    //if (adjLeftArm.x != Float.MAX_VALUE) playerModel.leftSleeve.xRot -= typeAngle2;
                 }
 
                 if (adjRightArm.x != Float.MAX_VALUE) playerModel.rightArm.xRot -= adjRightArm.x;
-                if (adjRightArm.x != Float.MAX_VALUE) playerModel.rightSleeve.xRot -= adjRightArm.x;
+                //if (adjRightArm.x != Float.MAX_VALUE) playerModel.rightSleeve.xRot -= adjRightArm.x;
                 if (adjLeftArm.x != Float.MAX_VALUE) playerModel.leftArm.xRot -= adjLeftArm.x;
-                if (adjLeftArm.x != Float.MAX_VALUE) playerModel.leftSleeve.xRot -= adjLeftArm.x;
+                //if (adjLeftArm.x != Float.MAX_VALUE) playerModel.leftSleeve.xRot -= adjLeftArm.x;
 
                 if (adjRightArm.y != Float.MAX_VALUE) playerModel.rightArm.yRot -= adjRightArm.y;
-                if (adjRightArm.y != Float.MAX_VALUE) playerModel.rightSleeve.yRot -= adjRightArm.y;
+                //if (adjRightArm.y != Float.MAX_VALUE) playerModel.rightSleeve.yRot -= adjRightArm.y;
                 if (adjLeftArm.y != Float.MAX_VALUE) playerModel.leftArm.yRot -= adjLeftArm.y;
-                if (adjLeftArm.y != Float.MAX_VALUE) playerModel.leftSleeve.yRot -= adjLeftArm.y;
+                //if (adjLeftArm.y != Float.MAX_VALUE) playerModel.leftSleeve.yRot -= adjLeftArm.y;
 
                 if (adjRightArm.z != Float.MAX_VALUE) playerModel.rightArm.zRot -= adjRightArm.z;
-                if (adjRightArm.z != Float.MAX_VALUE) playerModel.rightSleeve.zRot -= adjRightArm.z;
+                //if (adjRightArm.z != Float.MAX_VALUE) playerModel.rightSleeve.zRot -= adjRightArm.z;
                 if (adjLeftArm.z != Float.MAX_VALUE) playerModel.leftArm.zRot -= adjLeftArm.z;
-                if (adjLeftArm.z != Float.MAX_VALUE) playerModel.leftSleeve.zRot -= adjLeftArm.z;
+                //if (adjLeftArm.z != Float.MAX_VALUE) playerModel.leftSleeve.zRot -= adjLeftArm.z;
 
                 if (ConfigClient.showPlayerAnimation_Idle && ConfigServerControlledSyncedToClient.showPlayerAnimation_Idle && playerStatus.isIdle()) {
                     float angle = (float) ((Math.toRadians(Math.sin((pAgeInTicks * 0.05F) % 360) * 15)));
@@ -874,10 +892,14 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     playerModel.head.zRot += angle;
                 }
             }
-            playerModel.hat.xRot = playerModel.head.xRot;
+            /*playerModel.hat.xRot = playerModel.head.xRot;
             playerModel.hat.yRot = playerModel.head.yRot;
-            playerModel.hat.zRot = playerModel.head.zRot;
+            playerModel.hat.zRot = playerModel.head.zRot;*/
         }
+    }
+
+    public void setupRotationsHook(EntityModel model, Entity pEntity, float pLimbSwing, float pLimbSwingAmount, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch) {
+
     }
 
     public void setPoseTarget(UUID uuid, boolean becauseMousePress) {

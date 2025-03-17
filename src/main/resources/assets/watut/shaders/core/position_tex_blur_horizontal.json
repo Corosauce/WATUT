@@ -4,8 +4,8 @@
         "srcrgb": "srcalpha",
         "dstrgb": "1-srcalpha"
     },
-    "vertex": "watut:position_tex_blur_horizontal",
-    "fragment": "watut:position_tex_blur_horizontal",
+    "vertex": "watut:core/position_tex_blur_horizontal",
+    "fragment": "watut:core/position_tex_blur_horizontal",
     "attributes": [
         "Position",
         "UV0"

@@ -9,10 +9,11 @@
     "client.GuiRender",
     "client.ScreenRenderBackground",
     "client.ScreenRenderWithTooltip",
-    "client.PostChainResize",
-    "client.GameRendererReloadShaders",
+    "client.GameRendererResize",
     "client.ParticleEngineMixin",
-    "client.NativeImageAccessor"
+    "client.NativeImageAccessor",
+    "client.RenderTargetBindWrite",
+    "client.RenderStateShardSetup"
   ],
   "mixins": [
     "AbstractContainerMenuDoClick",

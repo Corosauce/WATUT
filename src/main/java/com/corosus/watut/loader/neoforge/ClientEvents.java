@@ -22,7 +22,7 @@ public class ClientEvents {
         CommandWatutReloadJSON.register(event.getDispatcher());
     }
 
-    public void onMouse(InputEvent.MouseButton.Post event) {
+    public void onMouse(InputEvent.MouseButton.Pre event) {
         WatutMod.getPlayerStatusManagerClient().onMouse(event.getAction() != 0);
     }
 

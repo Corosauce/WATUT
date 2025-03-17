@@ -8,6 +8,7 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.CoreShaders;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
 import org.joml.Matrix4f;
@@ -55,7 +56,7 @@ public class ScreenParticleRenderer {
         height = mc.getWindow().getHeight();
         mainRenderTarget = new MainTarget(width, height);
         mainRenderTarget.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
-        mainRenderTarget.clear(Minecraft.ON_OSX);
+        mainRenderTarget.clear();
 
         if (ConfigServerControlledSyncedToClient.dynamicGuiShowClientsEntireScreen) {
             widthScaledDown = width;
@@ -67,19 +68,19 @@ public class ScreenParticleRenderer {
 
         mainRenderTargetScaledDown = new MainTarget(widthScaledDown, heightScaledDown);
         mainRenderTargetScaledDown.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
-        mainRenderTargetScaledDown.clear(Minecraft.ON_OSX);
+        mainRenderTargetScaledDown.clear();
     }
 
     public synchronized void resize(int width, int height) {
         this.width = width;
         this.height = height;
         checkSetup();
-        mainRenderTarget.resize(width, height, Minecraft.ON_OSX);
+        mainRenderTarget.resize(width, height);
         resizeScaledDown(width, height);
     }
 
     public void resizeScaledDown(int width, int height) {
-
+        checkSetup();
         int widthToUse = defaultWidthScaledDown;
         int heightToUse = defaultHeightScaledDown;
         if (ConfigServerControlledSyncedToClient.dynamicGuiShowClientsEntireScreen) {
@@ -93,7 +94,7 @@ public class ScreenParticleRenderer {
         CULog.dbg("resizeScaledDown to " + widthToUse + " " + heightToUse);
 
         if (mainRenderTargetScaledDown.width != widthToUse || mainRenderTargetScaledDown.height != heightToUse) {
-            mainRenderTargetScaledDown.resize(widthToUse, heightToUse, Minecraft.ON_OSX);
+            mainRenderTargetScaledDown.resize(widthToUse, heightToUse);
         }
     }
 
@@ -126,8 +127,8 @@ public class ScreenParticleRenderer {
     }
 
     public void innerBlitCustomShader(PoseStack pose, int p_281399_, int p_283222_, int p_283615_, int p_283430_, int p_281729_, float p_283247_, float p_282598_, float p_282883_, float p_283017_) {
-        RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
-        RenderSystem.setShader(() -> PlayerStatusManagerClient.positionTexBlur);
+        RenderSystem.setShaderTexture(0, mainRenderTarget.getColorTextureId());
+        RenderSystem.setShader(PlayerStatusManagerClient.positionTexBlur.getProgram());
 
         if (PlayerStatusManagerClient.positionTexBlur == null) {
             return;
@@ -160,8 +161,8 @@ public class ScreenParticleRenderer {
 
     public void innerBlitCustomShader2(int textureID, PoseStack pose, int p_281399_, int p_283222_, int p_283615_, int p_283430_, int p_281729_, float p_283247_, float p_282598_, float p_282883_, float p_283017_) {
         //RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
-        RenderSystem._setShaderTexture(0, textureID);
-        RenderSystem.setShader(() -> PlayerStatusManagerClient.positionTexBlur);
+        RenderSystem.setShaderTexture(0, mainRenderTarget.getColorTextureId());
+        RenderSystem.setShader(PlayerStatusManagerClient.positionTexBlur.getProgram());
 
         if (PlayerStatusManagerClient.positionTexBlur == null) {
             return;
@@ -201,10 +202,10 @@ public class ScreenParticleRenderer {
             GlStateManager._bindTexture(test);
             RenderSystem.setShaderTexture(0, test);*/
         } else {
-            RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
+            RenderSystem.setShaderTexture(0, mainRenderTarget.getColorTextureId());
         }
         //RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
-        RenderSystem.setShader(() -> PlayerStatusManagerClient.positionTexBlurHorizontal);
+        RenderSystem.setShader(PlayerStatusManagerClient.positionTexBlurHorizontal.getProgram());
 
         if (PlayerStatusManagerClient.positionTexBlurHorizontal == null) {
             return;
@@ -241,9 +242,9 @@ public class ScreenParticleRenderer {
     }
 
     public void innerBlitCustomShaderVertical(PoseStack pose, int p_281399_, int p_283222_, int p_283615_, int p_283430_, int p_281729_, float p_283247_, float p_282598_, float p_282883_, float p_283017_) {
-        RenderSystem._setShaderTexture(0, mainRenderTargetScaledDown.getColorTextureId());
+        RenderSystem.setShaderTexture(0, mainRenderTargetScaledDown.getColorTextureId());
         //RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
-        RenderSystem.setShader(() -> PlayerStatusManagerClient.positionTexBlurVertical);
+        RenderSystem.setShader(PlayerStatusManagerClient.positionTexBlurVertical.getProgram());
 
         if (PlayerStatusManagerClient.positionTexBlurVertical == null) {
             return;
@@ -260,7 +261,7 @@ public class ScreenParticleRenderer {
         }
 
         if (PlayerStatusManagerClient.positionTexBlurVertical.BLUR_LEVEL != null) {
-            PlayerStatusManagerClient.positionTexBlurVertical.BLUR_LEVEL.set((float)ConfigServerControlledSyncedToClient.dynamicGuiBlurLevel);
+            PlayerStatusManagerClient.positionTexBlurVertical.BLUR_LEVEL.set((float)(RenderHelper.xaeroWorldMapTextureID != -1 ? 0 : ConfigServerControlledSyncedToClient.dynamicGuiBlurLevel));
         }
 
         Matrix4f matrix4f = pose.last().pose();
@@ -283,7 +284,8 @@ public class ScreenParticleRenderer {
     //copy of GuiGraphics.innerBlit with PoseStack added
     public void innerBlit(PoseStack pose, ResourceLocation atlasLocation, int x1, int x2, int y1, int y2, int blitOffset, float minU, float maxU, float minV, float maxV) {
         RenderSystem.setShaderTexture(0, atlasLocation);
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        //RenderSystem.setShaderTexture(0, mainRenderTarget.getColorTextureId());
+        RenderSystem.setShader(CoreShaders.POSITION_TEX);
         Matrix4f matrix4f = pose.last().pose();
         BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
         //bufferbuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
