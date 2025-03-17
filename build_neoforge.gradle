@@ -133,7 +133,7 @@ dependencies {
 
     implementation ("com.corosus.coroutil:coroutil-neoforge:${project.minecraft_version}.0-${project.coroutil_version}")
 
-    implementation ("curse.maven:journeymap-32274:5950315")
+    //implementation ("curse.maven:journeymap-32274:5950315")
 
     //implementation("curse.maven:forge-config-api-port-fabric-547434:5577288")
     implementation 'com.electronwill.night-config:core:3.6.5'
@@ -257,16 +257,16 @@ publisher {
 
     // Fancy display name for the upload.
     // Will default to the project version if not set
-    setDisplayName("${project.mod_id}-fabric-${project.mod_version}.jar")
+    setDisplayName("${project.mod_id}-neoforge-${project.mod_version}.jar")
 
     // The supported game versions
-    setGameVersions("${project.minecraft_version}")
+    setGameVersions(["${project.minecraft_version}", "1.21.1"])
 
     // The modloaders your upload supports.
     // This can also be an Enum from ModLoader,
     // like setLoaders(ModLoader.FABRIC, ModLoader.FORGE)
     //setLoaders("forge", "fabric")
-    setLoaders("fabric")
+    setLoaders("neoforge")
 
     // The new Curseforge Environment tag. Optional
     // Valid values are "server", "client" or "both"
@@ -283,7 +283,7 @@ publisher {
     // If this is a task, the task specified will be executed before publishing
     //setArtifact(jar)
     //setArtifact("build/libs/watut-fabric-1.20.1-1.2.1.jar")
-    setArtifact("build/libs/${project.mod_id}-fabric-${project.mod_version}.jar")
+    setArtifact("build/libs/${project.mod_id}-neoforge-${project.mod_version}.jar")
 
     // Override the artifact uploaded to modrinth
     // setPlatformArtifact(Platform.Modrinth, "build/libs/mymod.jar")

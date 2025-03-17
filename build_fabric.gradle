@@ -177,7 +177,7 @@ publisher {
 	setDisplayName("${project.mod_id}-fabric-${project.mod_version}.jar")
 
 	// The supported game versions
-	setGameVersions("${project.minecraft_version}")
+	setGameVersions(["${project.minecraft_version}", "1.21.1"])
 
 	// The modloaders your upload supports.
 	// This can also be an Enum from ModLoader,

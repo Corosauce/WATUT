@@ -33,7 +33,7 @@ void main() {
             yy=y*y;
             if (xx+yy<=rr) {
                 w=w0*exp((-xx-yy)/(2.0*rr));
-                col+=texture2D(Sampler0,p)*w;
+                col+=texture(Sampler0,p)*w;
             }
         }
     }
