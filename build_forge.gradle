@@ -303,7 +303,7 @@ publisher {
 
     // Upload the release, but keep it "private" until you are ready
     // Unreleased feature on CurseForge, working on Modrinth
-    setIsManualRelease(true)
+    setIsManualRelease(false)
 
     // The file to be uploaded. This can be a file, task, or string.
     // setArtifact("build/libs/mymod.jar")
