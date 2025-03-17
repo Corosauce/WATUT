@@ -13,10 +13,7 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
-import net.minecraft.client.gui.screens.ChatScreen;
-import net.minecraft.client.gui.screens.DeathScreen;
-import net.minecraft.client.gui.screens.PauseScreen;
-import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.*;
 import net.minecraft.client.gui.screens.inventory.*;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.PlayerModel;
@@ -133,9 +130,15 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             gameTime = Minecraft.getInstance().level.getGameTime();
         }
 
+        //if (Minecraft.getInstance().screen != null) System.out.println(Minecraft.getInstance().screen);
+
         if (/*!selfPlayerStatus.isIdle()*/selfPlayerStatus.getTicksSinceLastAction() < (20 * 5)) {
             if (selfPlayerStatus.getScreenData().getGameTicksSinceLastScreenSend() + ConfigServerControlledSyncedToClient.dynamicGuiTickSendRateOfGUIUpdates < gameTime) {
-                if (Minecraft.getInstance().screen != null && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
+                if (Minecraft.getInstance().screen != null
+                        && !(Minecraft.getInstance().screen instanceof LevelLoadingScreen)
+                        && !(Minecraft.getInstance().screen instanceof ReceivingLevelScreen)
+                        && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE
+                        && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
                     //System.out.println("? " + selfPlayerStatus.getScreenData().getLastScreen());
                     if (!ConfigServerControlledSyncedToClient.dynamicGuiDontSendConstantGUIUpdates || selfPlayerStatus.getScreenData().getLastScreen() != Minecraft.getInstance().screen) {
                         selfPlayerStatus.getScreenData().setGameTicksSinceLastScreenSend(gameTime);
