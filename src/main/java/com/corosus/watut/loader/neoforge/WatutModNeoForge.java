@@ -8,6 +8,7 @@ import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.client.ClientHooks;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -69,5 +70,10 @@ public class WatutModNeoForge extends WatutMod {
 
     public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
         WatutMod.getPlayerStatusManagerServer().playerLoggedIn(event.getEntity());
+    }
+
+    @Override
+    public float getFarPlane() {
+        return ClientHooks.getGuiFarPlane();
     }
 }

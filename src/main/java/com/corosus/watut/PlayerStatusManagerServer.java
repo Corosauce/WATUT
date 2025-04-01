@@ -72,6 +72,10 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         //update active snapshot with latest data
         getStatus(player).getNbtCache().merge(data);
 
+        if (data.contains(WatutNetworking.NBTDataPlayerScreenCompressedPixelData)) {
+            //CULog.dbg("server side receive packet index " + data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex) + " of " + data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount));
+        }
+
         if (data.contains(WatutNetworking.NBTDataPlayerGuiStatus) || data.contains(WatutNetworking.NBTDataPlayerIdleTicks) || data.contains(WatutNetworking.NBTDataPlayerChatStatus)/* || data.contains(WatutNetworking.NBTDataPlayerScreenCompressedPixelData)*/) {
             WatutNetworking.instance().serverSendToClientAll(data);
         } else {

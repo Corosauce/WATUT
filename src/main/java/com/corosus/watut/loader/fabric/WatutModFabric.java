@@ -62,4 +62,9 @@ public class WatutModFabric extends WatutMod implements ModInitializer {
 	public boolean isModInstalled(String modID) {
 		return FabricLoader.getInstance().isModLoaded(modID);
 	}
+
+	@Override
+	public float getFarPlane() {
+		return 21000.0F;
+	}
 }

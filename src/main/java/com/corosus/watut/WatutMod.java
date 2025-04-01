@@ -90,4 +90,6 @@ public abstract class WatutMod
     }
 
     public abstract boolean isModInstalled(String modID);
+
+    public abstract float getFarPlane();
 }

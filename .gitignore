@@ -25,6 +25,7 @@ build.gradle
 # other
 eclipse
 run
+runServer
 
 # java
 *.class

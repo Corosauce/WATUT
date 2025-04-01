@@ -241,7 +241,7 @@ public class RenderHelper {
 
     public static void bindVanillaRenderTargetAndSetupProjectionMatrix() {
         Window window = Minecraft.getInstance().getWindow();
-        Matrix4f matrix4f = (new Matrix4f()).setOrtho(0.0F, (float)((double)window.getWidth() / window.getGuiScale()), (float)((double)window.getHeight() / window.getGuiScale()), 0.0F, 1000.0F, 21000.0F/*net.minecraftforge.client.ForgeHooksClient.getGuiFarPlane()*/);
+        Matrix4f matrix4f = (new Matrix4f()).setOrtho(0.0F, (float)((double)window.getWidth() / window.getGuiScale()), (float)((double)window.getHeight() / window.getGuiScale()), 0.0F, 1000.0F, WatutMod.instance().getFarPlane());
         RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
 
         Minecraft.getInstance().getMainRenderTarget().bindWrite(true);

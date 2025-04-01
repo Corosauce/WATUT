@@ -12,15 +12,13 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
-import net.minecraft.client.gui.screens.ChatScreen;
-import net.minecraft.client.gui.screens.DeathScreen;
-import net.minecraft.client.gui.screens.PauseScreen;
-import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.*;
 import net.minecraft.client.gui.screens.inventory.*;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.packs.resources.ReloadableResourceManager;
@@ -47,8 +45,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     //idle state tracking and comparison when it changes from selfPlayer previous
     //remote use case:
     //idle state pose setup when it changes from NON selfPlayer previous, setting up lerp
-    private PlayerStatus selfPlayerStatus = new PlayerStatus(PlayerStatus.PlayerGuiState.NONE);
-    private PlayerStatus selfPlayerStatusPrev = new PlayerStatus(PlayerStatus.PlayerGuiState.NONE);
+    private PlayerStatus selfPlayerStatus = new PlayerStatus(PlayerStatus.PlayerGuiState.NONE, null);
+    private PlayerStatus selfPlayerStatusPrev = new PlayerStatus(PlayerStatus.PlayerGuiState.NONE, null);
 
     public HashMap<UUID, PlayerStatus> lookupPlayerToStatusPrev = new HashMap<>();
     private long typingIdleTimeout = 60;
@@ -71,6 +69,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     private static CustomParticleEngine customParticleEngine;
 
+    private static HashMap<String, Boolean> lookupPlayersReceivedLatestGUIRender = new HashMap<>();
+
     public static CustomParticleEngine getParticleEngine() {
         if (customParticleEngine == null) {
             customParticleEngine = new CustomParticleEngine(Minecraft.getInstance().level, Minecraft.getInstance().getTextureManager());
@@ -83,6 +83,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         steadyTickCounter++;
         if (steadyTickCounter == Integer.MAX_VALUE) steadyTickCounter = 0;
         Level level = Minecraft.getInstance().level;
+        if (level == null) return;
 
         //reset any players data that disconnected
         if (Minecraft.getInstance().getConnection() != null) {
@@ -120,31 +121,141 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         lastLevel = level;
 
         long gameTime = 0;
-        if (Minecraft.getInstance().level != null) {
-            gameTime = Minecraft.getInstance().level.getGameTime();
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null) {
+            gameTime = mc.level.getGameTime();
         }
 
-        if (/*!selfPlayerStatus.isIdle()*/selfPlayerStatus.getTicksSinceLastAction() < (20 * 5)) {
-            if (selfPlayerStatus.getScreenData().getGameTicksSinceLastScreenSend() + ConfigServerControlledSyncedToClient.dynamicGuiTickSendRateOfGUIUpdates < gameTime) {
-                if (Minecraft.getInstance().screen != null && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
-                    //System.out.println("? " + selfPlayerStatus.getScreenData().getLastScreen());
-                    if (!ConfigServerControlledSyncedToClient.dynamicGuiDontSendConstantGUIUpdates || selfPlayerStatus.getScreenData().getLastScreen() != Minecraft.getInstance().screen) {
-                        selfPlayerStatus.getScreenData().setGameTicksSinceLastScreenSend(gameTime);
-                        selfPlayerStatus.getScreenData().setNeedsNewRenderToPixelData(true);
+        //TODO: dev debugger
+        boolean testSingleplayer = false;
 
+        //CULog.dbg("screen " + Minecraft.getInstance().screen);
+
+        Screen screen = Minecraft.getInstance().screen;
+        boolean guiBlacklisted = screen instanceof ReceivingLevelScreen;
+
+        boolean validGui = !guiBlacklisted && (screen != null && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN);
+        boolean stillActiveInGUI = selfPlayerStatus.getTicksSinceLastAction() < (20 * 5);
+        boolean delayPassed = selfPlayerStatus.getScreenData().getGameTicksSinceLastScreenSend() + ConfigServerControlledSyncedToClient.dynamicGuiTickSendRateOfGUIUpdates < gameTime;
+        boolean canRenderANewGUI = !ConfigServerControlledSyncedToClient.dynamicGuiDontSendConstantGUIUpdates || selfPlayerStatus.getScreenData().getLastScreen() != screen;
+        /**
+         * this (anotherPlayerNear) must always be true for how the code was structured, we need to render a new frame regardless of if another player was around or not
+         * scenario 1: dynamicGuiDontSendConstantGUIUpdates is true, and we need the latest frame ready to send out if a player comes near
+         * scanario 2: dynamicGuiDontSendConstantGUIUpdates is false, and stillActiveInGUI became false, then a player wandered in, still need the latest frame
+         *
+         * what we dont need to do is render the particle itself for the self player
+         */
+        //boolean anotherPlayerNear = testSingleplayer || mc.level.getNearestPlayer(mc.player.getX(), mc.player.getY(), mc.player.getZ(), ConfigServerControlledSyncedToClient.distanceRequiredToShowGUIInfo, (entity) -> entity != mc.player) != null;
+
+        if (delayPassed) {
+            //CULog.dbg("anotherPlayerNear " + anotherPlayerNear);
+        }
+
+        /**
+         * if time delay passed need to do a new render and send
+         *  do it, mark time for next delay
+         *  collect players near and update to list
+         * else if dynamicGuiDontSendConstantGUIUpdates and time delay passed
+         *  collect players near
+         *  if new list differs old list
+         *   send same data again so new player gets it
+         *  update to list
+         */
+
+        if (stillActiveInGUI) {
+            //if (anotherPlayerNear) {
+                if (delayPassed) {
+                    if (validGui) {
+                        if (canRenderANewGUI) {
+                            selfPlayerStatus.getScreenData().setGameTicksSinceLastScreenSend(gameTime);
+                            selfPlayerStatus.getScreenData().setNeedsNewRenderToPixelData(true);
+                            updateNearbyPlayerListAndCheckIfNewPlayerNear();
+                        }
+                    }
+                    selfPlayerStatus.getScreenData().setLastScreen(Minecraft.getInstance().screen);
+                }
+            //}
+        }
+
+        if (delayPassed && validGui && (ConfigServerControlledSyncedToClient.dynamicGuiDontSendConstantGUIUpdates || !stillActiveInGUI) && selfPlayerStatus.getScreenData().getTexturePixelData() != null) {
+            boolean needSendUpdate = updateNearbyPlayerListAndCheckIfNewPlayerNear();
+            if (needSendUpdate) {
+                CULog.dbg(gameTime + " needSendUpdate? " + needSendUpdate);
+                sendScreenRenderData(selfPlayerStatus);
+            }
+        }
+
+        //make sure next fresh update will go out right away once they open gui
+        if (Minecraft.getInstance().screen == null) {
+            selfPlayerStatus.getScreenData().setGameTicksSinceLastScreenSend(0);
+        }
+
+        /*if (selfPlayerStatus.getTicksSinceLastAction() < (20 * 5)) {
+            if (testSingleplayer || mc.level.getNearestPlayer(mc.player.getX(), mc.player.getY(), mc.player.getZ(), ConfigServerControlledSyncedToClient.distanceRequiredToShowGUIInfo, (entity) -> entity != mc.player) != null) {
+                if (selfPlayerStatus.getScreenData().getGameTicksSinceLastScreenSend() + ConfigServerControlledSyncedToClient.dynamicGuiTickSendRateOfGUIUpdates < gameTime) {
+                    if (validGui) {
+                        //System.out.println("? " + selfPlayerStatus.getScreenData().getLastScreen());
+                        if (!ConfigServerControlledSyncedToClient.dynamicGuiDontSendConstantGUIUpdates || selfPlayerStatus.getScreenData().getLastScreen() != Minecraft.getInstance().screen) {
+                            selfPlayerStatus.getScreenData().setGameTicksSinceLastScreenSend(gameTime);
+                            selfPlayerStatus.getScreenData().setNeedsNewRenderToPixelData(true);
+
+                        }
+                    }
+                    selfPlayerStatus.getScreenData().setLastScreen(Minecraft.getInstance().screen);
+                }
+
+                if (Minecraft.getInstance().screen == null) {
+                    selfPlayerStatus.getScreenData().setGameTicksSinceLastScreenSend(0);
+                }
+            }
+        }
+
+        //TODO: we need to prevent this code from sending another packet right after the above code sends its packet
+
+        //purpose of this code, send existing gui render to new players who wandered into the area, so they can see it
+        if (validGui && ConfigServerControlledSyncedToClient.dynamicGuiDontSendConstantGUIUpdates && selfPlayerStatus.getScreenData().getTexturePixelData() != null) {
+            if (gameTime % ConfigServerControlledSyncedToClient.dynamicGuiTickSendRateOfGUIUpdates == 0) {
+                HashMap<String, Boolean> lookup = new HashMap<>();
+                boolean newPlayer = false;
+                for (AbstractClientPlayer player : mc.level.players()) {
+                    if (player.position().distanceTo(new Vec3(mc.player.getX(), mc.player.getY(), mc.player.getZ())) <= ConfigServerControlledSyncedToClient.distanceRequiredToShowGUIInfo) {
+                        lookup.put(player.getName().getString(), true);
+                        if (!lookupPlayersReceivedLatestGUIRender.containsKey(player.getName().getString())) {
+                            newPlayer = true;
+                        }
                     }
                 }
-                selfPlayerStatus.getScreenData().setLastScreen(Minecraft.getInstance().screen);
-            }
 
-            if (Minecraft.getInstance().screen == null) {
-                selfPlayerStatus.getScreenData().setGameTicksSinceLastScreenSend(0);
+                //detected a new player nearby, sending data for them (it gets sent to everyone nearby, cant change without some further refactors)
+                if (newPlayer) {
+                    sendScreenRenderData(selfPlayerStatus);
+                }
+
+                //update comparison
+                lookupPlayersReceivedLatestGUIRender = lookup;
             }
-        }
+        }*/
 
         /*if (JSONLoader.RELOAD_LIVE_OFTEN && level != null && level.getGameTime() % 100 == 0) {
             JSONLoader.getInstance().loadFiles();
         }*/
+    }
+
+    public boolean updateNearbyPlayerListAndCheckIfNewPlayerNear() {
+        HashMap<String, Boolean> lookup = new HashMap<>();
+        boolean newPlayer = false;
+        Minecraft mc = Minecraft.getInstance();
+        for (AbstractClientPlayer player : mc.level.players()) {
+            if (player.position().distanceTo(new Vec3(mc.player.getX(), mc.player.getY(), mc.player.getZ())) <= ConfigServerControlledSyncedToClient.distanceRequiredToShowGUIInfo) {
+                lookup.put(player.getName().getString(), true);
+                if (!lookupPlayersReceivedLatestGUIRender.containsKey(player.getName().getString())) {
+                    newPlayer = true;
+                }
+            }
+        }
+        lookupPlayersReceivedLatestGUIRender = lookup;
+        //CULog.dbg("players near count: " + lookupPlayersReceivedLatestGUIRender.size());
+        return newPlayer;
     }
 
     public void tickPlayerClient(Player player) {
@@ -169,6 +280,15 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         Minecraft mc = Minecraft.getInstance();
         PlayerStatus statusLocal = getStatusLocal();
         PlayerStatus statusPrevLocal = getStatusPrevLocal();
+
+        //afterthought for uuid, thisll work well enough
+        if (mc.player != null && mc.player.getUUID() != null) {
+            if (statusLocal.getUuid() == null) {
+                CULog.dbg("setting uuid for local player " + mc.player.getUUID());
+                statusLocal.setUuid(mc.player.getUUID());
+                statusPrevLocal.setUuid(mc.player.getUUID());
+            }
+        }
 
         statusPrevLocal.setPlayerGuiState(statusLocal.getPlayerGuiState());
 
@@ -518,6 +638,13 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         boolean idleParticleChangeOrGone = playerStatus.isIdle() != playerStatusPrev.isIdle() || playerStatus.getParticleIdle() == null;
         boolean statusParticleChangeOrGone = playerStatus.getPlayerGuiState() != playerStatusPrev.getPlayerGuiState() || playerStatus.getParticle() == null;
         boolean statusChatParticleChangeOrGone = playerStatus.getPlayerChatState() != playerStatusPrev.getPlayerChatState() && playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_SCREEN;
+
+        //prevent any particle happening if conditions say so
+        //note: playerStatus.getUuid() can be null because we only set up the local one
+        if ((!ConfigClient.showGuisForYourOwnPlayerIn3rdPerson || Minecraft.getInstance().options.getCameraType().isFirstPerson()) && (getStatusLocal().getUuid() == null || playerStatus.getUuid() == getStatusLocal().getUuid())) {
+            statusParticleChangeOrGone = false;
+            statusChatParticleChangeOrGone = false;
+        }
 
         if (idleParticleChangeOrGone || !playerStatus.isIdle()) {
             if (playerStatus.getParticleIdle() != null) {
@@ -1011,7 +1138,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     public void checkPrev(UUID uuid) {
         if (!lookupPlayerToStatusPrev.containsKey(uuid)) {
-            lookupPlayerToStatusPrev.put(uuid, new PlayerStatus(PlayerStatus.PlayerGuiState.NONE));
+            lookupPlayerToStatusPrev.put(uuid, new PlayerStatus(PlayerStatus.PlayerGuiState.NONE, uuid));
         }
     }
 
@@ -1120,10 +1247,13 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount, packetCount);
                     data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex, i);
 
+                    //CULog.dbg(Minecraft.getInstance().level.getGameTime() + " sending pixel packet");
                     WatutNetworking.instance().clientSendToServer(data);
 
                 }
             }
+
+            status.getScreenData().getTexturePixelData().flip();
         }
 
 
@@ -1238,7 +1368,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             long gameTime = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
             int timeout = 10;
 
-            //CULog.dbg("compressed pixel data size in bytes: " + pixelData.length + " - " + packetIndex + " of " + packetCount + " roughly total " + (pixelData.length * packetCount));
+            //CULog.dbg(gameTime + " compressed pixel data size in bytes: " + pixelData.length + " - " + packetIndex + " of " + packetCount + " roughly total " + (pixelData.length * packetCount));
 
             if (packetCount > 1) {
                 if (packetIndex == 0) {
@@ -1265,6 +1395,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                                 if (packetIndex == packetCount-1) {
                                     try {
                                         if (status.getScreenData().getTexturePixelDataPartial() != null) {
+                                            //CULog.dbg(gameTime + " updating pixel data");
                                             status.getScreenData().setTexturePixelData(RenderHelper.decompress(status.getScreenData(), ByteBuffer.wrap(status.getScreenData().getTexturePixelDataPartial()), decompressedSize));
                                             status.getScreenData().markNeedsNewRenderFromPixelData(true);
                                             status.getScreenData().getIsBufferReady().set(true);

@@ -152,8 +152,11 @@ public class PlayerStatus {
     private InventorySnapshot inventorySnapshotCarried = new InventorySnapshot();
     private boolean isCarriedItemFromPlayerInventory = false;
 
-    public PlayerStatus(PlayerGuiState playerGuiState) {
+    private UUID uuid = null;
+
+    public PlayerStatus(PlayerGuiState playerGuiState, UUID uuid) {
         this.playerGuiState = playerGuiState;
+        this.uuid = uuid;
     }
 
     public void tick() {
@@ -421,5 +424,18 @@ public class PlayerStatus {
 
     public void setCarriedItemFromPlayerInventory(boolean carriedItemFromPlayerInventory) {
         isCarriedItemFromPlayerInventory = carriedItemFromPlayerInventory;
+    }
+
+    public UUID getUuid() {
+        //if (uuid == null) return UUID.randomUUID();
+        return uuid;
+    }
+
+    /*public UUID getUuidUnsafe() {
+        return uuid;
+    }*/
+
+    public void setUuid(UUID uuid) {
+        this.uuid = uuid;
     }
 }

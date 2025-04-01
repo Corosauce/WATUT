@@ -37,7 +37,7 @@ public class PlayerStatusManager {
         if (local) return getStatusLocal();
         PlayerStatus status = lookupPlayerToStatus.get(uuid);
         if (status == null) {
-            status = new PlayerStatus(PlayerStatus.PlayerGuiState.NONE);
+            status = new PlayerStatus(PlayerStatus.PlayerGuiState.NONE, uuid);
             lookupPlayerToStatus.put(uuid, status);
         }
         return status;

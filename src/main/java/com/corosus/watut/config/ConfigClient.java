@@ -83,6 +83,9 @@ public class ConfigClient implements IConfigCategory {
     @ConfigComment("Privacy setting, if you dont want to show the items you are transferring to and from yourself and containers, set this to true")
     public static boolean dontSendItemInfo = false;
 
+    @ConfigComment("Set to false if you dont want watut to sho your own dynamic guis in 3rd person")
+    public static boolean showGuisForYourOwnPlayerIn3rdPerson = true;
+
     @Override
     public String getName() {
         return "-client";
