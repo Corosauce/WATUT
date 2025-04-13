@@ -29,9 +29,8 @@ public class ConfigServerControlledSyncedToClient implements IConfigCategory {
     @ConfigParams(min = 5, comment = "Delay in ticks before sending a new image of a gui to other clients, 10 = twice a second, 0 = no delay, 20 = once a second, more frequent might affect performance and network load")
     public static int dynamicGuiTickSendRateOfGUIUpdates = 10;
 
-    //TODO: players coming into range or joining server might never receive the screen if the gui was already opened
     @ConfigParams(comment = "If enabled, only sends the initial image of a players gui, does not constantly update after it's been opened.")
-    public static boolean dynamicGuiDontSendConstantGUIUpdates = false;
+    public static boolean dynamicGuiDontSendConstantGUIUpdates = true;
 
     @ConfigParams(min = 0, max = 2, comment = "Blur is used to prevent nasty aliasing/flicker artifacts at the cost of clarity")
     public static int dynamicGuiBlurLevel = 1;
