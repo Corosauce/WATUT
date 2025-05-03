@@ -15,12 +15,13 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
 import net.minecraft.client.gui.screens.*;
 import net.minecraft.client.gui.screens.inventory.*;
-import net.minecraft.client.model.EntityModel;
-import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.*;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.renderer.ShaderProgram;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.nbt.CompoundTag;
@@ -40,7 +41,7 @@ import org.joml.Vector3f;
 import java.nio.ByteBuffer;
 import java.util.*;
 
-public class PlayerStatusManagerClient extends PlayerStatusManager {
+public class PlayerStatusManagerClient<T extends EntityRenderState> extends PlayerStatusManager {
 
     //selfPlayer statuses are important, a use case: tracking things to send packets for locally,
     //then we allow for packet to be sent to self as well, where we also use the lookup to then compare previous state so we can correctly setup pose for self as well as others
@@ -775,6 +776,63 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             return true;
         }
         return false;
+    }
+
+    public void setupAnimMobs2(EntityModel modelBase) {
+        Random rand = new Random();
+        Minecraft mc = Minecraft.getInstance();
+        float amp = 0.5F;
+        float rate = 0.5F;
+        if (modelBase instanceof HumanoidModel model) {
+            /*model.rightArm.xRot += Math.sin(mc.level.getGameTime() * rate) * amp;
+            model.leftArm.xRot += -Math.sin(mc.level.getGameTime() * rate) * amp;
+            model.rightLeg.xRot += Math.sin(mc.level.getGameTime() * rate) * amp;
+            model.leftLeg.xRot += -Math.sin(mc.level.getGameTime() * rate) * amp;
+            model.head.xRot += Math.sin(mc.level.getGameTime() * rate) * amp;*/
+            /*model.rightArm.yRot += 45;
+            model.rightArm.zRot += 45;
+            model.leftLeg.zRot += 5;
+            model.rightLeg.zRot += 5;
+            model.head.zRot += 5;*/
+        }
+
+        amp = 0.8F;
+        rate = 0.5F;
+
+        if (modelBase instanceof QuadrupedModel model) {
+
+            //model.root().getChild("head").xRot += Math.sin(mc.level.getGameTime() * rate) * amp;
+            /*model.leftArm.xRot += -Math.sin(mc.level.getGameTime() * rate) * amp;
+            model.rightLeg.xRot += Math.sin(mc.level.getGameTime() * rate) * amp;
+            model.leftLeg.xRot += -Math.sin(mc.level.getGameTime() * rate) * amp;
+            model.head.xRot += Math.sin(mc.level.getGameTime() * rate) * amp;*/
+
+        }
+
+        for (ModelPart part : modelBase.allParts()) {
+            try {
+                if (part != modelBase.root()) {
+                    if (modelBase.root().getChild("body") != part) {
+                        part.xRot += Math.sin(mc.level.getGameTime() * rate) * amp;
+                        part.zRot += Math.cos(mc.level.getGameTime() * rate * 0.5) * amp * 0.4;
+                    }
+                }
+            } catch (Exception e) {
+                //TODO: avoid throwing if looking up missing piece
+            }
+
+        }
+    }
+
+    public void setupAnimMobs(HumanoidModel model, T renderState) {
+        Random rand = new Random();
+        model.rightArm.xRot += rand.nextFloat() * 45;
+        model.rightArm.yRot += 45;
+        model.rightArm.zRot += 45;
+        model.leftLeg.zRot += rand.nextFloat() * Math.toRadians(15);
+        model.rightLeg.zRot += rand.nextFloat() * Math.toRadians(15);
+        model.head.zRot += 5;
+        //model.rightArm.x += 45;
     }
 
     public void setupRotationsHook(EntityModel model, PlayerRenderState renderState) {

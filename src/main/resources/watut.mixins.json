@@ -5,6 +5,8 @@
   "refmap": "watut.refmap.json",
   "client": [
     "client.SetupRotationsInject",
+    "client.HumanoidModelSetupAnim",
+    "client.LivingEntityRendererRender",
     "client.RenderPingIconInject",
     "client.GuiRender",
     "client.ScreenRenderBackground",
