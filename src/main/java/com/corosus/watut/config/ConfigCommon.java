@@ -12,6 +12,15 @@ public class ConfigCommon implements IConfigCategory {
     @ConfigComment("Default 5 minutes")
     public static int ticksToMarkPlayerIdle = 20*60*5;
 
+    public static boolean dc_noHordesIfInCreative = true;
+
+    public static boolean dc_noHordesIfWatutIdle = true;
+    public static boolean dc_noHordesIfGameTimePaused = false;
+    public static boolean dc_useResetBeforeDay104 = true;
+    public static boolean dc_dbg = false;
+
+    public static int dc_resetDay = 70;
+
     @Override
     public String getName() {
         return "-common";

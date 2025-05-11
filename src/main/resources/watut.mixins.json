@@ -8,6 +8,9 @@
     "client.RenderPingIconInject",
     "client.TextureAtlasPrepareToStitch"
   ],
+  "mixins": [
+    "FixChickenLoadBomb"
+  ],
   "injectors": {
     "defaultRequire": 0
   },

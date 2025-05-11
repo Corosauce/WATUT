@@ -1,12 +1,14 @@
 package com.corosus.watut;
 
+import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.config.ConfigCommon;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ChatType;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.stats.Stats;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.GameRules;
 
 import java.util.Map;
 import java.util.UUID;
@@ -17,6 +19,40 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     public void tickPlayer(Player player) {
         getStatus(player).setTicksToMarkPlayerIdleSyncedForClient(ConfigCommon.ticksToMarkPlayerIdle);
         super.tickPlayer(player);
+
+        int dayNumber = ((ServerPlayer)player).getStats().getValue(Stats.CUSTOM.get(Stats.PLAY_TIME)) / 24000;
+        int resetTime = 24000 * ConfigCommon.dc_resetDay;
+
+        boolean stopProgress = false;
+
+        if (player.getTags().contains("no_hordes") || (ConfigCommon.dc_noHordesIfWatutIdle && getStatus(player).isIdle())) {
+            stopProgress = true;
+        }
+
+        if (ConfigCommon.dc_noHordesIfGameTimePaused && !player.level.getGameRules().getBoolean(GameRules.RULE_DAYLIGHT)) {
+            stopProgress = true;
+        }
+
+        if (ConfigCommon.dc_noHordesIfInCreative && player.isCreative()) {
+            stopProgress = true;
+        }
+
+        if (stopProgress) {
+            player.awardStat(Stats.CUSTOM.get(Stats.PLAY_TIME), -1);
+        }
+
+        if (ConfigCommon.dc_useResetBeforeDay104) {
+            if (dayNumber >= 104) {
+                if (ConfigCommon.dc_dbg) CULog.log("player " + player.getScoreboardName() + " reset play_time to: " + resetTime);
+                ((ServerPlayer)player).getStats().setValue(player, Stats.CUSTOM.get(Stats.PLAY_TIME), resetTime);
+            }
+        }
+
+        //((ServerPlayer)player).getStats().setValue(player, Stats.CUSTOM.get(Stats.PLAY_TIME), 24000 * 104);
+
+        if (player.level.getGameTime() % 200 == 0 && ConfigCommon.dc_dbg) {
+            CULog.log("player " + player.getScoreboardName() + " play_time: " + ((ServerPlayer)player).getStats().getValue(Stats.CUSTOM.get(Stats.PLAY_TIME)) + ", day Number: " + dayNumber);
+        }
     }
 
     /**
