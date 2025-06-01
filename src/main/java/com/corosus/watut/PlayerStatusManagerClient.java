@@ -6,10 +6,14 @@ import com.corosus.watut.client.screen.RenderHelper;
 import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.client.screen.ScreenParticleRenderer;
 import com.corosus.watut.config.*;
+import com.corosus.watut.loader.neoforge.ClientEvents;
 import com.corosus.watut.math.Lerpables;
+import com.corosus.watut.mixin.client.ModelPartAccessor;
 import com.corosus.watut.particle.*;
 import com.ibm.icu.impl.Pair;
 import com.mojang.authlib.GameProfile;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
@@ -19,8 +23,6 @@ import net.minecraft.client.model.*;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
-import net.minecraft.client.renderer.ShaderProgram;
-import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -32,10 +34,13 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import java.nio.ByteBuffer;
@@ -778,11 +783,170 @@ public class PlayerStatusManagerClient<T extends EntityRenderState> extends Play
         return false;
     }
 
-    public void setupAnimMobs2(EntityModel modelBase) {
+    public static Entity renderingEntity = null;
+
+    public void extractRenderState(Entity p_entity, EntityRenderState reusedState, float partialTick) {
+        renderingEntity = p_entity;
+        if (p_entity instanceof LivingEntity livingEntity) {
+            ClientEvents.ExtraEntityInfo extraEntityInfo = ClientEvents.getExtraInfo(p_entity);
+            if (extraEntityInfo.hurtTime > 0) {
+                //CULog.dbg(p_entity.hashCode() + " ? " + extraRenderInfo + " p " + extraRenderInfo.hurtTimeLast + " n " + extraRenderInfo.hurtTime);
+            }
+
+
+            //TODO: this needs to be during a tick part
+            //extraRenderInfo.hurtTimeLast = extraRenderInfo.hurtTime;
+            //extraRenderInfo.hurtTime = ((LivingEntity) p_entity).hurtTime;
+        }
+    }
+
+    public boolean translateAndRotate(ModelPart instance, PoseStack poseStack) {
+        //if (true) return true;
+        Random random = new Random();
+        //randomly disable some
+        //return random.nextBoolean();
+        if (renderingEntity != null) {
+            ClientEvents.ExtraEntityInfo extraEntityInfo = ClientEvents.lookupEntityToData.get(renderingEntity);
+            if (extraEntityInfo != null) {
+                if (true || extraEntityInfo.partsToHide.contains(instance)) {
+                    Minecraft mc = Minecraft.getInstance();
+
+                    //what was i doing here
+                    //iirc i was trying to get it to rotate around its center, to adjust the pivot to be center of a piece
+
+                    float rotX = (float)Math.toRadians((mc.level.getGameTime()) % 360) * 10;
+                    //rotX = 0;
+                    float rotY = (float)Math.toRadians((mc.level.getGameTime() + 100) % 360) * 3;
+                    //rotY = 0;
+                    float rotZ = (float)Math.toRadians((mc.level.getGameTime() + 200) % 360) * 6;
+                    //rotZ = 0;
+                    poseStack.mulPose((new Quaternionf()).rotationZYX(rotZ, rotY, rotX));
+                } else {
+                    return false;
+                }
+            }
+            //return extraEntityInfo == null ? true : !extraEntityInfo.partsToHide.contains(instance);
+        }
+        /*if (instance.xRot != 0.0F || instance.yRot != 0.0F || instance.zRot != 0.0F) {
+            poseStack.mulPose((new Quaternionf()).rotationZYX(instance.zRot, instance.yRot, instance.xRot));
+        }*/
+
+        return false;
+    }
+
+    public boolean renderModelPart(ModelPart instance, PoseStack poseStack, VertexConsumer vertexConsumer, int buffer, int packedLight, int packedOverlay) {
+        if (renderingEntity != null) {
+            ClientEvents.ExtraEntityInfo extraEntityInfo = ClientEvents.lookupEntityToData.get(renderingEntity);
+            //return (extraEntityInfo == null ? true : !extraEntityInfo.partsToHide.contains(instance));
+            //return !(extraEntityInfo == null ? true : !extraEntityInfo.partsToHide.contains(instance));
+            return true;
+        }
+        return true;
+    }
+
+    public Vector3f transformPosition(ModelPart.Cube cube, Matrix4f instance, float x, float y, float z, Vector3f dest) {
+
+        /*float offsetX = (cube.maxX - cube.minX) / 16;
+        float offsetY = (cube.maxY - cube.minY) / 16;
+        float offsetZ = (cube.maxZ - cube.minZ) / 16;*/
+        float offsetX = (cube.maxX - cube.minX) / 16 / 2;
+        float offsetY = (cube.maxY - cube.minY) / 16 / 2;
+        float offsetZ = (cube.maxZ - cube.minZ) / 16 / 2;
+        //return instance.transformPosition(x - offsetX, y + offsetY, z - offsetZ, dest);
+        //return instance.transformPosition(x + offsetX, y + offsetY, z + offsetZ, dest);
+        //return instance.transformPosition(x + offsetX, y + offsetY, z + offsetZ, dest);
+        //ISSUE WITH THIS, im trying to offset it by cube size, if the pivot is 1/4 up the arm, it just moves it to 3/4 up the arm, still bad
+        //WE NEED to figure out the existing pivot, and remove it, im using wrong data
+
+        /**
+         * humanoid model:
+         *      addBox(-4.0F, -8.0F, -4.0F, 8.0F, 8.0F, 8.0F
+         *      first 3 are the offset
+         *      second 3 are the dimensions
+         *
+         *      so the pivot should be:
+         *      4 0 4
+         *          that checks out, middle of bottom of head
+         *
+         *      pivot = first 3
+         *
+         *      this data distills and bakes all the way into ModelPart.Cube, as these:
+         *
+         *             this.minX = originX;
+         *             this.minY = originY;
+         *             this.minZ = originZ;
+         *             this.maxX = originX + dimensionX;
+         *             this.maxY = originY + dimensionY;
+         *             this.maxZ = originZ + dimensionZ;
+         *
+         *
+         *
+         *      so how do we adjust for this then?
+         *
+         *      we remove vanilla pivot, then we make our own be the half size of each dimension...
+         *
+         *      since were trying to fix arm lets look at the data
+         *
+         *          -3.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F
+         *
+         *
+         *      also / 16F your OG numbers as thats the scale were working in before transforming
+         *
+         *      we just need to remove the existing pivot and it should rotate center mass, i think?
+         *      maybe its remove pivot + add ours
+         *
+         *      newY = y - minY + (maxY/2)
+         */
+
+
+        float newX = x - ((cube.minX + ((cube.maxX-cube.minX)/2F)) / 16F);
+        float newY = y - ((cube.minY + ((cube.maxY-cube.minY)/2F)) / 16F);
+        float newZ = z - ((cube.minZ + ((cube.maxZ-cube.minZ)/2F)) / 16F);
+
+        //return instance.transformPosition(x + 0, y - offsetY, z + (offsetX / 2), dest);
+        //return instance.transformPosition(x + offsetX, y, z + 0, dest);
+        //return instance.transformPosition(x + offsetX, y, z + 0, dest);
+        //return instance.transformPosition(x + offsetX, y + 0, z + 0, dest);
+        Vector3f dest2 = new Vector3f(dest);
+        Vector3f vec2 = instance.transformPosition(0, 0, 0, dest2);
+        if ((new Random()).nextBoolean()) {
+            //vec = instance.transformPosition(x, y, z, dest);
+        }
+        //Vector3f vec = instance.transformPosition(x, y - (4F / 16F), z, dest);
+        //Vector3f vec = instance.transformPosition(x, newY, z, dest);
+        Vector3f vec = instance.transformPosition(newX, newY, newZ, dest);
+        //Vector3f vec = instance.transformPosition(x, y, z, dest);
+        return vec;
+        //return instance.transformPosition(0, 0, 0, dest);
+        //return dest;
+
+        //observations for husk
+        //rotate X, affected by Y offset
+        //because rotating X is rotating around its X axis, so we adjust Z and Y, thats the pattern
+
+        //rotate head Y, already fine, cause head is centered for X and Z i guess
+            //so this means my fixes need to be conditional, aware if theres a pivot problem
+            //learn how to figure this out
+
+        //rotate arm
+
+    }
+
+    public void setupAnimMobs1(EntityModel modelBase, EntityRenderState entityRenderState) {
+        ClientEvents.ExtraEntityInfo extraEntityInfo = ClientEvents.lookupEntityToData.get(renderingEntity);
+
+        if (extraEntityInfo.hurtTime > 0) {
+            int what = 0;
+        }
+    }
+
+    public void setupAnimMobs2(EntityModel modelBase, EntityRenderState entityRenderState) {
+        //if (true) return;
         Random rand = new Random();
         Minecraft mc = Minecraft.getInstance();
-        float amp = 0.5F;
+        float rot = 0.5F;
         float rate = 0.5F;
+        //float amp = 1;
         if (modelBase instanceof HumanoidModel model) {
             /*model.rightArm.xRot += Math.sin(mc.level.getGameTime() * rate) * amp;
             model.leftArm.xRot += -Math.sin(mc.level.getGameTime() * rate) * amp;
@@ -796,7 +960,7 @@ public class PlayerStatusManagerClient<T extends EntityRenderState> extends Play
             model.head.zRot += 5;*/
         }
 
-        amp = 0.8F;
+        rot = 0.2F;
         rate = 0.5F;
 
         if (modelBase instanceof QuadrupedModel model) {
@@ -809,18 +973,130 @@ public class PlayerStatusManagerClient<T extends EntityRenderState> extends Play
 
         }
 
-        for (ModelPart part : modelBase.allParts()) {
-            try {
-                if (part != modelBase.root()) {
-                    if (modelBase.root().getChild("body") != part) {
-                        part.xRot += Math.sin(mc.level.getGameTime() * rate) * amp;
-                        part.zRot += Math.cos(mc.level.getGameTime() * rate * 0.5) * amp * 0.4;
+
+
+
+        if (renderingEntity != null) {
+            ClientEvents.ExtraEntityInfo extraEntityInfo = ClientEvents.lookupEntityToData.get(renderingEntity);
+            Random rand2 = new Random(extraEntityInfo.randSeed);
+
+            //TODO: where do i recalc?
+            if (extraEntityInfo.recalcModelPieces) {
+                extraEntityInfo.recalcModelPieces = false;
+
+                for (Map.Entry<String, ModelPart> entrySet : ((ModelPartAccessor)((Object)modelBase.root())).getChildren().entrySet()) {
+                    String name = entrySet.getKey();
+                    boolean isRoot = name.equals("root");
+                    boolean isALeg = name.contains("leg");
+                    boolean isAnArm = name.contains("arm");
+                    boolean isAHead = name.contains("head");
+                    boolean isBody = name.equals("body");
+                    if (!isAHead && !isBody && !isALeg && !isRoot) {
+                        if (rand2.nextInt(5) == 0) {
+                            extraEntityInfo.partsToHide.add(entrySet.getValue());
+                        }
                     }
                 }
-            } catch (Exception e) {
-                //TODO: avoid throwing if looking up missing piece
             }
 
+            if (extraEntityInfo.hurtTime > 0) {
+
+                if (renderingEntity instanceof LivingEntity livingEntity) {
+
+                    //TODO: not needed? - because we are cancelling the rotations for the leg movements in a mixin now i think
+                    livingEntity.walkAnimation.stop();
+                }
+
+                processPart("root", modelBase.root(), extraEntityInfo, entityRenderState, rand2);
+
+                for (Map.Entry<String, ModelPart> entrySet : ((ModelPartAccessor)((Object)modelBase.root())).getChildren().entrySet()) {
+                    processPart(entrySet.getKey(), entrySet.getValue(), extraEntityInfo, entityRenderState, rand2);
+                }
+            }
+
+        }
+    }
+
+    public void processPart(String name, ModelPart part, ClientEvents.ExtraEntityInfo extraEntityInfo, EntityRenderState entityRenderState, Random rand2) {
+        //if (true) return;
+        try {
+            boolean isRoot = name.equals("root");
+            boolean isALeg = name.contains("leg");
+            boolean isAnArm = name.contains("arm");
+            boolean isAHead = name.contains("head");
+            boolean isBody = name.equals("body");
+            //boolean isHead = modelBase.root().getChild("head") == part;
+            //if (part != modelBase.root()) {
+
+            if (isBody) return;
+
+            if (isRoot) {
+                int what = 0;
+            }
+
+            //first first frame interpolating from 0 to 10
+            int last = extraEntityInfo.hurtTimeLast;
+            if (last == 0) {
+                last = extraEntityInfo.hurtTime;
+            }
+
+            float lerp = Mth.lerp(entityRenderState.partialTick, last, extraEntityInfo.hurtTime);
+            float phase = (float) ((10 - lerp) * Math.PI / 10);
+            float ampX = 0.25F;
+            float ampY = 0.15F;
+            float ampZ = 0.15F;
+            float dirX = 1;
+            float dirY = 1;
+            float dirZ = 1;
+
+            /*if (isHead) {
+                amp = 0.55F;
+            }
+
+            if (isRoot) {
+                amp = 0.15F;
+            }*/
+
+            if (rand2.nextBoolean()) dirX = -1;
+
+            if (rand2.nextBoolean()) dirY = -1;
+
+            if (rand2.nextBoolean()) dirZ = -1;
+
+            /*if (isAHead) {
+                dirX = -1;
+            }*/
+
+            if (isRoot) {
+                dirX = -1;
+            }
+
+            if (isALeg) {
+                dirX = 1;
+                ampX = rand2.nextFloat() * 0.7F + 0.5F;
+            }
+
+            float rotX = ((float) -Math.sin(phase) * ampX) * dirX;
+            float rotY = ((float) -Math.sin(phase) * ampY) * dirY;
+            float rotZ = ((float) -Math.sin(phase) * ampZ) * dirZ;
+
+            if (isAHead) {
+                //rotX = 0;
+                rotY = 0;
+                rotZ = 0;
+            } else {
+                /*rotX = 0;
+                rotY = 0;
+                rotZ = 0;*/
+            }
+
+            //part.xRot = 0;
+            part.xRot += rotX;
+            part.zRot += rotY;
+            part.yRot += rotZ;
+
+        } catch (Exception e) {
+            //TODO: avoid throwing if looking up missing piece
         }
     }
 

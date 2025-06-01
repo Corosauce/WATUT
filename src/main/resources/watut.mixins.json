@@ -15,6 +15,11 @@
     "client.ParticleEngineMixin",
     "client.NativeImageAccessor",
     "client.RenderTargetBindWrite",
+    "client.EntityRendererMixin",
+    "client.LivingEntityMixin",
+    "client.ModelPartMixin",
+    "client.ModelPartCubeMixin",
+    "client.ModelPartAccessor",
     "client.RenderStateShardSetup"
   ],
   "mixins": [

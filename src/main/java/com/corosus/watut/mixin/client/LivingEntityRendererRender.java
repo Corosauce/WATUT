@@ -35,8 +35,9 @@ public abstract class LivingEntityRendererRender<S extends EntityRenderState, M 
                     target = "Lnet/minecraft/client/model/EntityModel;setupAnim(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;)V"))
     public void setupAnimMobs(M model, S renderState) {
 
+        WatutMod.getPlayerStatusManagerClient().setupAnimMobs1(model, renderState);
         this.model.setupAnim(renderState);
-        WatutMod.getPlayerStatusManagerClient().setupAnimMobs2(model);
+        WatutMod.getPlayerStatusManagerClient().setupAnimMobs2(model, renderState);
 
     }
 
