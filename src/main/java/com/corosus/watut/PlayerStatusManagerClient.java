@@ -808,7 +808,7 @@ public class PlayerStatusManagerClient<T extends EntityRenderState> extends Play
         if (renderingEntity != null) {
             ClientEvents.ExtraEntityInfo extraEntityInfo = ClientEvents.lookupEntityToData.get(renderingEntity);
             if (extraEntityInfo != null) {
-                if (true || extraEntityInfo.partsToHide.contains(instance)) {
+                if (extraEntityInfo.partsToHide.contains(instance)) {
                     Minecraft mc = Minecraft.getInstance();
 
                     //what was i doing here
@@ -822,7 +822,7 @@ public class PlayerStatusManagerClient<T extends EntityRenderState> extends Play
                     //rotZ = 0;
                     poseStack.mulPose((new Quaternionf()).rotationZYX(rotZ, rotY, rotX));
                 } else {
-                    return false;
+                    return true;
                 }
             }
             //return extraEntityInfo == null ? true : !extraEntityInfo.partsToHide.contains(instance);
@@ -914,8 +914,9 @@ public class PlayerStatusManagerClient<T extends EntityRenderState> extends Play
         }
         //Vector3f vec = instance.transformPosition(x, y - (4F / 16F), z, dest);
         //Vector3f vec = instance.transformPosition(x, newY, z, dest);
-        Vector3f vec = instance.transformPosition(newX, newY, newZ, dest);
-        //Vector3f vec = instance.transformPosition(x, y, z, dest);
+        //TODO: this is the one we need
+        //Vector3f vec = instance.transformPosition(newX, newY, newZ, dest);
+        Vector3f vec = instance.transformPosition(x, y, z, dest);
         return vec;
         //return instance.transformPosition(0, 0, 0, dest);
         //return dest;
