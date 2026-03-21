@@ -31,6 +31,7 @@ public class WatutModNeoForge extends WatutMod {
         if (FMLEnvironment.dist.isClient()) {
             ClientEvents clientEvents = new ClientEvents();
             container.getEventBus().addListener(clientEvents::getRegisteredParticles);
+            container.getEventBus().addListener(clientEvents::onRegisterShaders);
             NeoForge.EVENT_BUS.addListener(clientEvents::onRegisterCommandsClient);
             NeoForge.EVENT_BUS.addListener(clientEvents::onGameTick);
             NeoForge.EVENT_BUS.addListener(clientEvents::onKey);

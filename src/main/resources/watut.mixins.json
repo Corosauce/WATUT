@@ -10,7 +10,6 @@
     "client.ScreenRenderBackground",
     "client.ScreenRenderWithTooltip",
     "client.PostChainResize",
-    "client.GameRendererReloadShaders",
     "client.ParticleEngineMixin",
     "client.NativeImageAccessor"
   ],
