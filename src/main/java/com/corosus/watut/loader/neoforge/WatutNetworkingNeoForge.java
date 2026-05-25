@@ -1,6 +1,7 @@
 package com.corosus.watut.loader.neoforge;
 
 import com.corosus.coroutil.util.CULog;
+import com.corosus.watut.WatutMod;
 import com.corosus.watut.WatutModClient;
 import com.corosus.watut.WatutNetworking;
 import com.corosus.watut.network.*;
@@ -11,11 +12,13 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadHandler;
+import net.neoforged.neoforge.network.registration.NetworkRegistry;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 import java.util.function.BiConsumer;
@@ -83,17 +86,30 @@ public class WatutNetworkingNeoForge extends WatutNetworking {
 
     @Override
     public void serverSendToClientAll(CompoundTag data) {
-        PacketDistributor.sendToAllPlayers(new PacketNBTFromServer(data));
+        PlayerList playerList = WatutMod.instance().getPlayerList();
+        if (playerList == null) return;
+        for (ServerPlayer player : playerList.getPlayers()) {
+            serverSendToClientPlayer(data, player);
+        }
     }
 
     @Override
     public void serverSendToClientPlayer(CompoundTag data, Player player) {
-        PacketDistributor.sendToPlayer((ServerPlayer) player, new PacketNBTFromServer(data));
+        ServerPlayer serverPlayer = (ServerPlayer) player;
+        if (NetworkRegistry.hasChannel(serverPlayer.connection, PacketNBTFromServer.TYPE.id())) {
+            PacketDistributor.sendToPlayer(serverPlayer, new PacketNBTFromServer(data));
+        }
     }
 
     @Override
     public void serverSendToClientNear(CompoundTag data, Vec3 pos, double dist, Level level) {
-        PacketDistributor.sendToPlayersNear((ServerLevel) level, null, pos.x, pos.y, pos.z, dist, new PacketNBTFromServer(data));
+        ServerLevel serverLevel = (ServerLevel) level;
+        double distSqr = dist * dist;
+        for (ServerPlayer player : serverLevel.players()) {
+            if (player.distanceToSqr(pos) <= distSqr) {
+                serverSendToClientPlayer(data, player);
+            }
+        }
     }
 }
 

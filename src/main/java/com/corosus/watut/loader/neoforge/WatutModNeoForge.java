@@ -44,7 +44,7 @@ public class WatutModNeoForge extends WatutMod {
     }
 
     public void registerPackets(final RegisterPayloadHandlersEvent event) {
-        final PayloadRegistrar registrar = event.registrar("1.0.0");
+        final PayloadRegistrar registrar = event.registrar("1.0.0").optional();
         WatutNetworkingNeoForge.register(registrar);
     }
 
