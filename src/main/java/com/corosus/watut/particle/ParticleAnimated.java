@@ -8,7 +8,7 @@ public class ParticleAnimated extends ParticleRotating {
     private final SpriteSetPlayer sprites;
 
     public ParticleAnimated(ClientLevel pLevel, double pX, double pY, double pZ, SpriteSetPlayer pSprites) {
-        super(pLevel, pX, pY, pZ);
+        super(pLevel, pX, pY, pZ, pSprites.first());
         this.sprites = pSprites;
         this.lifetime = Integer.MAX_VALUE;
         this.gravity = 0.0F;

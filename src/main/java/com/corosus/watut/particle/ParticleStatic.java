@@ -5,14 +5,12 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 public class ParticleStatic extends ParticleRotating {
 
-
     public ParticleStatic(ClientLevel pLevel, double pX, double pY, double pZ, TextureAtlasSprite sprite) {
         this(pLevel, pX, pY, pZ, sprite, 1F);
     }
 
     public ParticleStatic(ClientLevel pLevel, double pX, double pY, double pZ, TextureAtlasSprite sprite, float brightness) {
-        super(pLevel, pX, pY, pZ);
-        this.sprite = sprite;
+        super(pLevel, pX, pY, pZ, sprite);
         this.lifetime = Integer.MAX_VALUE;
         this.gravity = 0.0F;
         this.setSize(0.2F, 0.2F);
@@ -38,5 +36,4 @@ public class ParticleStatic extends ParticleRotating {
             this.move(this.xd, this.yd, this.zd);
         }
     }
-
 }

@@ -1,18 +1,7 @@
 package com.corosus.watut.client.screen;
 
-import com.corosus.watut.PlayerStatusManagerClient;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.particle.ParticleRenderType;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.world.level.Level;
-import org.jetbrains.annotations.Nullable;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
@@ -25,14 +14,12 @@ public class ScreenData {
     private final AtomicBoolean isBufferReady = new AtomicBoolean(false);
     private byte[] texturePixelDataPartial = null;
 
-    //private byte[] texturePixelDataDiff = null;
-
     private long gameTicksSinceFirstPacket = 0;
     private int lastIndexReceived = 0;
     private long gameTicksSinceLastScreenSend = 0;
     private long gameTicksSinceLastScreenReceiveAndRender = 0;
 
-    private ParticleRenderType particleRenderType;
+    private Object particleRenderType;
 
     private boolean needsNewRenderFromPixelData = false;
 
@@ -43,35 +30,9 @@ public class ScreenData {
     private int width = ScreenParticleRenderer.defaultWidthScaledDown;
     private int height = ScreenParticleRenderer.defaultHeightScaledDown;
 
-    //since gui states are kinda old system and require specifically adding support for a screen, we use this instead to track true differences now
     private Screen lastScreen;
 
     public void initClient() {
-
-        this.particleRenderType = new ParticleRenderType() {
-            public @Nullable BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
-                //oculus breaks our shader for some reason
-                if (RenderHelper.isShadersEnabled()) {
-                    RenderSystem.setShader(GameRenderer::getParticleShader);
-                } else {
-                    RenderSystem.setShader(() -> PlayerStatusManagerClient.particle);
-                }
-                RenderSystem._setShaderTexture(0, getImage().getId());
-
-                RenderSystem.depthMask(true);
-                RenderSystem.enableBlend();
-                RenderSystem.defaultBlendFunc();
-                RenderSystem.disableCull();
-                return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
-            }
-
-            public String toString() {
-                return "DYNAMIC_TEXTURE";
-            }
-        };
-
-        //WatutMod.instance().addParticleRenderType(particleRenderType);
-
     }
 
     public ByteBuffer getTexturePixelData() {
@@ -88,11 +49,11 @@ public class ScreenData {
         this.texturePixelData = texturePixelData;
     }
 
-    public ParticleRenderType getParticleRenderType() {
+    public Object getParticleRenderType() {
         return particleRenderType;
     }
 
-    public void setParticleRenderType(ParticleRenderType particleRenderType) {
+    public void setParticleRenderType(Object particleRenderType) {
         this.particleRenderType = particleRenderType;
     }
 
@@ -201,12 +162,4 @@ public class ScreenData {
     public void setLastScreen(Screen lastScreen) {
         this.lastScreen = lastScreen;
     }
-
-    /*public byte[] getTexturePixelDataDiff() {
-        return texturePixelDataDiff;
-    }
-
-    public void setTexturePixelDataDiff(byte[] texturePixelDataDiff) {
-        this.texturePixelDataDiff = texturePixelDataDiff;
-    }*/
 }

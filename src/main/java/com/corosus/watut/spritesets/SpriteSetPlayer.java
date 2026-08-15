@@ -29,7 +29,12 @@ public class SpriteSetPlayer implements SpriteSet {
 
     @Override
     public TextureAtlasSprite get(RandomSource pRandom) {
-        return list.get(0);
+        return list != null && !list.isEmpty() ? list.get(0) : null;
+    }
+
+    @Override
+    public TextureAtlasSprite first() {
+        return list != null && !list.isEmpty() ? list.get(0) : null;
     }
 
     public void setList(List<TextureAtlasSprite> list) {

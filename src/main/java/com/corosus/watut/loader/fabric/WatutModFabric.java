@@ -32,8 +32,8 @@ public class WatutModFabric extends WatutMod implements ModInitializer {
 		ServerLifecycleEvents.SERVER_STARTED.register((minecraftServer) -> {
 			WatutModFabric.minecraftServer = minecraftServer;
 		});
-		PayloadTypeRegistry.playS2C().register(PacketNBTFromServer.TYPE, PacketNBTFromServer.STREAM_CODEC);
-		PayloadTypeRegistry.playC2S().register(PacketNBTFromClient.TYPE, PacketNBTFromClient.STREAM_CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(PacketNBTFromServer.TYPE, PacketNBTFromServer.STREAM_CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(PacketNBTFromClient.TYPE, PacketNBTFromClient.STREAM_CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(PacketNBTFromClient.TYPE, (payload, ctx) -> {
 			CompoundTag nbt = payload.nbt();
 			ctx.server().execute(() -> {

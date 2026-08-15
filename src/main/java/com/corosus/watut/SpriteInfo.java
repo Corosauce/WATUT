@@ -3,7 +3,7 @@ package com.corosus.watut;
 import com.corosus.watut.spritesets.SpriteSetPlayer;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,15 +23,15 @@ public class SpriteInfo {
         return spriteSetPlayer != null;
     }
 
-    public ResourceLocation getResLocationName() {
+    public Identifier getResLocationName() {
         return getResLocationName(0);
     }
 
-    public ResourceLocation getResLocationName(int index) {
+    public Identifier getResLocationName(int index) {
         if (isSpriteSet()) {
-            return ResourceLocation.parse(WatutMod.MODID + ":particles/" + name + index);
+            return Identifier.parse(WatutMod.MODID + ":particles/" + name + index);
         } else {
-            return ResourceLocation.parse(WatutMod.MODID + ":particles/" + name);
+            return Identifier.parse(WatutMod.MODID + ":particles/" + name);
         }
     }
 
@@ -47,7 +47,9 @@ public class SpriteInfo {
                 }
             }
             this.spriteSetPlayer.setList(list);
-            sprite = list.get(0);
+            if (!list.isEmpty()) {
+                sprite = list.get(0);
+            }
         } else {
             sprite = textureAtlas.getSprite(getResLocationName());
             if (sprite == null) {

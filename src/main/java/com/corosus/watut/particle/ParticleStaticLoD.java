@@ -12,7 +12,7 @@ public class ParticleStaticLoD extends ParticleRotating {
     }
 
     public ParticleStaticLoD(ClientLevel pLevel, double pX, double pY, double pZ, SpriteSetPlayer pSprites, float brightness) {
-        super(pLevel, pX, pY, pZ);
+        super(pLevel, pX, pY, pZ, pSprites.first());
         this.sprites = pSprites;
         this.lifetime = Integer.MAX_VALUE;
         this.gravity = 0.0F;

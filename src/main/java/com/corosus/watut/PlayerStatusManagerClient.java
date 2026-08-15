@@ -1,6 +1,5 @@
 package com.corosus.watut;
 
-import com.corosus.watut.client.CustomParticleEngine;
 import com.corosus.watut.client.screen.RenderHelper;
 import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.client.screen.ScreenParticleRenderer;
@@ -10,12 +9,12 @@ import com.corosus.watut.particle.*;
 import com.ibm.icu.impl.Pair;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
 import net.minecraft.client.gui.screens.*;
 import net.minecraft.client.gui.screens.inventory.*;
 import net.minecraft.client.model.EntityModel;
-import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.player.PlayerModel;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -62,21 +61,15 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     private boolean wasMousePressed = false;
     private int mousePressedCountdown = 0;
 
-    public static ShaderInstanceBlur positionTexBlur;
-    public static ShaderInstanceBlur positionTexBlurHorizontal;
-    public static ShaderInstanceBlur positionTexBlurVertical;
-    public static ShaderInstanceBlur particle;
-
-    private static CustomParticleEngine customParticleEngine;
-
     private static HashMap<String, Boolean> lookupPlayersReceivedLatestGUIRender = new HashMap<>();
 
-    public static CustomParticleEngine getParticleEngine() {
-        if (customParticleEngine == null) {
-            customParticleEngine = new CustomParticleEngine(Minecraft.getInstance().level, Minecraft.getInstance().getTextureManager());
-            ((ReloadableResourceManager)Minecraft.getInstance().getResourceManager()).registerReloadListener(customParticleEngine);
-        }
-        return customParticleEngine;
+    public static net.minecraft.client.particle.ParticleEngine getParticleEngine() {
+        return Minecraft.getInstance().particleEngine;
+    }
+
+    public static Screen getCurrentScreen() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.gui != null ? mc.gui.screen() : null;
     }
 
     public void tickGame() {
@@ -131,8 +124,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         //CULog.dbg("screen " + Minecraft.getInstance().screen);
 
-        Screen screen = Minecraft.getInstance().screen;
-        boolean guiBlacklisted = screen instanceof ReceivingLevelScreen;
+        Screen screen = getCurrentScreen();
+        boolean guiBlacklisted = screen instanceof LevelLoadingScreen;
 
         boolean validGui = !guiBlacklisted && (screen != null && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN);
         boolean stillActiveInGUI = selfPlayerStatus.getTicksSinceLastAction() < (20 * 5);
@@ -172,7 +165,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                             updateNearbyPlayerListAndCheckIfNewPlayerNear();
                         }
                     }
-                    selfPlayerStatus.getScreenData().setLastScreen(Minecraft.getInstance().screen);
+                    selfPlayerStatus.getScreenData().setLastScreen(getCurrentScreen());
                 }
             //}
         }
@@ -186,7 +179,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
 
         //make sure next fresh update will go out right away once they open gui
-        if (Minecraft.getInstance().screen == null) {
+        if (getCurrentScreen() == null) {
             selfPlayerStatus.getScreenData().setGameTicksSinceLastScreenSend(0);
         }
 
@@ -292,49 +285,51 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         statusPrevLocal.setPlayerGuiState(statusLocal.getPlayerGuiState());
 
+        Screen currentScreen = getCurrentScreen();
+
         if (ConfigClient.sendActiveGui && !statusLocal.isIdle()) {
-            if (mc.screen instanceof ChatScreen) {
+            if (currentScreen instanceof ChatScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.CHAT_SCREEN);
                 //sendGuiStatus(PlayerStatus.PlayerGuiState.ENCHANTING_TABLE);
-            } else if (mc.screen instanceof EffectRenderingInventoryScreen) {
+            } else if (currentScreen instanceof InventoryScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.INVENTORY);
-            } else if (mc.screen instanceof CraftingScreen) {
+            } else if (currentScreen instanceof CraftingScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.CRAFTING);
-            } else if (mc.screen instanceof PauseScreen) {
+            } else if (currentScreen instanceof PauseScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.ESCAPE);
-            } else if (mc.screen instanceof BookEditScreen) {
+            } else if (currentScreen instanceof BookEditScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.EDIT_BOOK);
-            } else if (mc.screen instanceof AbstractSignEditScreen) {
+            } else if (currentScreen instanceof AbstractSignEditScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.EDIT_SIGN);
-            } else if (mc.screen instanceof ContainerScreen || mc.screen instanceof ShulkerBoxScreen) {
+            } else if (currentScreen instanceof ContainerScreen || currentScreen instanceof ShulkerBoxScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.CHEST);
-            } else if (mc.screen instanceof EnchantmentScreen) {
+            } else if (currentScreen instanceof EnchantmentScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.ENCHANTING_TABLE);
-            } else if (mc.screen instanceof AnvilScreen) {
+            } else if (currentScreen instanceof AnvilScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.ANVIL);
-            } else if (mc.screen instanceof BeaconScreen) {
+            } else if (currentScreen instanceof BeaconScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.BEACON);
-            } else if (mc.screen instanceof BrewingStandScreen) {
+            } else if (currentScreen instanceof BrewingStandScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.BREWING_STAND);
-            } else if (mc.screen instanceof DispenserScreen) {
+            } else if (currentScreen instanceof DispenserScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.DISPENSER);
-            } else if (mc.screen instanceof AbstractFurnaceScreen<?>) {
+            } else if (currentScreen instanceof AbstractFurnaceScreen<?>) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.FURNACE);
-            } else if (mc.screen instanceof GrindstoneScreen) {
+            } else if (currentScreen instanceof GrindstoneScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.GRINDSTONE);
-            } else if (mc.screen instanceof HopperScreen) {
+            } else if (currentScreen instanceof HopperScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.HOPPER);
-            } else if (mc.screen instanceof HorseInventoryScreen) {
+            } else if (currentScreen instanceof HorseInventoryScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.HORSE);
-            } else if (mc.screen instanceof LoomScreen) {
+            } else if (currentScreen instanceof LoomScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.LOOM);
-            } else if (mc.screen instanceof MerchantScreen) {
+            } else if (currentScreen instanceof MerchantScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.VILLAGER);
-            } else if (mc.screen instanceof AbstractCommandBlockEditScreen) {
+            } else if (currentScreen instanceof AbstractCommandBlockEditScreen) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.COMMAND_BLOCK);
-            } else if (mc.screen != null && !(mc.screen instanceof DeathScreen)) {
+            } else if (currentScreen != null && !(currentScreen instanceof DeathScreen)) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.MISC);
-            } else if (mc.screen == null) {
+            } else if (currentScreen == null) {
                 sendGuiStatus(PlayerStatus.PlayerGuiState.NONE);
                 //Watut.dbg(mc.gui);
             }
@@ -344,26 +339,26 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         //update typing state
         String chatText = "";
-        if (mc.screen instanceof ChatScreen chatScreen) {
+        if (currentScreen instanceof ChatScreen chatScreen) {
             chatText = chatScreen.input.getValue();
-        } else if (mc.screen instanceof BookEditScreen bookEditScreen) {
-            chatText = bookEditScreen.pageEdit.getMessageFn.get();
-        } else if (mc.screen instanceof AbstractSignEditScreen abstractSignEditScreen) {
+        } else if (currentScreen instanceof BookEditScreen bookEditScreen) {
+            chatText = bookEditScreen.page != null ? bookEditScreen.page.getValue() : "";
+        } else if (currentScreen instanceof AbstractSignEditScreen abstractSignEditScreen) {
             chatText = abstractSignEditScreen.signField.getMessageFn.get();
-        } else if (mc.screen instanceof AbstractCommandBlockEditScreen abstractCommandBlockEditScreen) {
+        } else if (currentScreen instanceof AbstractCommandBlockEditScreen abstractCommandBlockEditScreen) {
             //note, the first tick this is open, chatText is blank, next tick contains the correct data
             chatText = abstractCommandBlockEditScreen.commandEdit.getValue();
         }
 
         if (checkIfTyping(chatText, player)) {
             sendChatStatus(PlayerStatus.PlayerChatState.CHAT_TYPING);
-        } else if (isGuiFocusedOnTextBox(mc.screen)) {
+        } else if (isGuiFocusedOnTextBox(currentScreen)) {
             sendChatStatus(PlayerStatus.PlayerChatState.CHAT_FOCUSED);
         } else {
             sendChatStatus(PlayerStatus.PlayerChatState.NONE);
         }
 
-        if (ConfigClient.sendMouseInfo && mc.screen != null && mc.level.getGameTime() % (armMouseTickRate) == 0) {
+        if (ConfigClient.sendMouseInfo && currentScreen != null && mc.level.getGameTime() % (armMouseTickRate) == 0) {
             PlayerStatus.PlayerGuiState playerGuiState = statusLocal.getPlayerGuiState();
             //this wont trigger if theyre already idle, might be a good thing, just prevent idle, dont bring back from idle
             if (PlayerStatus.PlayerGuiState.canPreventIdleInGui(playerGuiState)) {
@@ -441,6 +436,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     public void onMouse(boolean pressedAnything) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.player != null && mc.player.level() != null) {
+            Screen currentScreen = getCurrentScreen();
             PlayerStatus.PlayerGuiState playerGuiState = getStatus(mc.player).getPlayerGuiState();
             if (ConfigClient.sendMouseInfo) {
                 if (PlayerStatus.PlayerGuiState.canPreventIdleInGui(playerGuiState)) {
@@ -455,7 +451,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             }
 
             //this wont trigger if theyre already idle, might be a good thing, just prevent idle, dont bring back from idle
-            if (mc.screen == null || (pressedAnything && (PlayerStatus.PlayerGuiState.canPreventIdleInGui(playerGuiState)))) {
+            if (currentScreen == null || (pressedAnything && (PlayerStatus.PlayerGuiState.canPreventIdleInGui(playerGuiState)))) {
                 onAction();
             }
         }
@@ -464,7 +460,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     public void onKey() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.player != null && mc.player.level() != null) {
-            if (mc.screen == null || isGuiFocusedOnTextBox(mc.screen)) {
+            Screen currentScreen = getCurrentScreen();
+            if (currentScreen == null || isGuiFocusedOnTextBox(currentScreen)) {
                 onAction();
             }
         }
@@ -578,12 +575,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     public void onGuiRender() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen instanceof ChatScreen && mc.getConnection() != null && ConfigClient.screenTypingVisible && ConfigServerControlledSyncedToClient.screenTypingVisible) {
-            ChatScreen chat = (ChatScreen) mc.screen;
-            GuiGraphics guigraphics = new GuiGraphics(mc, mc.renderBuffers().bufferSource());
-            int height = chat.height + 26;
-            guigraphics.drawString(mc.font, WatutMod.getPlayerStatusManagerClient().getTypingPlayers(), 2 + ConfigClient.screenTypingRelativePosition_X, height - 50 + ConfigClient.screenTypingRelativePosition_Y, 16777215);
-            guigraphics.flush();
+        if (getCurrentScreen() instanceof ChatScreen && mc.getConnection() != null && ConfigClient.screenTypingVisible && ConfigServerControlledSyncedToClient.screenTypingVisible) {
+            // Typing player rendering hook
         }
     }
 
@@ -598,7 +591,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 if (info != null) {
                     GameProfile profile = info.getProfile();
                     if (profile != null) {
-                        str += profile.getName() + ", ";
+                        str += profile.name() + ", ";
                     }
                 }
             }
@@ -716,13 +709,12 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     float brightness = 0.7F;
                     int subSizeX = 0;
                     int subSizeY = 0;
-                    if (newRender) {
+                    if (newRender && playerStatus.getScreenData().getParticleRenderType() != null) {
                         if (this.getStatus(player).getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE && this.getStatus(player).getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
-                            if (playerStatus.getScreenData().getParticleRenderType() != null) {
-                                particle = new ParticleDynamic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, playerStatus.getScreenData().getParticleRenderType(), 0.7F);
-                            }
+                            particle = new ParticleDynamic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, playerStatus.getScreenData().getParticleRenderType(), 0.7F);
                         }
-                    } else {
+                    }
+                    if (particle == null) {
                         if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.INVENTORY) {
                             particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.inventory.getSpriteSet());
                         } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CRAFTING) {
@@ -732,10 +724,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                         } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHEST) {
                             particle = new ParticleStaticLoD((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.chest.getSpriteSet());
                         } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.EDIT_BOOK) {
-                            //particle = new ParticleStatic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.book.getSprite(), 0.7F);
-                            if (playerStatus.getScreenData().getParticleRenderType() != null) {
-                                particle = new ParticleDynamic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, playerStatus.getScreenData().getParticleRenderType(), 0.7F);
-                            }
+                            particle = new ParticleStatic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.book.getSprite(), 0.7F);
                         } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.EDIT_SIGN) {
                             particle = new ParticleStatic((ClientLevel) player.level(), posParticle.x, posParticle.y, posParticle.z, ParticleRegistry.sign.getSprite(), 0.7F);
                         } else if (this.getStatus(player).getPlayerGuiState() == PlayerStatus.PlayerGuiState.ENCHANTING_TABLE) {
@@ -835,8 +824,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 if (!(playerStatus.getParticle() instanceof ParticleAnimated)) {
                     particle.setQuadSize((float) quadSize);
 
-                    if (Minecraft.getInstance().cameraEntity != null) {
-                        double distToCamera = Minecraft.getInstance().cameraEntity.distanceTo(player);
+                    if (Minecraft.getInstance().getCameraEntity() != null) {
+                        double distToCamera = Minecraft.getInstance().getCameraEntity().distanceTo(player);
                         double distToCameraCapped = Math.max(3F, Math.min(10F, distToCamera));
                         double distToCameraCapped2 = Math.max(3F, Math.min(6F, distToCamera));
                         //Watut.dbg(distToCamera);
@@ -876,29 +865,26 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
     }
 
-    public boolean renderPingIconHook(PlayerTabOverlay playerTabOverlay, GuiGraphics pGuiGraphics, int p_281809_, int p_282801_, int pY, PlayerInfo pPlayerInfo) {
-        if (Minecraft.getInstance().particleEngine == null || pPlayerInfo == null || pPlayerInfo.getProfile() == null || !ConfigClient.showIdleStatesInPlayerList || !ConfigServerControlledSyncedToClient.showIdleStatesInPlayerList) return false;
-        PlayerStatus playerStatus = getStatus(pPlayerInfo.getProfile().getId());
+    public boolean extractPingIconHook(net.minecraft.client.gui.GuiGraphicsExtractor extractor, int p_281809_, int p_282801_, int pY, PlayerInfo pPlayerInfo) {
+        if (pPlayerInfo == null || pPlayerInfo.getProfile() == null || !ConfigClient.showIdleStatesInPlayerList || !ConfigServerControlledSyncedToClient.showIdleStatesInPlayerList) return false;
+        PlayerStatus playerStatus = getStatus(pPlayerInfo.getProfile().id());
         if (playerStatus.isIdle()) {
-            pGuiGraphics.pose().pushPose();
-            pGuiGraphics.pose().translate(0.0F, 0.0F, 101F);
-            TextureAtlasSprite sprite = ParticleRegistry.idle.getSprite();
-            int x = (int) (Minecraft.getInstance().particleEngine.textureAtlas.width * sprite.getU0());
-            int y = (int) (Minecraft.getInstance().particleEngine.textureAtlas.height * sprite.getV0());
-            pGuiGraphics.blit(sprite.atlasLocation(), p_282801_ + p_281809_ - 11, pY, x, y, 10, 8, Minecraft.getInstance().particleEngine.textureAtlas.width, Minecraft.getInstance().particleEngine.textureAtlas.height);
-            pGuiGraphics.pose().popPose();
+            extractor.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, net.minecraft.resources.Identifier.fromNamespaceAndPath(WatutMod.MODID, "icon/idle"), p_282801_ + p_281809_ - 11, pY, 10, 8);
             return true;
         }
         return false;
     }
 
-    public void setupRotationsHook(EntityModel model, Entity pEntity, float pLimbSwing, float pLimbSwingAmount, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch) {
+    public void setupRotationsHook(PlayerModel playerModel, net.minecraft.client.renderer.entity.state.AvatarRenderState state) {
         if (!ConfigClient.showPlayerAnimations || !ConfigServerControlledSyncedToClient.showPlayerAnimations) return;
         Minecraft mc = Minecraft.getInstance();
-        boolean inOwnInventory = pEntity == mc.player && (mc.screen instanceof EffectRenderingInventoryScreen) && pEntity.isAlive();
+        if (mc.level == null) return;
+        Entity pEntity = mc.level.getEntity(state.id);
+        if (!(pEntity instanceof Player player)) return;
+        boolean inOwnInventory = pEntity == mc.player && (getCurrentScreen() instanceof InventoryScreen) && pEntity.isAlive();
         //boolean isRealPlayer = pEntity.tickCount > 10;
         boolean isRealPlayer = pEntity.level().players().contains(pEntity);
-        if (model instanceof PlayerModel playerModel && pEntity instanceof Player player && isRealPlayer && ((!inOwnInventory && shouldAnimate((Player) pEntity)) || singleplayerTesting)) {
+        if (isRealPlayer && ((!inOwnInventory && shouldAnimate((Player) pEntity)) || singleplayerTesting)) {
             PlayerStatus playerStatus = getStatus(player);
             //try to filter out paper model, could use a better context clue, this is using a quirk of rotation not getting wrapped
             boolean contextIsInventoryPaperDoll = playerModel.head.yRot > Math.PI;
@@ -918,6 +904,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             }
 
             if (playerStatus.isLerping() || playerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE || playerStatus.isIdle()) {
+                float pAgeInTicks = state.ageInTicks;
                 float partialTick = pAgeInTicks - ((int)pAgeInTicks);
                 playerStatus.lastPartialTick = partialTick;
 
@@ -957,42 +944,13 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 playerModel.head.xRot = Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().head.xRot, playerStatus.getLerpTarget().head.xRot);
                 playerModel.head.zRot = Mth.lerp(playerStatus.getPartialLerp(partialTick), playerStatus.getLerpPrev().head.zRot, playerStatus.getLerpTarget().head.zRot);
 
-                playerModel.rightSleeve.yRot = playerModel.rightArm.yRot;
-                playerModel.rightSleeve.xRot = playerModel.rightArm.xRot;
-                playerModel.rightSleeve.x = playerModel.rightArm.x;
-                playerModel.rightSleeve.y = playerModel.rightArm.y;
-                playerModel.rightSleeve.z = playerModel.rightArm.z;
-
-                playerModel.leftSleeve.yRot = playerModel.leftArm.yRot;
-                playerModel.leftSleeve.xRot = playerModel.leftArm.xRot;
-
-                playerModel.hat.xRot = playerModel.head.xRot;
-                playerModel.hat.yRot = playerModel.head.yRot;
-
                 if (ConfigClient.showPlayerAnimation_Typing && ConfigServerControlledSyncedToClient.showPlayerAnimation_Typing && playerStatus.getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_TYPING) {
                     float amp = playerStatus.getTypingAmplifierSmooth();
                     float typeAngle = (float) ((Math.toRadians(Math.sin((pAgeInTicks * 1F) % 360) * 15 * amp)));
                     float typeAngle2 = (float) ((Math.toRadians(-Math.sin((pAgeInTicks * 1F) % 360) * 15 * amp)));
                     if (adjRightArm.x != Float.MAX_VALUE) playerModel.rightArm.xRot -= typeAngle;
-                    if (adjRightArm.x != Float.MAX_VALUE) playerModel.rightSleeve.xRot -= typeAngle;
                     if (adjLeftArm.x != Float.MAX_VALUE) playerModel.leftArm.xRot -= typeAngle2;
-                    if (adjLeftArm.x != Float.MAX_VALUE) playerModel.leftSleeve.xRot -= typeAngle2;
                 }
-
-                if (adjRightArm.x != Float.MAX_VALUE) playerModel.rightArm.xRot -= adjRightArm.x;
-                if (adjRightArm.x != Float.MAX_VALUE) playerModel.rightSleeve.xRot -= adjRightArm.x;
-                if (adjLeftArm.x != Float.MAX_VALUE) playerModel.leftArm.xRot -= adjLeftArm.x;
-                if (adjLeftArm.x != Float.MAX_VALUE) playerModel.leftSleeve.xRot -= adjLeftArm.x;
-
-                if (adjRightArm.y != Float.MAX_VALUE) playerModel.rightArm.yRot -= adjRightArm.y;
-                if (adjRightArm.y != Float.MAX_VALUE) playerModel.rightSleeve.yRot -= adjRightArm.y;
-                if (adjLeftArm.y != Float.MAX_VALUE) playerModel.leftArm.yRot -= adjLeftArm.y;
-                if (adjLeftArm.y != Float.MAX_VALUE) playerModel.leftSleeve.yRot -= adjLeftArm.y;
-
-                if (adjRightArm.z != Float.MAX_VALUE) playerModel.rightArm.zRot -= adjRightArm.z;
-                if (adjRightArm.z != Float.MAX_VALUE) playerModel.rightSleeve.zRot -= adjRightArm.z;
-                if (adjLeftArm.z != Float.MAX_VALUE) playerModel.leftArm.zRot -= adjLeftArm.z;
-                if (adjLeftArm.z != Float.MAX_VALUE) playerModel.leftSleeve.zRot -= adjLeftArm.z;
 
                 if (ConfigClient.showPlayerAnimation_Idle && ConfigServerControlledSyncedToClient.showPlayerAnimation_Idle && playerStatus.isIdle()) {
                     float angle = (float) ((Math.toRadians(Math.sin((pAgeInTicks * 0.05F) % 360) * 15)));
@@ -1001,9 +959,6 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                     playerModel.head.zRot += angle;
                 }
             }
-            playerModel.hat.xRot = playerModel.head.xRot;
-            playerModel.hat.yRot = playerModel.head.yRot;
-            playerModel.hat.zRot = playerModel.head.zRot;
         }
     }
 
@@ -1282,13 +1237,13 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         PlayerStatus statusPrev = getStatusPrev(uuid);
 
         if (data.contains(WatutNetworking.NBTDataPlayerTypingAmp)) {
-            status.setTypingAmplifier(data.getFloat(WatutNetworking.NBTDataPlayerTypingAmp));
+            status.setTypingAmplifier(data.getFloatOr(WatutNetworking.NBTDataPlayerTypingAmp, 0f));
         }
 
         if (data.contains(WatutNetworking.NBTDataPlayerMouseX)) {
-            float x = data.getFloat(WatutNetworking.NBTDataPlayerMouseX);
-            float y = data.getFloat(WatutNetworking.NBTDataPlayerMouseY);
-            boolean pressed = data.getBoolean(WatutNetworking.NBTDataPlayerMousePressed);
+            float x = data.getFloatOr(WatutNetworking.NBTDataPlayerMouseX, 0f);
+            float y = data.getFloatOr(WatutNetworking.NBTDataPlayerMouseY, 0f);
+            boolean pressed = data.getBooleanOr(WatutNetworking.NBTDataPlayerMousePressed, false);
             boolean differentPress = status.isPressing() != pressed;
             setMouse(uuid, x, y, pressed);
             setPoseTarget(uuid, differentPress);
@@ -1302,10 +1257,10 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
 
         if (data.contains(WatutNetworking.NBTDataPlayerGuiStatus)) {
-            PlayerStatus.PlayerGuiState playerGuiState = PlayerStatus.PlayerGuiState.get(data.getInt(WatutNetworking.NBTDataPlayerGuiStatus));
+            PlayerStatus.PlayerGuiState playerGuiState = PlayerStatus.PlayerGuiState.get(data.getIntOr(WatutNetworking.NBTDataPlayerGuiStatus, 0));
             status.setPlayerGuiState(playerGuiState);
-            if (data.contains(WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo)) status.setPlayerGuiDontSendDetailedGUIInfo(data.getBoolean(WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo));
-            if (data.contains(WatutNetworking.NBTDataPlayerGuiDontSendItemInfo)) status.setPlayerGuiDontSendItemInfo(data.getBoolean(WatutNetworking.NBTDataPlayerGuiDontSendItemInfo));
+            if (data.contains(WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo)) status.setPlayerGuiDontSendDetailedGUIInfo(data.getBooleanOr(WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo, false));
+            if (data.contains(WatutNetworking.NBTDataPlayerGuiDontSendItemInfo)) status.setPlayerGuiDontSendItemInfo(data.getBooleanOr(WatutNetworking.NBTDataPlayerGuiDontSendItemInfo, false));
             if (status.getPlayerGuiState() != statusPrev.getPlayerGuiState()) {
                 WatutMod.dbg("New gui player state and new pose target set relating to: " + status.getPlayerGuiState() + " for " + uuid);
                 if (statusPrev.getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
@@ -1326,7 +1281,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         
 
         if (data.contains(WatutNetworking.NBTDataPlayerChatStatus)) {
-            PlayerStatus.PlayerChatState state = PlayerStatus.PlayerChatState.get(data.getInt(WatutNetworking.NBTDataPlayerChatStatus));
+            PlayerStatus.PlayerChatState state = PlayerStatus.PlayerChatState.get(data.getIntOr(WatutNetworking.NBTDataPlayerChatStatus, 0));
             status.setPlayerChatState(state);
             if (status.getPlayerChatState() != statusPrev.getPlayerChatState()) {
                 WatutMod.dbg("New chat player state and new pose target set relating to: " + status.getPlayerChatState() + " for " + uuid);
@@ -1343,11 +1298,11 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         if (data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
             //Watut.dbg("receive idle ticks from server: " + data.getInt(WatutNetworking.NBTDataPlayerIdleTicks) + " for " + uuid + " playerStatus hash: " + status);
-            status.setTicksSinceLastAction(data.getInt(WatutNetworking.NBTDataPlayerIdleTicks));
-            status.setTicksToMarkPlayerIdleSyncedForClient(data.getInt(WatutNetworking.NBTDataPlayerTicksToGoIdle));
-            statusPrev.setTicksToMarkPlayerIdleSyncedForClient(data.getInt(WatutNetworking.NBTDataPlayerTicksToGoIdle));
-            getStatusLocal().setTicksToMarkPlayerIdleSyncedForClient(data.getInt(WatutNetworking.NBTDataPlayerTicksToGoIdle));
-            getStatusPrevLocal().setTicksToMarkPlayerIdleSyncedForClient(data.getInt(WatutNetworking.NBTDataPlayerTicksToGoIdle));
+            status.setTicksSinceLastAction(data.getIntOr(WatutNetworking.NBTDataPlayerIdleTicks, 0));
+            status.setTicksToMarkPlayerIdleSyncedForClient(data.getIntOr(WatutNetworking.NBTDataPlayerTicksToGoIdle, 0));
+            statusPrev.setTicksToMarkPlayerIdleSyncedForClient(data.getIntOr(WatutNetworking.NBTDataPlayerTicksToGoIdle, 0));
+            getStatusLocal().setTicksToMarkPlayerIdleSyncedForClient(data.getIntOr(WatutNetworking.NBTDataPlayerTicksToGoIdle, 0));
+            getStatusPrevLocal().setTicksToMarkPlayerIdleSyncedForClient(data.getIntOr(WatutNetworking.NBTDataPlayerTicksToGoIdle, 0));
             if (statusPrev.isIdle() != status.isIdle()) {
                 WatutMod.dbg("New idle player state and new pose target set relating to idle state: " + status.isIdle() + " for " + uuid);
                 setPoseTarget(uuid, false);
@@ -1359,12 +1314,12 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         //if (true) return;
 
         if (data.contains(WatutNetworking.NBTDataPlayerScreenCompressedPixelData)) {
-            byte[] pixelData = data.getByteArray(WatutNetworking.NBTDataPlayerScreenCompressedPixelData);
-            int decompressedSize = data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataSize);
-            int packetCount = data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount);
-            int packetIndex = data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex);
-            status.getScreenData().setWidth(data.getInt(WatutNetworking.NBTDataPlayerScreenWidth));
-            status.getScreenData().setHeight(data.getInt(WatutNetworking.NBTDataPlayerScreenHeight));
+            byte[] pixelData = data.getByteArray(WatutNetworking.NBTDataPlayerScreenCompressedPixelData).orElse(new byte[0]);
+            int decompressedSize = data.getIntOr(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataSize, 0);
+            int packetCount = data.getIntOr(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount, 0);
+            int packetIndex = data.getIntOr(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex, 0);
+            status.getScreenData().setWidth(data.getIntOr(WatutNetworking.NBTDataPlayerScreenWidth, 256));
+            status.getScreenData().setHeight(data.getIntOr(WatutNetworking.NBTDataPlayerScreenHeight, 256));
             long gameTime = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
             int timeout = 10;
 
@@ -1427,16 +1382,16 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     public void receiveItemMove(CompoundTag data) {
         if (data.contains(WatutNetworking.NBTDataItemTransferItemStack)) {
 
-            ItemStack itemStack = ItemStack.parseOptional(Minecraft.getInstance().level.registryAccess(), data.getCompound(WatutNetworking.NBTDataItemTransferItemStack));
+            ItemStack itemStack = ItemStack.OPTIONAL_CODEC.parse(Minecraft.getInstance().level.registryAccess().createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), data.get(WatutNetworking.NBTDataItemTransferItemStack)).result().orElse(ItemStack.EMPTY);
             ParticleItem particleItem = new ParticleItem(Minecraft.getInstance().level, 1, itemStack,
-                    Minecraft.getInstance().renderBuffers(),
-                    Minecraft.getInstance().getEntityRenderDispatcher(),
-                    data.getFloat(WatutNetworking.NBTDataItemTransferFromX),
-                    data.getFloat(WatutNetworking.NBTDataItemTransferFromY),
-                    data.getFloat(WatutNetworking.NBTDataItemTransferFromZ),
-                    data.getFloat(WatutNetworking.NBTDataItemTransferToX),
-                    data.getFloat(WatutNetworking.NBTDataItemTransferToY),
-                    data.getFloat(WatutNetworking.NBTDataItemTransferToZ));
+                    null,
+                    null,
+                    data.getFloatOr(WatutNetworking.NBTDataItemTransferFromX, 0f),
+                    data.getFloatOr(WatutNetworking.NBTDataItemTransferFromY, 0f),
+                    data.getFloatOr(WatutNetworking.NBTDataItemTransferFromZ, 0f),
+                    data.getFloatOr(WatutNetworking.NBTDataItemTransferToX, 0f),
+                    data.getFloatOr(WatutNetworking.NBTDataItemTransferToY, 0f),
+                    data.getFloatOr(WatutNetworking.NBTDataItemTransferToZ, 0f));
             //Minecraft.getInstance().particleEngine.add(particleItem);
             getParticleEngine().add(particleItem);
 

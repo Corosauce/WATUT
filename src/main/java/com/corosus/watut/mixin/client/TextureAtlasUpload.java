@@ -1,9 +1,6 @@
 package com.corosus.watut.mixin.client;
 
 import com.corosus.watut.ParticleRegistry;
-import com.corosus.watut.WatutMod;
-import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.texture.SpriteLoader;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import org.spongepowered.asm.mixin.Mixin;

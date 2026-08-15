@@ -12,11 +12,7 @@
     "client.KeyboardHandlerKeyPress",
     "client.MinecraftTick",
     "client.MouseHandlerOnPress",
-    "client.TextureAtlasUpload",
-    "client.PostChainResize",
-    "client.GameRendererReloadShaders",
-    "client.ParticleEngineMixinFabric",
-    "client.NativeImageAccessor"
+    "client.TextureAtlasUpload"
   ],
   "mixins": [
     "PlayerLoggedIn",
