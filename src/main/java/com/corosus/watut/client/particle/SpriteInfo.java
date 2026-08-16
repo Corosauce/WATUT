@@ -1,6 +1,6 @@
-package com.corosus.watut;
+package com.corosus.watut.client.particle;
 
-import com.corosus.watut.spritesets.SpriteSetPlayer;
+import com.corosus.watut.WatutMod;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.Identifier;
@@ -8,6 +8,9 @@ import net.minecraft.resources.Identifier;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Informazioni e caricamento per uno sprite o serie di sprite dall'atlas delle particelle.
+ */
 public class SpriteInfo {
 
     private final String name;
@@ -16,7 +19,9 @@ public class SpriteInfo {
 
     public SpriteInfo(String name, int size, int tickDelay) {
         this.name = name;
-        if (size > 0) this.spriteSetPlayer = new SpriteSetPlayer(tickDelay, size);
+        if (size > 0) {
+            this.spriteSetPlayer = new SpriteSetPlayer(tickDelay, size);
+        }
     }
 
     public boolean isSpriteSet() {
@@ -39,11 +44,9 @@ public class SpriteInfo {
         if (isSpriteSet()) {
             List<TextureAtlasSprite> list = new ArrayList<>();
             for (int i = 0; i < spriteSetPlayer.getFrames(); i++) {
-                TextureAtlasSprite textureAtlasSprite = textureAtlas.getSprite(getResLocationName(i));
-                if (textureAtlasSprite != null) {
-                    list.add(textureAtlasSprite);
-                } else {
-                    System.out.println("failed to find " + getResLocationName(i));
+                TextureAtlasSprite s = textureAtlas.getSprite(getResLocationName(i));
+                if (s != null) {
+                    list.add(s);
                 }
             }
             this.spriteSetPlayer.setList(list);
@@ -52,18 +55,11 @@ public class SpriteInfo {
             }
         } else {
             sprite = textureAtlas.getSprite(getResLocationName());
-            if (sprite == null) {
-                System.out.println("failed to find " + getResLocationName());
-            }
         }
     }
 
     public TextureAtlasSprite getSprite() {
         return sprite;
-    }
-
-    public void setSprite(TextureAtlasSprite sprite) {
-        this.sprite = sprite;
     }
 
     public String getName() {
@@ -72,9 +68,5 @@ public class SpriteInfo {
 
     public SpriteSetPlayer getSpriteSet() {
         return spriteSetPlayer;
-    }
-
-    public void setSpriteSetPlayer(SpriteSetPlayer spriteSetPlayer) {
-        this.spriteSetPlayer = spriteSetPlayer;
     }
 }

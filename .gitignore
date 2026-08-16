@@ -19,9 +19,6 @@ build
 libs
 logs
 
-# ignore build.gradle since we have 3 different versions
-build.gradle
-
 # other
 eclipse
 run

@@ -6,15 +6,17 @@
   "client": [
     "client.SetupRotationsInject",
     "client.RenderPingIconInject",
-    "client.GuiRender",
     "client.ScreenRenderBackground",
     "client.ScreenRenderWithTooltip",
-    "client.PostChainResize",
-    "client.GameRendererReloadShaders",
-    "client.ParticleEngineMixin",
-    "client.NativeImageAccessor"
+    "client.GuiRender",
+    "client.KeyboardHandlerKeyPress",
+    "client.MinecraftTick",
+    "client.MouseHandlerOnPress",
+    "client.TextureAtlasUpload"
   ],
   "mixins": [
+    "PlayerLoggedIn",
+    "PlayerTick",
     "AbstractContainerMenuDoClick",
     "BlockBehaviorUse"
   ],

@@ -13,10 +13,26 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Gestisce le correzioni personalizzate degli angoli delle braccia in base all'oggetto impugnato.
+ * 
+ * COME FUNZIONA:
+ * Alcuni oggetti (es. spade enormi, scudi, mappe, balestre o armi di altre mod) possono
+ * collidere visivamente con la testa o avere una posa strana quando il giocatore apre un inventario o digita.
+ * 
+ * Questo sistema legge il file JSON (config/watut-item-arm-adjustments.json) e permette di:
+ * 1. Filtrare oggetti per ID esatto ("minecraft:shield"), per mod ("@modid") o con wildcard ("*sword*").
+ * 2. Applicare rotazioni correttive (espresse in gradi nel JSON, convertite in radianti per Minecraft).
+ * 3. Disattivare l'animazione di un braccio usando la parola chiave "disable" (rappresentata come Float.MAX_VALUE).
+ */
 public class CustomArmCorrections {
 
     private static HeldItemArmAdjustmentLists heldItemArmAdjustmentLists = null;
 
+    /**
+     * Carica il file di configurazione JSON da disco.
+     * @return true se il file è stato caricato e parsato correttamente, false altrimenti.
+     */
     public static boolean loadJsonConfigs() {
         Gson gson = new Gson();
         try (FileReader reader = new FileReader("./config/" + WatutMod.configJSONName)) {
@@ -33,112 +49,145 @@ public class CustomArmCorrections {
         return heldItemArmAdjustmentLists;
     }
 
-    public static Vector3f getAdjustmentForArm(ItemStack stackMainArm, ItemStack stackotherHandArm, EquipmentSlot equipmentSlot) {
-        if (getHeldItemArmAdjustmentLists() == null) return new Vector3f(0, 0, 0);
+    /**
+     * Calcola il vettore di rotazione correttivo (in radianti) da applicare al braccio.
+     * 
+     * @param stackMainArm    Oggetto nella mano associata a questo braccio
+     * @param stackOtherHandArm Oggetto nell'altra mano
+     * @param equipmentSlot   Slot dell'equipaggiamento analizzato
+     * @return Vector3f contenente (xRot, yRot, zRot) in radianti, oppure Float.MAX_VALUE se disattivato
+     */
+    public static Vector3f getAdjustmentForArm(ItemStack stackMainArm, ItemStack stackOtherHandArm, EquipmentSlot equipmentSlot) {
+        if (getHeldItemArmAdjustmentLists() == null) {
+            return new Vector3f(0, 0, 0);
+        }
+
         try {
             for (HeldItemArmAdjustment heldItemArmAdjustment : getHeldItemArmAdjustmentLists().getHeldItemArmAdjustments()) {
+                Adjustment adj = heldItemArmAdjustment.getAdjustment();
+                if (adj == null) continue;
 
-                boolean shouldMatchmatchingHand = heldItemArmAdjustment.getAdjustment().getmatchingHandX() != "0" || heldItemArmAdjustment.getAdjustment().getmatchingHandY() != "0" || heldItemArmAdjustment.getAdjustment().getmatchingHandZ() != "0";
-                boolean shouldMatchotherHand = heldItemArmAdjustment.getAdjustment().getotherHandX() != "0" || heldItemArmAdjustment.getAdjustment().getotherHandY() != "0" || heldItemArmAdjustment.getAdjustment().getotherHandZ() != "0";
-                boolean matchmatchingHand = shouldMatchmatchingHand && filterMatches(heldItemArmAdjustment, stackMainArm);
-                boolean matchotherHand = shouldMatchotherHand && filterMatches(heldItemArmAdjustment, stackotherHandArm);
-                boolean modIDMatches = heldItemArmAdjustment.getOnly_if_mod_installed().equals("") || WatutMod.instance().isModInstalled(heldItemArmAdjustment.getOnly_if_mod_installed());
-                boolean matchFound = (matchmatchingHand || matchotherHand) && modIDMatches;
+                // Controlla se la regola specifica rotazioni per la mano corrispondente o per l'altra mano
+                boolean shouldMatchMatchingHand = isConfigured(adj.getmatchingHandX()) || isConfigured(adj.getmatchingHandY()) || isConfigured(adj.getmatchingHandZ());
+                boolean shouldMatchOtherHand = isConfigured(adj.getotherHandX()) || isConfigured(adj.getotherHandY()) || isConfigured(adj.getotherHandZ());
 
-                if (matchFound) {
-                    float adjX = 0;
-                    float adjY = 0;
-                    float adjZ = 0;
-                    if (matchmatchingHand) {
-                        if (heldItemArmAdjustment.getAdjustment().getmatchingHandX().toLowerCase().startsWith("disable")) {
-                            adjX = Float.MAX_VALUE;
-                        } else {
-                            adjX = Float.parseFloat(heldItemArmAdjustment.getAdjustment().getmatchingHandX());
-                        }
-                        if (heldItemArmAdjustment.getAdjustment().getmatchingHandY().toLowerCase().startsWith("disable")) {
-                            adjY = Float.MAX_VALUE;
-                        } else {
-                            adjY = Float.parseFloat(heldItemArmAdjustment.getAdjustment().getmatchingHandY());
-                        }
-                        if (heldItemArmAdjustment.getAdjustment().getmatchingHandZ().toLowerCase().startsWith("disable")) {
-                            adjZ = Float.MAX_VALUE;
-                        } else {
-                            adjZ = Float.parseFloat(heldItemArmAdjustment.getAdjustment().getmatchingHandZ());
-                        }
-                    } else if (matchotherHand) {
-                        if (heldItemArmAdjustment.getAdjustment().getotherHandX().toLowerCase().startsWith("disable")) {
-                            adjX = Float.MAX_VALUE;
-                        } else {
-                            adjX = Float.parseFloat(heldItemArmAdjustment.getAdjustment().getotherHandX());
-                        }
-                        if (heldItemArmAdjustment.getAdjustment().getotherHandY().toLowerCase().startsWith("disable")) {
-                            adjY = Float.MAX_VALUE;
-                        } else {
-                            adjY = Float.parseFloat(heldItemArmAdjustment.getAdjustment().getotherHandY());
-                        }
-                        if (heldItemArmAdjustment.getAdjustment().getotherHandZ().toLowerCase().startsWith("disable")) {
-                            adjZ = Float.MAX_VALUE;
-                        } else {
-                            adjZ = Float.parseFloat(heldItemArmAdjustment.getAdjustment().getotherHandZ());
-                        }
+                boolean matchMatchingHand = shouldMatchMatchingHand && filterMatches(heldItemArmAdjustment, stackMainArm);
+                boolean matchOtherHand = shouldMatchOtherHand && filterMatches(heldItemArmAdjustment, stackOtherHandArm);
+
+                // Controlla se la regola è vincolata alla presenza di una specifica mod installata
+                String modReq = heldItemArmAdjustment.getOnly_if_mod_installed();
+                boolean modIDMatches = modReq == null || modReq.isEmpty() || WatutMod.instance().isModInstalled(modReq);
+
+                if ((matchMatchingHand || matchOtherHand) && modIDMatches) {
+                    if (matchMatchingHand) {
+                        return parseArmVector(adj.getmatchingHandX(), adj.getmatchingHandY(), adj.getmatchingHandZ());
+                    } else {
+                        return parseArmVector(adj.getotherHandX(), adj.getotherHandY(), adj.getotherHandZ());
                     }
-
-                    return new Vector3f(adjX == Float.MAX_VALUE ? adjX : Mth.DEG_TO_RAD * adjX, adjY == Float.MAX_VALUE ? adjY : Mth.DEG_TO_RAD * adjY, adjZ == Float.MAX_VALUE ? adjZ : Mth.DEG_TO_RAD * adjZ);
                 }
             }
         } catch (Exception ex) {
             ex.printStackTrace();
-            return new Vector3f(0, 0, 0);
         }
+
         return new Vector3f(0, 0, 0);
     }
 
+    /**
+     * Verifica se un valore nel JSON rappresenta una rotazione configurata (non vuota e diversa da "0").
+     */
+    private static boolean isConfigured(String val) {
+        return val != null && !val.trim().isEmpty() && !val.trim().equals("0");
+    }
+
+    /**
+     * Converte le stringhe X, Y, Z in un vettore Vector3f di angoli in radianti.
+     * Gestisce la parola chiave "disable" impostando il valore a Float.MAX_VALUE.
+     */
+    private static Vector3f parseArmVector(String xStr, String yStr, String zStr) {
+        float x = parseArmAngle(xStr);
+        float y = parseArmAngle(yStr);
+        float z = parseArmAngle(zStr);
+
+        return new Vector3f(
+            x == Float.MAX_VALUE ? x : Mth.DEG_TO_RAD * x,
+            y == Float.MAX_VALUE ? y : Mth.DEG_TO_RAD * y,
+            z == Float.MAX_VALUE ? z : Mth.DEG_TO_RAD * z
+        );
+    }
+
+    /**
+     * Converte una singola stringa dal JSON nel valore float corrispondente.
+     */
+    private static float parseArmAngle(String value) {
+        if (value == null || value.trim().isEmpty() || value.trim().equals("0")) {
+            return 0f;
+        }
+        if (value.trim().toLowerCase().startsWith("disable")) {
+            return Float.MAX_VALUE;
+        }
+        try {
+            return Float.parseFloat(value.trim());
+        } catch (NumberFormatException e) {
+            return 0f;
+        }
+    }
+
+    /**
+     * Verifica se l'ItemStack soddisfa uno dei filtri specificati nella regola JSON.
+     * Supporta:
+     * - ID completo: "minecraft:shield"
+     * - Mod ID: "@twilightforest"
+     * - Wildcard inizio/fine/contenuto: "*sword*", "*bow", "modid:*"
+     */
     private static boolean filterMatches(HeldItemArmAdjustment heldItemArmAdjustment, ItemStack stack) {
-        //using OR logic
-        boolean matchFound = false;
+        if (stack == null || stack.isEmpty() || heldItemArmAdjustment.getFilters() == null) {
+            return false;
+        }
+
+        String fullName = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        if (fullName.equals("minecraft:air")) {
+            return false;
+        }
+
+        String[] parts = fullName.split(":");
+        String modID = parts[0];
+
         for (String filter : heldItemArmAdjustment.getFilters()) {
-            String fullname = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+            if (filter == null || filter.isEmpty()) continue;
 
-            if (fullname.matches("minecraft:air")) continue;
-
-            String modID = fullname.split(":")[0];
-            String name = fullname.split(":")[1];
-
-            //mod id match check
-            if (filter.contains("@")) {
-                if (filter.substring(1).equals(modID)) {
-                    matchFound = true;
-                    break;
+            // Controllo per prefisso mod '@' (es. "@farmersdelight")
+            if (filter.startsWith("@")) {
+                if (filter.substring(1).equalsIgnoreCase(modID)) {
+                    return true;
                 }
+                continue;
             }
 
-            //perfect match
-            if (filter.equals(fullname)) {
-                matchFound = true;
-                break;
+            // Corrispondenza esatta
+            if (filter.equalsIgnoreCase(fullName)) {
+                return true;
             }
 
+            // Corrispondenza con caratteri jolly (wildcard '*')
             if (filter.startsWith("*") && filter.endsWith("*")) {
-                String search = filter.replace("*", "").replace("*", "");
-                if (fullname.contains(search)) {
-                    matchFound = true;
-                    break;
+                String search = filter.substring(1, filter.length() - 1);
+                if (fullName.contains(search)) {
+                    return true;
                 }
             } else if (filter.startsWith("*")) {
-                String search = filter.replace("*", "");
-                if (fullname.endsWith(search)) {
-                    matchFound = true;
-                    break;
+                String search = filter.substring(1);
+                if (fullName.endsWith(search)) {
+                    return true;
                 }
             } else if (filter.endsWith("*")) {
-                String search = filter.replace("*", "");
-                if (fullname.startsWith(search)) {
-                    matchFound = true;
-                    break;
+                String search = filter.substring(0, filter.length() - 1);
+                if (fullName.startsWith(search)) {
+                    return true;
                 }
             }
         }
-        return matchFound;
+        return false;
     }
 }
 

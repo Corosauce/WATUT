@@ -1,6 +1,5 @@
 package com.corosus.watut.mixin.client;
 
-import com.corosus.watut.PlayerStatusManagerClient;
 import com.corosus.watut.WatutMod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -19,8 +18,8 @@ public abstract class MinecraftTick {
 
     @Inject(method = "setLevel", at = @At("TAIL"))
     private void setLevel(ClientLevel clientLevel, CallbackInfo ci) {
-        if (PlayerStatusManagerClient.getParticleEngine() != null) {
-            PlayerStatusManagerClient.getParticleEngine().setLevel(clientLevel);
+        if (Minecraft.getInstance().particleEngine != null) {
+            Minecraft.getInstance().particleEngine.setLevel(clientLevel);
         }
     }
 }

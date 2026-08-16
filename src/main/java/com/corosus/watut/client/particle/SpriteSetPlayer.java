@@ -1,4 +1,4 @@
-package com.corosus.watut.spritesets;
+package com.corosus.watut.client.particle;
 
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -6,10 +6,13 @@ import net.minecraft.util.RandomSource;
 
 import java.util.List;
 
+/**
+ * SpriteSet per le particelle animate o LoD di WATUT.
+ */
 public class SpriteSetPlayer implements SpriteSet {
 
-    private int tickDelay;
-    private int frames;
+    private final int tickDelay;
+    private final int frames;
     private List<TextureAtlasSprite> list;
 
     public SpriteSetPlayer(int tickDelay, int frames) {
@@ -19,12 +22,18 @@ public class SpriteSetPlayer implements SpriteSet {
 
     @Override
     public TextureAtlasSprite get(int pAge, int pLifetime) {
-        int index = (pAge / tickDelay) % frames;
-        if (index < list.size()) {
-            return list.get(index);
-        } else {
+        if (list == null || list.isEmpty()) {
+            return null;
+        }
+        if (tickDelay <= 0 || frames <= 0) {
             return list.get(0);
         }
+
+        int index = (pAge / tickDelay) % frames;
+        if (index >= 0 && index < list.size()) {
+            return list.get(index);
+        }
+        return list.get(0);
     }
 
     @Override

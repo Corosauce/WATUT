@@ -1,0 +1,107 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version '1.17-SNAPSHOT'
+	id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+repositories {
+	mavenLocal()
+	maven {
+		url 'https://jitpack.io'
+	}
+	maven {
+		url "https://maven.terraformersmc.com/"
+	}
+	maven {
+		url "https://maven.shedaniel.me/"
+	}
+	maven {
+		url "https://maven.siphalor.de/"
+	}
+	maven {
+		url "https://maven.isxander.dev/releases"
+	}
+	maven {
+		name = "ParchmentMC"
+		url = "https://maven.parchmentmc.net/"
+	}
+	maven {
+		name = "Fuzs Mod Resources"
+		url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/"
+	}
+	maven {
+		url "https://cursemaven.com"
+	}
+	flatDir {
+		dir 'libs'
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	implementation "com.corosus.coroutil:CoroUtil:${project.minecraft_version}.0-${project.coroutil_version}"
+
+	// Fabric API.
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
+
+//If there's mixins
+loom {
+	accessWidenerPath = file("src/main/resources/${project.mod_id}.accesswidener")
+}
+
+base {
+	archivesName = "${project.archives_base_name}-fabric"
+}
+
+processResources {
+	inputs.property "version", project.version
+
+	filesMatching("fabric.mod.json") {
+		expand "mod_id": project.mod_id, "version": project.version, "mod_name": project.mod_name, "mod_description": project.mod_description, "mod_authors": project.mod_authors, "mod_license": project.mod_license
+	}
+
+	exclude("META-INF/mods.toml")
+	exclude("META-INF/neoforge.mods.toml")
+	exclude("META-INF/accesstransformer.cfg")
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+	from("LICENSE") {
+		rename { "${it}_${project.archivesBaseName}"}
+	}
+}
+
+// configure the maven publication
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+		}
+	}
+
+	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
+	repositories {
+		// Add repositories to publish to here.
+		// Notice: This block does NOT have the same function as the block in the top level.
+		// The repositories here will be used for publishing your artifact, not for
+		// retrieving dependencies.
+	}
+}
+
+

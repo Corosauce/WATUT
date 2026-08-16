@@ -1,10 +1,10 @@
 package com.corosus.watut.client.screen;
 
 import com.corosus.coroutil.util.CULog;
-import com.corosus.watut.PlayerStatus;
 import com.corosus.watut.WatutMod;
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
+import com.corosus.watut.status.PlayerStatus;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
