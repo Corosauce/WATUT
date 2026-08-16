@@ -18,6 +18,11 @@ public class WatutClientMod implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        // Registrazione del renderer olografico 3D per schermi dinamici
+        net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(
+                com.corosus.watut.client.screen.DynamicScreenRenderer::render
+        );
+
         ClientPlayNetworking.registerGlobalReceiver(PacketNBTFromServer.TYPE, (payload, ctx) -> {
             CompoundTag nbt = payload.nbt();
             ctx.client().execute(() -> {

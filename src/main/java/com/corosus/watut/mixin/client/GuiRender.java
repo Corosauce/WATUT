@@ -1,6 +1,5 @@
 package com.corosus.watut.mixin.client;
 
-import com.corosus.watut.WatutMod;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.Gui;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,6 +12,6 @@ public abstract class GuiRender {
 
     @Inject(method = "extractRenderState", at = @At("TAIL"))
     private void extractRenderState(DeltaTracker deltaTracker, boolean b1, boolean b2, CallbackInfo ci) {
-        WatutMod.getPlayerStatusManagerClient().onGuiRender();
+        // Reserved for future HUD hooks
     }
 }

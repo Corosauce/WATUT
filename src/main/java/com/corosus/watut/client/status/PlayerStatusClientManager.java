@@ -118,24 +118,21 @@ public class PlayerStatusClientManager {
         }
         lastLevel = level;
 
-        long gameTime = level.getGameTime();
-        Screen screen = InputTracker.getCurrentScreen();
-        boolean guiBlacklisted = screen instanceof LevelLoadingScreen;
-        boolean validGui = !guiBlacklisted && (screen != null && selfPlayerStatus.getPlayerGuiState() != PlayerGuiState.NONE && selfPlayerStatus.getPlayerGuiState() != PlayerGuiState.CHAT_SCREEN);
-        boolean stillActiveInGUI = selfPlayerStatus.getTicksSinceLastAction() < (20 * 5);
-        boolean delayPassed = selfPlayerStatus.getScreenData().getGameTicksSinceLastScreenSend() + ConfigServerControlledSyncedToClient.dynamicGuiTickSendRateOfGUIUpdates < gameTime;
-        boolean canRenderANewGUI = !ConfigServerControlledSyncedToClient.dynamicGuiDontSendConstantGUIUpdates || selfPlayerStatus.getScreenData().getLastScreen() != screen;
+        // Elaborazione e upload delle texture dinamiche ricevute
+        RenderHelper.guiRender();
 
-        if (stillActiveInGUI && delayPassed && validGui && canRenderANewGUI) {
-            selfPlayerStatus.getScreenData().setGameTicksSinceLastScreenSend(gameTime);
-            selfPlayerStatus.getScreenData().setNeedsNewRenderToPixelData(true);
-            updateNearbyPlayerListAndCheckIfNewPlayerNear();
-            selfPlayerStatus.getScreenData().setLastScreen(InputTracker.getCurrentScreen());
-        }
+        // Cattura sicura dello schermo locale se la GUI è aperta
+        com.corosus.watut.client.screen.DynamicScreenManager.getInstance().tryCaptureCurrentScreen();
 
-        if (delayPassed && validGui && (ConfigServerControlledSyncedToClient.dynamicGuiDontSendConstantGUIUpdates || !stillActiveInGUI) && selfPlayerStatus.getScreenData().getTexturePixelData() != null) {
-            if (updateNearbyPlayerListAndCheckIfNewPlayerNear()) {
-                sendScreenRenderData(selfPlayerStatus);
+        if (RenderHelper.processor.hasProcessedBuffers()) {
+            try {
+                ByteBuffer result = RenderHelper.processor.getProcessedBuffer();
+                if (result != null) {
+                    selfPlayerStatus.getScreenData().setTexturePixelData(result);
+                    sendScreenRenderData(selfPlayerStatus);
+                }
+            } catch (Exception ex) {
+                CULog.dbg("Watut: error processing screen buffer: " + ex.getMessage());
             }
         }
 
@@ -269,6 +266,10 @@ public class PlayerStatusClientManager {
             chatChange = false;
         }
 
+        boolean isDynamicScreenActive = playerStatus.getScreenData().isTextureReady()
+                && playerStatus.getPlayerGuiState() != PlayerGuiState.NONE
+                && playerStatus.getPlayerGuiState() != PlayerGuiState.CHAT_SCREEN;
+
         if (idleChange || !playerStatus.isIdle()) {
             if (playerStatus.getParticleIdle() != null) {
                 playerStatus.getParticleIdle().remove();
@@ -280,6 +281,15 @@ public class PlayerStatusClientManager {
                 playerStatus.getParticle().remove();
                 playerStatus.setParticle(null);
             }
+            if (playerStatus.getPlayerGuiState() == PlayerGuiState.NONE || playerStatus.getPlayerGuiState() == PlayerGuiState.CHAT_SCREEN) {
+                playerStatus.getScreenData().cleanup();
+            }
+        }
+
+        // Se lo schermo olografico dinamico è attivo, rimuoviamo l'icona statica per evitare sovrapposizioni
+        if (isDynamicScreenActive && playerStatus.getParticle() != null) {
+            playerStatus.getParticle().remove();
+            playerStatus.setParticle(null);
         }
 
         if (playerStatus.getParticle() != null && !playerStatus.getParticle().isAlive()) {
@@ -301,7 +311,7 @@ public class PlayerStatusClientManager {
                 particle.setQuadSize((float) quadSize);
             }
 
-            if (statusChange || chatChange) {
+            if ((statusChange || chatChange) && !isDynamicScreenActive) {
                 WatutParticle particle = spawnStatusParticle(player, playerStatus);
                 if (particle != null) {
                     playerStatus.setParticle(particle);
@@ -434,11 +444,38 @@ public class PlayerStatusClientManager {
         return false;
     }
 
-    public void onGuiRender() {
+    public void renderChatTypingOverlay(GuiGraphicsExtractor extractor) {
         Minecraft mc = Minecraft.getInstance();
-        if (InputTracker.getCurrentScreen() instanceof ChatScreen && mc.getConnection() != null && ConfigClient.screenTypingVisible && ConfigServerControlledSyncedToClient.screenTypingVisible) {
-            // Typing overlay hook
+        if (mc.level == null || mc.player == null || mc.getConnection() == null) return;
+        if (!ConfigClient.screenTypingVisible || !ConfigServerControlledSyncedToClient.screenTypingVisible) return;
+
+        java.util.List<String> typingPlayerNames = new java.util.ArrayList<>();
+        for (PlayerStatus status : lookupPlayerToStatus.values()) {
+            if (status.getUuid() != null && !status.getUuid().equals(mc.player.getUUID())) {
+                if (status.getPlayerChatState() == PlayerChatState.CHAT_TYPING || status.getPlayerChatState() == PlayerChatState.CHAT_FOCUSED) {
+                    Player other = mc.level.getPlayerByUUID(status.getUuid());
+                    if (other != null) {
+                        typingPlayerNames.add(other.getName().getString());
+                    }
+                }
+            }
         }
+
+        if (typingPlayerNames.isEmpty()) return;
+
+        String fullText;
+        if (typingPlayerNames.size() == 1) {
+            fullText = typingPlayerNames.get(0) + ConfigClient.screenTypingText;
+        } else if (typingPlayerNames.size() <= 3) {
+            fullText = String.join(", ", typingPlayerNames) + ConfigClient.screenTypingText;
+        } else {
+            fullText = ConfigClient.screenTypingMultiplePlayersText;
+        }
+
+        int x = 2 + ConfigClient.screenTypingRelativePosition_X;
+        int y = mc.getWindow().getGuiScaledHeight() - 26 + ConfigClient.screenTypingRelativePosition_Y;
+
+        extractor.text(mc.font, fullText, x, y, 0xCCCCCC, true);
     }
 
     public void onMouse(boolean pressedAnything) {

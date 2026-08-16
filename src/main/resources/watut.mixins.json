@@ -12,7 +12,8 @@
     "client.KeyboardHandlerKeyPress",
     "client.MinecraftTick",
     "client.MouseHandlerOnPress",
-    "client.TextureAtlasUpload"
+    "client.TextureAtlasUpload",
+    "client.AbstractContainerScreenAccessor"
   ],
   "mixins": [
     "PlayerLoggedIn",

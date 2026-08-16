@@ -58,7 +58,8 @@ public class InputTracker {
         return screen instanceof ChatScreen
                 || screen instanceof AbstractSignEditScreen
                 || screen instanceof BookEditScreen
-                || screen instanceof AbstractCommandBlockEditScreen;
+                || screen instanceof AbstractCommandBlockEditScreen
+                || screen instanceof AnvilScreen;
     }
 
     public String extractTextFromScreen(Screen screen) {
@@ -70,6 +71,8 @@ public class InputTracker {
             return signScreen.signField.getMessageFn.get();
         } else if (screen instanceof AbstractCommandBlockEditScreen cmdScreen) {
             return cmdScreen.commandEdit.getValue();
+        } else if (screen instanceof AnvilScreen anvilScreen) {
+            return anvilScreen.name != null ? anvilScreen.name.getValue() : "";
         }
         return "";
     }

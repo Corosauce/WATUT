@@ -2,37 +2,46 @@ package com.corosus.watut.client.screen;
 
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.texture.DynamicTexture;
-import org.lwjgl.system.MemoryUtil;
+import net.minecraft.resources.Identifier;
 
 import java.nio.ByteBuffer;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ScreenData {
 
-    private volatile ByteBuffer texturePixelData = null;
-    private volatile ByteBuffer decompressionBuffer = null;
-    private final AtomicBoolean isBufferReady = new AtomicBoolean(false);
-    private byte[] texturePixelDataPartial = null;
-
-    private long gameTicksSinceFirstPacket = 0;
-    private int lastIndexReceived = 0;
+    private boolean needsNewRenderToPixelData = false;
+    private boolean needsNewRenderFromPixelData = false;
     private long gameTicksSinceLastScreenSend = 0;
     private long gameTicksSinceLastScreenReceiveAndRender = 0;
-
-    private Object particleRenderType;
-
-    private boolean needsNewRenderFromPixelData = false;
-
-    //used for communicating from outside screen render hook to inside it
-    private boolean needsNewRenderToPixelData = false;
-
-    private DynamicTexture image = null;
-    private int width = ScreenParticleRenderer.defaultWidthScaledDown;
-    private int height = ScreenParticleRenderer.defaultHeightScaledDown;
-
+    private long gameTicksSinceFirstPacket = 0;
+    private int lastIndexReceived = 0;
+    private byte[] texturePixelDataPartial = new byte[0];
+    private ByteBuffer texturePixelData;
+    private ByteBuffer decompressionBuffer;
+    private final AtomicBoolean isBufferReady = new AtomicBoolean(false);
+    private int width = 256;
+    private int height = 256;
     private Screen lastScreen;
+    private Object particleRenderType;
+    private Identifier textureIdentifier;
+    private long lastFrameHash = 0;
+    private volatile boolean textureReady = false;
+    private DynamicTexture image;
 
-    public void initClient() {
+    public Identifier getTextureIdentifier(UUID uuid) {
+        if (this.textureIdentifier == null && uuid != null) {
+            this.textureIdentifier = Identifier.fromNamespaceAndPath("watut", "screen_" + uuid.toString().replace("-", ""));
+        }
+        return this.textureIdentifier;
+    }
+
+    public long getLastFrameHash() {
+        return lastFrameHash;
+    }
+
+    public void setLastFrameHash(long lastFrameHash) {
+        this.lastFrameHash = lastFrameHash;
     }
 
     public ByteBuffer getTexturePixelData() {
@@ -40,9 +49,9 @@ public class ScreenData {
     }
 
     public void freeTexturePixelData() {
-        if (texturePixelData != null) {
-            MemoryUtil.memFree(texturePixelData);
-        }
+        this.texturePixelData = null;
+        this.decompressionBuffer = null;
+        this.texturePixelDataPartial = new byte[0];
     }
 
     public void setTexturePixelData(ByteBuffer texturePixelData) {
@@ -125,6 +134,14 @@ public class ScreenData {
         this.decompressionBuffer = decompressionBuffer;
     }
 
+    public boolean isTextureReady() {
+        return textureReady && image != null;
+    }
+
+    public void setTextureReady(boolean ready) {
+        this.textureReady = ready;
+    }
+
     public DynamicTexture getImage() {
         return image;
     }
@@ -134,9 +151,19 @@ public class ScreenData {
     }
 
     public void closeImage() {
+        this.textureReady = false;
         if (this.image != null) {
             this.image.close();
+            this.image = null;
         }
+    }
+
+    public void cleanup() {
+        this.textureReady = false;
+        freeTexturePixelData();
+        this.isBufferReady.set(false);
+        this.needsNewRenderFromPixelData = false;
+        this.lastFrameHash = 0;
     }
 
     public int getWidth() {

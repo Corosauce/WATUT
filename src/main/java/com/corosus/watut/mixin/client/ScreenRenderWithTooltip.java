@@ -1,7 +1,9 @@
 package com.corosus.watut.mixin.client;
 
+import com.corosus.watut.WatutMod;
 import com.corosus.watut.client.screen.RenderHelper;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -15,6 +17,10 @@ public abstract class ScreenRenderWithTooltip {
     private void renderWithTooltipEnd(GuiGraphicsExtractor extractor, int pMouseX, int pMouseY, float pPartialTick, CallbackInfo ci) {
         if (!RenderHelper.performingOwnRender) {
             RenderHelper.renderWithTooltipEnd(extractor, pMouseX, pMouseY, pPartialTick);
+
+            if ((Object) this instanceof ChatScreen) {
+                WatutMod.getPlayerStatusManagerClient().renderChatTypingOverlay(extractor);
+            }
         }
     }
 }
