@@ -32,7 +32,7 @@ public class RenderHelper {
             gameTime = mc.level.getGameTime();
         }
 
-        for (PlayerStatus playerStatus : WatutMod.getPlayerStatusManagerClient().lookupPlayerToStatus.values()) {
+        for (PlayerStatus playerStatus : com.corosus.watut.client.WatutClientMod.getPlayerStatusManagerClient().lookupPlayerToStatus.values()) {
             ScreenData screenData = playerStatus.getScreenData();
 
             if (screenData.getIsBufferReady().get() && screenData.needsNewRenderFromPixelData() && screenData.getTexturePixelData() != null
@@ -66,9 +66,10 @@ public class RenderHelper {
                         ByteBuffer dstBuffer = nativeImage.getPixelBytes();
                         dstBuffer.rewind();
                         int copyLen = Math.min(srcBuffer.remaining(), dstBuffer.remaining());
-                        byte[] temp = new byte[copyLen];
-                        srcBuffer.get(temp);
-                        dstBuffer.put(temp);
+                        int oldLimit = srcBuffer.limit();
+                        srcBuffer.limit(srcBuffer.position() + copyLen);
+                        dstBuffer.put(srcBuffer);
+                        srcBuffer.limit(oldLimit);
                         dstBuffer.rewind();
                         srcBuffer.rewind();
 
@@ -91,25 +92,7 @@ public class RenderHelper {
     }
 
     public static synchronized void renderWithTooltipEnd(GuiGraphicsExtractor extractor, int pMouseX, int pMouseY, float pPartialTick) {
-        if (!useDynamicGUISystem()) return;
-        if (Minecraft.getInstance().level == null || Minecraft.getInstance().player == null) {
-            return;
-        }
-
-        PlayerStatus playerStatusLocal = WatutMod.getPlayerStatusManagerClient().getStatusLocal();
-
-        if (processor.hasProcessedBuffers()) {
-            try {
-                ByteBuffer result = processor.getProcessedBuffer();
-                if (result != null) {
-                    ScreenData screenDataLocal = playerStatusLocal.getScreenData();
-                    screenDataLocal.setTexturePixelData(result);
-                    WatutMod.getPlayerStatusManagerClient().sendScreenRenderData(playerStatusLocal);
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
+        // Buffer polling and network dispatch is now centralized in PlayerStatusClientManager.tickGame()
     }
 
     public static ByteBuffer compress(ByteBuffer inputBuffer) {
@@ -121,7 +104,7 @@ public class RenderHelper {
         deflater.finish();
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream(inputBytes.length);
-        byte[] temp = new byte[1024];
+        byte[] temp = new byte[4096];
 
         while (!deflater.finished()) {
             int count = deflater.deflate(temp);
@@ -141,8 +124,9 @@ public class RenderHelper {
         compressedBuffer.get(compressedBytes);
         inflater.setInput(compressedBytes);
 
-        ByteArrayOutputStream baos = new ByteArrayOutputStream(expectedSize > 0 ? expectedSize : compressedBytes.length * 2);
-        byte[] temp = new byte[1024];
+        int initCapacity = expectedSize > 0 ? expectedSize : 262144;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(initCapacity);
+        byte[] temp = new byte[4096];
 
         while (!inflater.finished()) {
             int count = inflater.inflate(temp);

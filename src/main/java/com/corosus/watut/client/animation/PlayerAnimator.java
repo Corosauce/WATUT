@@ -65,8 +65,8 @@ public class PlayerAnimator {
                     adjRightArm = CustomArmCorrections.getAdjustmentForArm(player.getItemBySlot(EquipmentSlot.MAINHAND), player.getItemBySlot(EquipmentSlot.OFFHAND), EquipmentSlot.MAINHAND);
                     adjLeftArm = CustomArmCorrections.getAdjustmentForArm(player.getItemBySlot(EquipmentSlot.OFFHAND), player.getItemBySlot(EquipmentSlot.MAINHAND), EquipmentSlot.OFFHAND);
                 } else {
-                    adjLeftArm = CustomArmCorrections.getAdjustmentForArm(player.getItemBySlot(EquipmentSlot.OFFHAND), player.getItemBySlot(EquipmentSlot.MAINHAND), EquipmentSlot.OFFHAND);
-                    adjRightArm = CustomArmCorrections.getAdjustmentForArm(player.getItemBySlot(EquipmentSlot.MAINHAND), player.getItemBySlot(EquipmentSlot.OFFHAND), EquipmentSlot.MAINHAND);
+                    adjLeftArm = CustomArmCorrections.getAdjustmentForArm(player.getItemBySlot(EquipmentSlot.MAINHAND), player.getItemBySlot(EquipmentSlot.OFFHAND), EquipmentSlot.MAINHAND);
+                    adjRightArm = CustomArmCorrections.getAdjustmentForArm(player.getItemBySlot(EquipmentSlot.OFFHAND), player.getItemBySlot(EquipmentSlot.MAINHAND), EquipmentSlot.OFFHAND);
                 }
 
                 // Float.MAX_VALUE rappresenta "disabilitato"
@@ -131,8 +131,8 @@ public class PlayerAnimator {
         }
 
         if (pointing) {
-            double xPercent = playerStatus.getScreenPosPercentX();
-            double yPercent = playerStatus.getScreenPosPercentY();
+            double xPercent = playerStatus.getScreenPosPercentX() * 0.6;
+            double yPercent = playerStatus.getScreenPosPercentY() * 0.6;
             double x = Math.toRadians(90) - Math.toRadians(22.5) - yPercent;
             double y = -Math.toRadians(15) + xPercent;
             double xHead = Math.toRadians(22.5) + yPercent;
@@ -146,9 +146,9 @@ public class PlayerAnimator {
             if (playerStatus.isPressing()) {
                 Vec3 vec = calculateViewVector((float) Math.toDegrees(y), (float) Math.toDegrees(x));
                 float press = 1.0F;
-                playerStatus.getLerpTarget().rightArm.x = (float) (press * vec.y);
-                playerStatus.getLerpTarget().rightArm.y = (float) (press * vec.z);
-                playerStatus.getLerpTarget().rightArm.z = (float) (press * vec.x);
+                playerStatus.getLerpTarget().rightArm.x = (float) (press * vec.x);
+                playerStatus.getLerpTarget().rightArm.y = (float) (press * vec.y);
+                playerStatus.getLerpTarget().rightArm.z = (float) (press * vec.z);
             } else {
                 playerStatus.getLerpTarget().rightArm.x = 0;
                 playerStatus.getLerpTarget().rightArm.y = 0;

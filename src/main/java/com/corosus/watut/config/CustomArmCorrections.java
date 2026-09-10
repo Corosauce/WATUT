@@ -3,14 +3,17 @@ package com.corosus.watut.config;
 import com.corosus.watut.WatutMod;
 import com.google.gson.Gson;
 import com.ibm.icu.impl.Pair;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Vector3f;
 
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -35,7 +38,11 @@ public class CustomArmCorrections {
      */
     public static boolean loadJsonConfigs() {
         Gson gson = new Gson();
-        try (FileReader reader = new FileReader("./config/" + WatutMod.configJSONName)) {
+        File file = FabricLoader.getInstance().getConfigDir().resolve(WatutMod.configJSONName).toFile();
+        if (!file.exists()) {
+            return false;
+        }
+        try (FileReader reader = new FileReader(file, StandardCharsets.UTF_8)) {
             heldItemArmAdjustmentLists = gson.fromJson(reader, HeldItemArmAdjustmentLists.class);
         } catch (IOException e) {
             System.out.println("FAILED TO LOAD watut-item-arm-adjustments.json, check its formatting!");

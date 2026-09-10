@@ -13,13 +13,6 @@ public abstract class MinecraftTick {
 
     @Inject(method = "tick", at = @At("TAIL"))
     private void tick(CallbackInfo info) {
-        WatutMod.getPlayerStatusManagerClient().tickGame();
-    }
-
-    @Inject(method = "setLevel", at = @At("TAIL"))
-    private void setLevel(ClientLevel clientLevel, CallbackInfo ci) {
-        if (Minecraft.getInstance().particleEngine != null) {
-            Minecraft.getInstance().particleEngine.setLevel(clientLevel);
-        }
+        com.corosus.watut.client.WatutClientMod.getPlayerStatusManagerClient().tickGame();
     }
 }

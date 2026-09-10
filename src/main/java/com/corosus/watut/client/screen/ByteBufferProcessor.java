@@ -12,8 +12,8 @@ public class ByteBufferProcessor {
     private volatile boolean isRunning;
     
     public ByteBufferProcessor(Function<ByteBuffer, ByteBuffer> processingFunction) {
-        this.inputQueue = new LinkedBlockingQueue<>();
-        this.outputQueue = new LinkedBlockingQueue<>();
+        this.inputQueue = new LinkedBlockingQueue<>(4);
+        this.outputQueue = new LinkedBlockingQueue<>(4);
         this.executorService = Executors.newSingleThreadExecutor();
         this.processingFunction = processingFunction;
         this.isRunning = true;
@@ -27,31 +27,37 @@ public class ByteBufferProcessor {
                 try {
                     ByteBuffer input = inputQueue.poll(100, TimeUnit.MILLISECONDS);
                     if (input != null) {
-                        ByteBuffer result = processingFunction.apply(input);
-                        outputQueue.put(result);
+                        ByteBuffer result = null;
+                        try {
+                            result = processingFunction.apply(input);
+                        } catch (Throwable t) {
+                            com.corosus.coroutil.util.CULog.dbg("Watut: error in ByteBufferProcessor worker: " + t.getMessage());
+                        }
+                        if (result != null) {
+                            while (!outputQueue.offer(result)) {
+                                outputQueue.poll();
+                            }
+                        }
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
+                } catch (Throwable t) {
+                    com.corosus.coroutil.util.CULog.dbg("Watut: unexpected error in ByteBufferProcessor loop: " + t.getMessage());
                 }
             }
         });
     }
     
     public void submitForProcessing(ByteBuffer buffer) {
-        if (!isRunning) {
-            throw new IllegalStateException("Processor has been shutdown");
-        }
-        try {
-            inputQueue.put(buffer);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Failed to submit buffer for processing", e);
+        if (!isRunning) return;
+        while (!inputQueue.offer(buffer)) {
+            inputQueue.poll();
         }
     }
     
-    public ByteBuffer getProcessedBuffer() throws InterruptedException {
-        return outputQueue.poll(100, TimeUnit.MILLISECONDS);
+    public ByteBuffer getProcessedBuffer() {
+        return outputQueue.poll();
     }
 
     public boolean hasProcessedBuffers() {

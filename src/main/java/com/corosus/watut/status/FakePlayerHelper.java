@@ -2,14 +2,15 @@ package com.corosus.watut.status;
 
 import net.minecraft.world.entity.player.Player;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Utility per rilevare istanze di FakePlayer create da mod terze (es. Fabric/Forge FakePlayer).
  */
 public class FakePlayerHelper {
-    private static final Map<String, Class<?>> CLASS_CACHE = new HashMap<>();
+    private static final Map<String, Class<?>> CLASS_CACHE = new ConcurrentHashMap<>();
+    private static final Class<?> NOT_FOUND = Void.class;
 
     public static boolean isFakePlayer(Player player) {
         if (player == null) return false;
@@ -30,12 +31,13 @@ public class FakePlayerHelper {
     }
 
     private static Class<?> getClassFromCache(String className) {
-        return CLASS_CACHE.computeIfAbsent(className, name -> {
+        Class<?> clazz = CLASS_CACHE.computeIfAbsent(className, name -> {
             try {
                 return Class.forName(name);
             } catch (ClassNotFoundException e) {
-                return null;
+                return NOT_FOUND;
             }
         });
+        return clazz == NOT_FOUND ? null : clazz;
     }
 }

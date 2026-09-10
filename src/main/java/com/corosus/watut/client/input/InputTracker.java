@@ -8,6 +8,7 @@ import com.ibm.icu.impl.Pair;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.*;
 import net.minecraft.client.gui.screens.inventory.*;
+import com.corosus.watut.mixin.client.AbstractContainerScreenAccessor;
 import net.minecraft.world.entity.player.Player;
 
 /**
@@ -121,19 +122,30 @@ public class InputTracker {
 
     public Pair<Float, Float> getMousePos() {
         Minecraft mc = Minecraft.getInstance();
-        double guiScale = mc.getWindow().getGuiScale();
-        double guiScaleMax = 4.0;
-        double xPercent = (mc.mouseHandler.xpos() / mc.getWindow().getScreenWidth()) - 0.5;
-        double yPercent = (mc.mouseHandler.ypos() / mc.getWindow().getScreenHeight()) - 0.5;
+        if (mc.getWindow() == null || mc.mouseHandler == null) return Pair.of(0f, 0f);
 
-        double emphasis = guiScaleMax / guiScale;
-        double edgeLimit = 0.75;
-        xPercent *= emphasis;
-        yPercent *= emphasis;
-        xPercent = Math.max(Math.min(xPercent, edgeLimit), -edgeLimit);
-        yPercent = Math.max(Math.min(yPercent, edgeLimit), -edgeLimit);
+        Screen screen = getCurrentScreen();
+        if (screen instanceof AbstractContainerScreen<?> containerScreen) {
+            AbstractContainerScreenAccessor accessor = (AbstractContainerScreenAccessor) containerScreen;
+            int guiLeft = accessor.getLeftPos();
+            int guiTop = accessor.getTopPos();
+            int guiWidth = Math.max(16, accessor.getImageWidth());
+            int guiHeight = Math.max(16, accessor.getImageHeight());
 
-        return Pair.of((float) xPercent, (float) yPercent);
+            double mouseGuiX = mc.mouseHandler.xpos() * (double) mc.getWindow().getGuiScaledWidth() / (double) mc.getWindow().getScreenWidth();
+            double mouseGuiY = mc.mouseHandler.ypos() * (double) mc.getWindow().getGuiScaledHeight() / (double) mc.getWindow().getScreenHeight();
+
+            float normX = (float) (((mouseGuiX - guiLeft) / (double) guiWidth - 0.5) * 2.0);
+            float normY = (float) (((mouseGuiY - guiTop) / (double) guiHeight - 0.5) * 2.0);
+
+            normX = Math.max(-1.1f, Math.min(1.1f, normX));
+            normY = Math.max(-1.1f, Math.min(1.1f, normY));
+            return Pair.of(normX, normY);
+        }
+
+        double xPercent = ((mc.mouseHandler.xpos() / (double) mc.getWindow().getScreenWidth()) - 0.5) * 2.0;
+        double yPercent = ((mc.mouseHandler.ypos() / (double) mc.getWindow().getScreenHeight()) - 0.5) * 2.0;
+        return Pair.of((float) Math.max(-1.0, Math.min(1.0, xPercent)), (float) Math.max(-1.0, Math.min(1.0, yPercent)));
     }
 
     public boolean isWasMousePressed() {

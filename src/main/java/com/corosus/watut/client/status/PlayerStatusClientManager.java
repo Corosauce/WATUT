@@ -9,7 +9,6 @@ import com.corosus.watut.client.particle.ParticleRegistry;
 import com.corosus.watut.client.particle.SpriteInfo;
 import com.corosus.watut.client.particle.WatutParticle;
 import com.corosus.watut.client.screen.RenderHelper;
-import com.corosus.watut.client.screen.ScreenParticleRenderer;
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
 import com.corosus.watut.config.ConfigServerSyncHelper;
@@ -55,8 +54,8 @@ public class PlayerStatusClientManager {
     private final PlayerStatus selfPlayerStatus = new PlayerStatus(PlayerGuiState.NONE, null);
     private final PlayerStatus selfPlayerStatusPrev = new PlayerStatus(PlayerGuiState.NONE, null);
 
-    public final Map<UUID, PlayerStatus> lookupPlayerToStatus = new HashMap<>();
-    public final Map<UUID, PlayerStatus> lookupPlayerToStatusPrev = new HashMap<>();
+    public final Map<UUID, PlayerStatus> lookupPlayerToStatus = new java.util.concurrent.ConcurrentHashMap<>();
+    public final Map<UUID, PlayerStatus> lookupPlayerToStatusPrev = new java.util.concurrent.ConcurrentHashMap<>();
 
     private final InputTracker inputTracker = new InputTracker();
     private final int armMouseTickRate = 5;
@@ -74,14 +73,25 @@ public class PlayerStatusClientManager {
     }
 
     public PlayerStatus getStatus(Player player) {
+        if (player == null) return getStatusLocal();
         return getStatus(player.getUUID());
     }
 
     public PlayerStatus getStatus(UUID uuid) {
+        if (uuid == null) return getStatusLocal();
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null && uuid.equals(mc.player.getUUID())) {
+            return getStatusLocal();
+        }
         return lookupPlayerToStatus.computeIfAbsent(uuid, k -> new PlayerStatus(PlayerGuiState.NONE, k));
     }
 
     public PlayerStatus getStatusPrev(UUID uuid) {
+        if (uuid == null) return getStatusPrevLocal();
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null && uuid.equals(mc.player.getUUID())) {
+            return getStatusPrevLocal();
+        }
         return lookupPlayerToStatusPrev.computeIfAbsent(uuid, k -> new PlayerStatus(PlayerGuiState.NONE, k));
     }
 
@@ -101,7 +111,9 @@ public class PlayerStatusClientManager {
                 PlayerStatus playerStatus = entry.getValue();
                 if (playerInfo == null) {
                     playerStatus.reset();
+                    playerStatus.getScreenData().closeImage();
                     it.remove();
+                    lookupPlayerToStatusPrev.remove(entry.getKey());
                 } else if (level.getPlayerByUUID(entry.getKey()) == null) {
                     playerStatus.resetParticles();
                 }
@@ -261,7 +273,7 @@ public class PlayerStatusClientManager {
 
         Minecraft mc = Minecraft.getInstance();
         if ((!ConfigClient.showGuisForYourOwnPlayerIn3rdPerson || mc.options.getCameraType().isFirstPerson())
-                && (getStatusLocal().getUuid() == null || playerStatus.getUuid() == getStatusLocal().getUuid())) {
+                && (getStatusLocal().getUuid() == null || java.util.Objects.equals(playerStatus.getUuid(), getStatusLocal().getUuid()))) {
             statusChange = false;
             chatChange = false;
         }
@@ -579,13 +591,17 @@ public class PlayerStatusClientManager {
         byte[] inputBytes = new byte[sizeByteCount];
         status.getScreenData().getTexturePixelData().get(inputBytes);
 
+        int uncompressedSize = 256 * 256 * 4;
+        int screenWidth = status.getScreenData().getWidth();
+        int screenHeight = status.getScreenData().getHeight();
+
         if (status.getScreenData().getTexturePixelData().limit() < packetSizeLimit) {
-            data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataSize, status.getScreenData().getTexturePixelData().capacity());
-            data.putInt(WatutNetworking.NBTDataPlayerScreenWidth, ScreenParticleRenderer.getInstance().widthScaledDown);
-            data.putInt(WatutNetworking.NBTDataPlayerScreenHeight, ScreenParticleRenderer.getInstance().heightScaledDown);
+            data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataSize, uncompressedSize);
+            data.putInt(WatutNetworking.NBTDataPlayerScreenWidth, screenWidth);
+            data.putInt(WatutNetworking.NBTDataPlayerScreenHeight, screenHeight);
             data.putByteArray(WatutNetworking.NBTDataPlayerScreenCompressedPixelData, inputBytes);
             data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount, 1);
-            data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex, 1);
+            data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex, 0);
             WatutNetworking.instance().clientSendToServer(data);
         } else {
             int packetCount = Mth.ceil((float) sizeByteCount / (float) packetSizeLimit);
@@ -601,9 +617,9 @@ public class PlayerStatusClientManager {
                 packetBytesIndex += inputBytesPartial.length;
 
                 data = new CompoundTag();
-                data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataSize, status.getScreenData().getTexturePixelData().capacity());
-                data.putInt(WatutNetworking.NBTDataPlayerScreenWidth, ScreenParticleRenderer.getInstance().widthScaledDown);
-                data.putInt(WatutNetworking.NBTDataPlayerScreenHeight, ScreenParticleRenderer.getInstance().heightScaledDown);
+                data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataSize, uncompressedSize);
+                data.putInt(WatutNetworking.NBTDataPlayerScreenWidth, screenWidth);
+                data.putInt(WatutNetworking.NBTDataPlayerScreenHeight, screenHeight);
                 data.putByteArray(WatutNetworking.NBTDataPlayerScreenCompressedPixelData, inputBytesPartial);
                 data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount, packetCount);
                 data.putInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex, i);
@@ -715,7 +731,9 @@ public class PlayerStatusClientManager {
                     status.getScreenData().setGameTicksSinceFirstPacket(gameTime);
                     status.getScreenData().setLastIndexReceived(0);
                     status.getScreenData().setTexturePixelDataPartial(pixelData);
-                } else if (packetIndex == status.getScreenData().getLastIndexReceived() + 1 && gameTime <= status.getScreenData().getGameTicksSinceFirstPacket() + timeout) {
+                } else if (status.getScreenData().getTexturePixelDataPartial() != null
+                        && packetIndex == status.getScreenData().getLastIndexReceived() + 1
+                        && gameTime <= status.getScreenData().getGameTicksSinceFirstPacket() + timeout) {
                     status.getScreenData().setLastIndexReceived(packetIndex);
                     if (pixelData.length > 0) {
                         byte[] dataBytes = status.getScreenData().getTexturePixelDataPartial();
@@ -731,9 +749,15 @@ public class PlayerStatusClientManager {
                                 status.getScreenData().getIsBufferReady().set(true);
                             } catch (Exception e) {
                                 e.printStackTrace();
+                            } finally {
+                                status.getScreenData().setTexturePixelDataPartial(null);
                             }
                         }
                     }
+                } else {
+                    // Reset on out-of-order or timed-out packets
+                    status.getScreenData().setTexturePixelDataPartial(null);
+                    status.getScreenData().setLastIndexReceived(-1);
                 }
             } else {
                 try {
@@ -766,6 +790,5 @@ public class PlayerStatusClientManager {
     public void receiveServerConfig(CompoundTag nbt) {
         CULog.dbg("receiving server config sync");
         ConfigServerSyncHelper.getInstance().updateSyncableConfigOnClient(nbt);
-        ScreenParticleRenderer.getInstance().resizeScaledDown(ScreenParticleRenderer.getInstance().width, ScreenParticleRenderer.getInstance().height);
     }
 }

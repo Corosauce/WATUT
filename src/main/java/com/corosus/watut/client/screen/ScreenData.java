@@ -156,6 +156,7 @@ public class ScreenData {
             this.image.close();
             this.image = null;
         }
+        cleanup();
     }
 
     public void cleanup() {
@@ -164,6 +165,7 @@ public class ScreenData {
         this.isBufferReady.set(false);
         this.needsNewRenderFromPixelData = false;
         this.lastFrameHash = 0;
+        this.lastScreen = null;
     }
 
     public int getWidth() {

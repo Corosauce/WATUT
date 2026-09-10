@@ -38,7 +38,7 @@ public class ItemTransferParticle extends WatutParticle {
                 }
             }
         } catch (Exception ignored) {}
-        return null;
+        return ParticleRegistry.CHEST.getSprite();
     }
 
     public ItemTransferParticle(ClientLevel level, float brightness, ItemStack itemStack,
@@ -70,7 +70,7 @@ public class ItemTransferParticle extends WatutParticle {
 
     @Override
     public void extract(QuadParticleRenderState renderState, Camera camera, float partialTicks) {
-        if (itemStack == null || ITEM_BLACKLIST.contains(itemStack.getItem().toString())) return;
+        if (itemStack == null || this.sprite == null || ITEM_BLACKLIST.contains(itemStack.getItem().toString())) return;
 
         float f = (float) Mth.lerp(partialTicks, this.xo, this.x);
         float f1 = (float) Mth.lerp(partialTicks, this.yo, this.y);

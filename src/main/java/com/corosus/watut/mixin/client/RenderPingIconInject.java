@@ -14,7 +14,7 @@ public abstract class RenderPingIconInject {
 
     @Inject(method = "extractPingIcon", at = @At(value = "HEAD"), cancellable = true)
     public void extractPingIcon(GuiGraphicsExtractor extractor, int width, int x, int y, PlayerInfo playerInfo, CallbackInfo ci) {
-        if (WatutMod.getPlayerStatusManagerClient().extractPingIconHook(extractor, width, x, y, playerInfo)) {
+        if (com.corosus.watut.client.WatutClientMod.getPlayerStatusManagerClient().extractPingIconHook(extractor, width, x, y, playerInfo)) {
             ci.cancel();
         }
     }

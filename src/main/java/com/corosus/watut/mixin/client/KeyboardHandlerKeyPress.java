@@ -14,11 +14,11 @@ public abstract class KeyboardHandlerKeyPress {
 
     @Inject(method = "keyPress", at = @At("TAIL"))
     private void keyPress(long windowPointer, int action, KeyEvent event, CallbackInfo info) {
-        WatutMod.getPlayerStatusManagerClient().onKey();
+        com.corosus.watut.client.WatutClientMod.getPlayerStatusManagerClient().onKey();
     }
 
     @Inject(method = "charTyped", at = @At("TAIL"))
     private void charTyped(long windowPointer, CharacterEvent event, CallbackInfo info) {
-        WatutMod.getPlayerStatusManagerClient().onKey();
+        com.corosus.watut.client.WatutClientMod.getPlayerStatusManagerClient().onKey();
     }
 }

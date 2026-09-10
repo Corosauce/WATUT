@@ -19,7 +19,7 @@ public abstract class ScreenRenderWithTooltip {
             RenderHelper.renderWithTooltipEnd(extractor, pMouseX, pMouseY, pPartialTick);
 
             if ((Object) this instanceof ChatScreen) {
-                WatutMod.getPlayerStatusManagerClient().renderChatTypingOverlay(extractor);
+                com.corosus.watut.client.WatutClientMod.getPlayerStatusManagerClient().renderChatTypingOverlay(extractor);
             }
         }
     }

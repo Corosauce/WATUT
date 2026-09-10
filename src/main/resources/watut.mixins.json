@@ -6,14 +6,13 @@
   "client": [
     "client.SetupRotationsInject",
     "client.RenderPingIconInject",
-    "client.ScreenRenderBackground",
     "client.ScreenRenderWithTooltip",
-    "client.GuiRender",
     "client.KeyboardHandlerKeyPress",
     "client.MinecraftTick",
     "client.MouseHandlerOnPress",
     "client.TextureAtlasUpload",
-    "client.AbstractContainerScreenAccessor"
+    "client.AbstractContainerScreenAccessor",
+    "client.ClientPlayerTick"
   ],
   "mixins": [
     "PlayerLoggedIn",

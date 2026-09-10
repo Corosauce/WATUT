@@ -26,7 +26,7 @@ import java.util.UUID;
  */
 public class PlayerStatusServerManager {
 
-    private final Map<UUID, PlayerStatus> lookupPlayerToStatus = new HashMap<>();
+    private final Map<UUID, PlayerStatus> lookupPlayerToStatus = new java.util.concurrent.ConcurrentHashMap<>();
     private boolean singleplayerTesting = false;
 
     public PlayerStatus getStatus(Player player) {
@@ -69,7 +69,9 @@ public class PlayerStatusServerManager {
             status.setPressing(pressed);
         }
 
-        getStatus(player).getNbtCache().merge(data);
+        if (!data.contains(WatutNetworking.NBTDataPlayerScreenCompressedPixelData)) {
+            getStatus(player).getNbtCache().merge(data);
+        }
 
         if (data.contains(WatutNetworking.NBTDataPlayerGuiStatus)
                 || data.contains(WatutNetworking.NBTDataPlayerIdleTicks)
@@ -107,10 +109,25 @@ public class PlayerStatusServerManager {
     public void playerLoggedIn(Player player) {
         if (player instanceof ServerPlayer serverPlayer) {
             for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
-                WatutNetworking.instance().serverSendToClientPlayer(entry.getValue().getNbtCache(), player);
+                if (!entry.getValue().getNbtCache().isEmpty()) {
+                    WatutNetworking.instance().serverSendToClientPlayer(entry.getValue().getNbtCache(), player);
+                }
             }
             WatutNetworking.instance().serverSendToClientPlayer(getServerConfigNBT(), serverPlayer);
         }
+    }
+
+    public void playerLoggedOut(Player player) {
+        if (player == null) return;
+        UUID uuid = player.getUUID();
+        lookupPlayerToStatus.remove(uuid);
+
+        CompoundTag data = new CompoundTag();
+        data.putString(WatutNetworking.NBTDataPlayerUUID, uuid.toString());
+        data.putInt(WatutNetworking.NBTDataPlayerGuiStatus, PlayerGuiState.NONE.ordinal());
+        data.putInt(WatutNetworking.NBTDataPlayerChatStatus, PlayerChatState.NONE.ordinal());
+        data.putInt(WatutNetworking.NBTDataPlayerIdleTicks, 0);
+        WatutNetworking.instance().serverSendToClientAll(data);
     }
 
     public void syncServerConfigToAllPlayers() {

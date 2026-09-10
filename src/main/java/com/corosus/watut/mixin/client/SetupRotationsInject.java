@@ -13,6 +13,6 @@ public abstract class SetupRotationsInject {
 
     @Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)V", at = @At(value = "TAIL"))
     public void setupAnim(AvatarRenderState state, CallbackInfo ci) {
-        WatutMod.getPlayerStatusManagerClient().setupRotationsHook((PlayerModel)(Object)this, state);
+        com.corosus.watut.client.WatutClientMod.getPlayerStatusManagerClient().setupRotationsHook((PlayerModel)(Object)this, state);
     }
 }

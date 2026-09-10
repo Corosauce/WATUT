@@ -17,4 +17,9 @@ public abstract class PlayerLoggedIn {
     private void placeNewPlayer(Connection connection, ServerPlayer player, CommonListenerCookie cookie, CallbackInfo ci) {
         WatutMod.getPlayerStatusManagerServer().playerLoggedIn(player);
     }
+
+    @Inject(method = "remove", at = @At("HEAD"))
+    private void onRemovePlayer(ServerPlayer player, CallbackInfo ci) {
+        WatutMod.getPlayerStatusManagerServer().playerLoggedOut(player);
+    }
 }

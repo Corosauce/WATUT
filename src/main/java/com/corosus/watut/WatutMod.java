@@ -1,9 +1,7 @@
 package com.corosus.watut;
 
 import com.corosus.modconfig.CoroConfigRegistry;
-import com.corosus.watut.client.status.PlayerStatusClientManager;
 import com.corosus.watut.command.CommandWatutReloadJSON;
-import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigCommon;
 import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
 import com.corosus.watut.config.CustomArmCorrections;
@@ -36,19 +34,10 @@ public class WatutMod implements ModInitializer {
 
     public static MinecraftServer minecraftServer = null;
     private static WatutMod instance;
-
-    private static PlayerStatusClientManager clientManager;
     private static PlayerStatusServerManager serverManager;
 
     public static WatutMod instance() {
         return instance;
-    }
-
-    public static PlayerStatusClientManager getPlayerStatusManagerClient() {
-        if (clientManager == null) {
-            clientManager = new PlayerStatusClientManager();
-        }
-        return clientManager;
     }
 
     public static PlayerStatusServerManager getPlayerStatusManagerServer() {
@@ -66,7 +55,6 @@ public class WatutMod implements ModInitializer {
         instance = this;
         CoroConfigRegistry.instance().addConfigFile(MODID, new ConfigCommon());
         CoroConfigRegistry.instance().addConfigFile(MODID, new ConfigServerControlledSyncedToClient());
-        CoroConfigRegistry.instance().addConfigFile(MODID, new ConfigClient());
 
         generateJsonConfigFile(configJSONName);
         CustomArmCorrections.loadJsonConfigs();
@@ -74,8 +62,12 @@ public class WatutMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        // Cattura l'istanza del server
+        // Cattura e pulizia dell'istanza del server
         ServerLifecycleEvents.SERVER_STARTED.register(server -> minecraftServer = server);
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+            minecraftServer = null;
+            serverManager = null;
+        });
 
         // Registrazione comandi (/watut reloadJSON)
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
@@ -101,7 +93,8 @@ public class WatutMod implements ModInitializer {
         String filePath = "config/" + filename;
         String fileContents = getContentsFromResourceLocation(Identifier.fromNamespaceAndPath(MODID, filePath));
         if (!fileContents.isEmpty()) {
-            File fileOut = new File("./config/" + filename);
+            File configDir = FabricLoader.getInstance().getConfigDir().toFile();
+            File fileOut = new File(configDir, filename);
             if (!fileOut.exists()) {
                 try {
                     FileUtils.writeStringToFile(fileOut, fileContents, StandardCharsets.UTF_8);

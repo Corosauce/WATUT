@@ -45,12 +45,12 @@ public class DynamicScreenRenderer {
 
         Vec3 cameraPos = camera.position();
 
-        for (PlayerStatus status : WatutMod.getPlayerStatusManagerClient().lookupPlayerToStatus.values()) {
+        for (PlayerStatus status : com.corosus.watut.client.WatutClientMod.getPlayerStatusManagerClient().lookupPlayerToStatus.values()) {
             UUID uuid = status.getUuid();
             if (uuid == null) continue;
 
             Player player = mc.level.getPlayerByUUID(uuid);
-            if (player == null || player.isInvisible()) continue;
+            if (player == null || player.isInvisible() || player.isSwimming() || player.isFallFlying()) continue;
 
             // In prima persona, non renderizziamo la nostra GUI
             if (player == mc.player && mc.options.getCameraType().isFirstPerson()) {
@@ -96,8 +96,9 @@ public class DynamicScreenRenderer {
             float distFromPlayer = 0.95F;
             Vec3 lookVec = PlayerAnimator.calculateViewVector(0, player.yBodyRot).scale(distFromPlayer);
 
+            double crouchOffset = player.isCrouching() ? -0.22D : 0.0D;
             double screenWorldX = px + lookVec.x;
-            double screenWorldY = py + 1.25D;
+            double screenWorldY = py + 1.25D + crouchOffset;
             double screenWorldZ = pz + lookVec.z;
 
             poseStack.translate(screenWorldX - cameraPos.x, screenWorldY - cameraPos.y, screenWorldZ - cameraPos.z);

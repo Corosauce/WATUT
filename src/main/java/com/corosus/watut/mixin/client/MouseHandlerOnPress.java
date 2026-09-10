@@ -13,6 +13,6 @@ public abstract class MouseHandlerOnPress {
 
     @Inject(method = "onButton", at = @At("TAIL"))
     private void onButton(long window, MouseButtonInfo buttonInfo, int action, CallbackInfo info) {
-        WatutMod.getPlayerStatusManagerClient().onMouse(action != 0);
+        com.corosus.watut.client.WatutClientMod.getPlayerStatusManagerClient().onMouse(action != 0);
     }
 }

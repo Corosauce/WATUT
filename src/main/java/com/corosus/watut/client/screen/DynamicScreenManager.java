@@ -16,6 +16,7 @@ import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
 import java.nio.ByteBuffer;
@@ -29,7 +30,7 @@ public class DynamicScreenManager {
     private static final DynamicScreenManager INSTANCE = new DynamicScreenManager();
     private long lastCaptureGameTime = 0;
     private final CRC32 crc32 = new CRC32();
-    private boolean isCapturing = false;
+    private final java.util.concurrent.atomic.AtomicBoolean isCapturing = new java.util.concurrent.atomic.AtomicBoolean(false);
 
     public static DynamicScreenManager getInstance() {
         return INSTANCE;
@@ -44,7 +45,7 @@ public class DynamicScreenManager {
     public boolean isValidScreenForCapture(Screen screen) {
         if (screen == null) return false;
         if (screen instanceof ChatScreen || screen instanceof LevelLoadingScreen) return false;
-        PlayerGuiState state = WatutMod.getPlayerStatusManagerClient().getStatusLocal().getPlayerGuiState();
+        PlayerGuiState state = com.corosus.watut.client.WatutClientMod.getPlayerStatusManagerClient().getStatusLocal().getPlayerGuiState();
         return state != PlayerGuiState.NONE && state != PlayerGuiState.CHAT_SCREEN;
     }
 
@@ -67,8 +68,7 @@ public class DynamicScreenManager {
             return;
         }
 
-        if (isCapturing) return;
-        isCapturing = true;
+        if (!isCapturing.compareAndSet(false, true)) return;
         lastCaptureGameTime = gameTime;
 
         try {
@@ -83,11 +83,11 @@ public class DynamicScreenManager {
                     if (fullImage != null && !fullImage.isClosed()) {
                         fullImage.close();
                     }
-                    isCapturing = false;
+                    isCapturing.set(false);
                 }
             });
         } catch (Exception ex) {
-            isCapturing = false;
+            isCapturing.set(false);
             CULog.dbg("Watut: error triggering screenshot capture: " + ex.getMessage());
         }
     }
@@ -95,6 +95,7 @@ public class DynamicScreenManager {
     private void processCapturedImage(NativeImage fullImage, Screen screen) {
         int fullW = fullImage.getWidth();
         int fullH = fullImage.getHeight();
+        if (fullW <= 0 || fullH <= 0) return;
 
         Minecraft mc = Minecraft.getInstance();
         double guiScale = mc.getWindow().getGuiScale();
@@ -119,18 +120,23 @@ public class DynamicScreenManager {
 
             srcX = Math.max(0, Math.min(physLeft, fullW - 1));
             srcY = Math.max(0, Math.min(physTop, fullH - 1));
-            srcW = Math.max(16, Math.min(physWidth, fullW - srcX));
-            srcH = Math.max(16, Math.min(physHeight, fullH - srcY));
+            int maxW = fullW - srcX;
+            int maxH = fullH - srcY;
+            if (maxW <= 0 || maxH <= 0) return;
+            srcW = Math.max(1, Math.min(physWidth, maxW));
+            srcH = Math.max(1, Math.min(physHeight, maxH));
         } else {
-            int srcBoxW = Math.min(fullW, (int) (fullW * 0.65f));
-            int srcBoxH = Math.min(fullH, (int) (fullH * 0.65f));
-            srcX = (fullW - srcBoxW) / 2;
-            srcY = (fullH - srcBoxH) / 2;
-            srcW = srcBoxW;
-            srcH = srcBoxH;
+            int srcBoxW = Math.max(1, Math.min(fullW, (int) (fullW * 0.65f)));
+            int srcBoxH = Math.max(1, Math.min(fullH, (int) (fullH * 0.65f)));
+            srcX = Math.max(0, (fullW - srcBoxW) / 2);
+            srcY = Math.max(0, (fullH - srcBoxH) / 2);
+            srcW = Math.min(srcBoxW, fullW - srcX);
+            srcH = Math.min(srcBoxH, fullH - srcY);
             guiAspectW = 256;
             guiAspectH = 256;
         }
+
+        if (srcW <= 0 || srcH <= 0 || srcX + srcW > fullW || srcY + srcH > fullH) return;
 
         int targetRes = 256;
         NativeImage cropped = new NativeImage(NativeImage.Format.RGBA, targetRes, targetRes, false);
@@ -139,12 +145,15 @@ public class DynamicScreenManager {
         ByteBuffer pixelBuffer = cropped.getPixelBytes();
         pixelBuffer.rewind();
 
-        crc32.reset();
-        crc32.update(pixelBuffer);
-        long currentHash = crc32.getValue();
+        long currentHash;
+        synchronized (crc32) {
+            crc32.reset();
+            crc32.update(pixelBuffer);
+            currentHash = crc32.getValue();
+        }
         pixelBuffer.rewind();
 
-        PlayerStatus localStatus = WatutMod.getPlayerStatusManagerClient().getStatusLocal();
+        PlayerStatus localStatus = com.corosus.watut.client.WatutClientMod.getPlayerStatusManagerClient().getStatusLocal();
         ScreenData screenData = localStatus.getScreenData();
 
         if (currentHash != screenData.getLastFrameHash() || screenData.getLastScreen() != screen
@@ -166,16 +175,13 @@ public class DynamicScreenManager {
     }
 
     private boolean hasNearbyObservingPlayers(Minecraft mc) {
-        if (mc.level == null || mc.player == null || mc.getConnection() == null) return false;
-        double maxDist = ConfigServerControlledSyncedToClient.distanceRequiredToShowGUIInfo;
+        if (mc.level == null || mc.player == null) return false;
+        double maxDistSq = ConfigServerControlledSyncedToClient.distanceRequiredToShowGUIInfo * ConfigServerControlledSyncedToClient.distanceRequiredToShowGUIInfo;
         Vec3 pos = mc.player.position();
 
-        for (PlayerInfo info : mc.getConnection().getOnlinePlayers()) {
-            if (info.getProfile() != null && !info.getProfile().id().equals(mc.player.getUUID())) {
-                var other = mc.level.getPlayerByUUID(info.getProfile().id());
-                if (other != null && other.position().distanceTo(pos) <= maxDist) {
-                    return true;
-                }
+        for (Player other : mc.level.players()) {
+            if (other != null && other != mc.player && other.distanceToSqr(pos) <= maxDistSq) {
+                return true;
             }
         }
         return false;
