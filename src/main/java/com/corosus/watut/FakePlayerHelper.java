@@ -24,7 +24,7 @@ public class FakePlayerHelper {
             }
 
             // Check for Forge's FakePlayer
-            Class<?> forgeFakePlayerClass = getClassFromCache("net.minecraftforge.common.util.FakePlayer");
+            Class<?> forgeFakePlayerClass = getClassFromCache("net.neoforged.neoforge.common.util.FakePlayer");
             if (forgeFakePlayerClass != null && forgeFakePlayerClass.isInstance(object)) {
                 return true;
             }

@@ -83,6 +83,7 @@ public class ConfigClient implements IConfigCategory {
     @ConfigComment("Privacy setting, if you dont want to show the items you are transferring to and from yourself and containers, set this to true")
     public static boolean dontSendItemInfo = false;
 
+
     @Override
     public String getName() {
         return "-client";

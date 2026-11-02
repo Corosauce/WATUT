@@ -2,7 +2,7 @@ plugins {
     id 'idea'
     id 'java-library'
     id 'maven-publish'
-    id 'net.neoforged.moddev' version '2.0.78'
+    id 'net.neoforged.moddev' version '2.0.148'
     id "com.hypherionmc.modutils.modpublisher" version "2.1.6"
 }
 
@@ -32,17 +32,11 @@ base {
     archivesName = "${mod_id}-neoforge"
 }
 
-// Mojang ships Java 21 to end users starting in 1.20.5, so mods should target Java 21.
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
 neoForge {
     // Specify the version of NeoForge to use.
     version = project.neo_version
-
-    parchment {
-        mappingsVersion = project.parchment_version
-        minecraftVersion = project.parchment_mc_version
-    }
 
     // This line is optional. Access Transformers are automatically detected
     accessTransformers = project.files('src/main/resources/META-INF/accesstransformer.cfg')
@@ -134,6 +128,8 @@ dependencies {
 
     implementation ("com.corosus.coroutil:coroutil-neoforge:${project.minecraft_version}-${project.coroutil_version}")
 
+    compileOnly ("maven.modrinth:iris:1.11.4+26.2-neoforge")
+
     //implementation ("curse.maven:journeymap-32274:5950315")
     //implementation ("curse.maven:corpse-316582:5964725")
     //implementation ("curse.maven:Xaeros_Minimap-263420:6184463")
@@ -172,7 +168,6 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             minecraft_version_range: minecraft_version_range,
             neo_version            : neo_version,
             neo_version_range      : neo_version_range,
-            loader_version_range   : neo_loader_version_range,
             mod_id                 : mod_id,
             mod_name               : mod_name,
             mod_license            : mod_license,
@@ -254,7 +249,7 @@ publisher {
     // For example: markdown.md, or "This is my changelog"
     // Or: https://raw.githubusercontent.com/hypherionmc/changelogs/changelog.md
     // Or https://gist.githubusercontent.com/hypherionmc/92f825d3c9337964cc77c9c8c9bf65e6/raw/ceeaaee5b98c688a23398864fe480b84796a1651/test_gist.md
-    setChangelog("https://raw.githubusercontent.com/Corosauce/WATUT/refs/heads/1.21.4/changelog.md")
+    setChangelog("https://raw.githubusercontent.com/Corosauce/WATUT/refs/heads/watut_26.2/changelog.md")
 
     // Required for Modrinth/GitHub
     setProjectVersion("${project.version}")
@@ -301,7 +296,7 @@ publisher {
 
     // Add supported java versions. Currently only used by CurseForge
     // Supports anything that can be parsed using JavaVersion.toVersion()
-    setJavaVersions(JavaVersion.VERSION_21, 21)
+    setJavaVersions(JavaVersion.VERSION_25, 25)
 
     // Safety check to check if the artifact contains a valid mod metadata entry,
     // which could possibly mean that the jar is empty

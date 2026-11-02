@@ -4,9 +4,9 @@ import com.corosus.watut.client.ParticleRenderTypeOld;
 import com.corosus.watut.client.screen.ScreenParticleRenderer;
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import net.minecraft.client.Camera;
+import net.minecraft.client.particle.SingleQuadParticle;
+import com.corosus.watut.WatutRenderPipelines;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.util.Mth;
@@ -57,66 +57,42 @@ public class ParticleDynamic extends ParticleRotating {
         }
     }
 
-    public void render(VertexConsumer pBuffer, Camera pRenderInfo, float pPartialTicks) {
-        Vec3 vec3 = pRenderInfo.getPosition();
-        float f = (float)(Mth.lerp(pPartialTicks, this.xo, this.x) - vec3.x());
-        float f1 = (float)(Mth.lerp(pPartialTicks, this.yo, this.y) - vec3.y());
-        float f2 = (float)(Mth.lerp(pPartialTicks, this.zo, this.z) - vec3.z());
-        Quaternionf quaternion;
-        if (useCustomRotation) {
-            quaternion = new Quaternionf(0, 0, 0, 1);
-            quaternion.mul(Axis.YP.rotationDegrees(Mth.lerp(pPartialTicks, this.prevRotationYaw, rotationYaw)));
-            quaternion.mul(Axis.XP.rotationDegrees(Mth.lerp(pPartialTicks, this.prevRotationPitch, rotationPitch)/* + 180*/));
-            quaternion.mul(Axis.ZP.rotationDegrees(Mth.lerp(pPartialTicks, this.prevRotationRoll, rotationRoll)));
-        } else {
-            if (this.roll == 0.0F) {
-                quaternion = pRenderInfo.rotation();
-            } else {
-                quaternion = new Quaternionf(pRenderInfo.rotation());
-                quaternion.rotateZ(Mth.lerp(pPartialTicks, this.oRoll, this.roll));
-            }
+    @Override
+    protected boolean hasTexture() {
+        return particleRenderType != null && particleRenderType.getTextureId() != null;
+    }
+
+    @Override
+    public SingleQuadParticle.Layer getLayer() {
+        return new SingleQuadParticle.Layer(true, particleRenderType.getTextureId(), WatutRenderPipelines.TRANSLUCENT_PARTICLE_NO_CULL);
+    }
+
+    @Override
+    public float getQuadSize(float partialTicks) {
+        if (ConfigServerControlledSyncedToClient.dynamicGuiShowClientsEntireScreen) {
+            return (float) (this.quadSize * 4F * ConfigClient.particleSizeScale);
         }
+        return (float) (this.quadSize * 2F * ConfigClient.particleSizeScale);
+    }
 
-        //Vector3f[] avector3f = new Vector3f[]{new Vector3f(-1.0F, -1.0F, 0.0F), new Vector3f(-1.0F, 1.0F, 0.0F), new Vector3f(1.0F, 1.0F, 0.0F), new Vector3f(1.0F, -1.0F, 0.0F)};
-        //float aspectRatio = 1920F/1080F;
-        float aspectRatio = (float) ScreenParticleRenderer.getInstance().widthScaledDown / (float)ScreenParticleRenderer.getInstance().heightScaledDown;
-        float height = 1F / aspectRatio;
-        //height = 1;
-        Vector3f[] avector3f = new Vector3f[]{
-                new Vector3f(-1.0F, height, 0.0F),
-                new Vector3f(-1.0F, -height, 0.0F),
-                new Vector3f(1.0F, -height, 0.0F),
-                new Vector3f(1.0F, height, 0.0F)};
-        float f3 = this.getQuadSize(pPartialTicks);
+    @Override
+    protected float getU0() {
+        return 0;
+    }
 
-        for(int i = 0; i < 4; ++i) {
-            Vector3f vector3f = avector3f[i];
-            vector3f.rotate(quaternion);
-            //vector3f.mul(f3 * 6F);
-            if (ConfigServerControlledSyncedToClient.dynamicGuiShowClientsEntireScreen) {
-                vector3f.mul((float) (f3 * 4F * ConfigClient.particleSizeScale));
-            } else {
-                vector3f.mul((float) (f3 * 2F * ConfigClient.particleSizeScale));
-            }
-            vector3f.add(f, f1, f2);
-        }
+    @Override
+    protected float getU1() {
+        return 1;
+    }
 
-        /*float u0 = this.getU0();
-        float u1 = this.getU1();
-        float v0 = this.getV0();
-        float v1 = this.getV1();*/
+    @Override
+    protected float getV0() {
+        return 1;
+    }
 
-        float u0 = 0;
-        float u1 = 1;
-        float v0 = 0;
-        float v1 = 1;
-
-        int j = this.getLightColor(pPartialTicks);
-        float extraDark = this.getBrightness();
-        pBuffer.addVertex(avector3f[0].x(), avector3f[0].y(), avector3f[0].z()).setUv(u1, v1).setColor(this.rCol, this.gCol, this.bCol, this.alpha).setLight(j);
-        pBuffer.addVertex(avector3f[1].x(), avector3f[1].y(), avector3f[1].z()).setUv(u1, v0).setColor(this.rCol, this.gCol, this.bCol, this.alpha).setLight(j);
-        pBuffer.addVertex(avector3f[2].x(), avector3f[2].y(), avector3f[2].z()).setUv(u0, v0).setColor(this.rCol, this.gCol, this.bCol, this.alpha).setLight(j);
-        pBuffer.addVertex(avector3f[3].x(), avector3f[3].y(), avector3f[3].z()).setUv(u0, v1).setColor(this.rCol, this.gCol, this.bCol, this.alpha).setLight(j);
+    @Override
+    protected float getV1() {
+        return 0;
     }
 
 }

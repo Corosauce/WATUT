@@ -1,17 +1,17 @@
 package com.corosus.watut.client.screen;
 
 import com.corosus.coroutil.util.CULog;
-import com.corosus.watut.PlayerStatusManagerClient;
 import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
+import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.MainTarget;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.*;
+import com.mojang.blaze3d.textures.GpuTexture;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.CoreShaders;
-import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.resources.ResourceLocation;
-import org.joml.Matrix4f;
+import org.joml.Vector4f;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public class ScreenParticleRenderer {
 
@@ -22,9 +22,6 @@ public class ScreenParticleRenderer {
     //used to capture raw copy of minecraft screen
     private MainTarget mainRenderTarget;
 
-    //used to render a sized down and cropped version of the above raw copy
-    private MainTarget mainRenderTargetScaledDown;
-
     public int width;
     public int height;
     public static int defaultWidthScaledDown = 256;
@@ -33,6 +30,11 @@ public class ScreenParticleRenderer {
     public int widthScaledDown = defaultWidthScaledDown;
     public int heightScaledDown = defaultHeightScaledDown;
     public boolean needsInit = true;
+
+    private static final float[] WEIGHTS_LEVEL_1 = {0.45F, 0.1F, 0.1F, 0.05F, 0.02F};
+    private static final float[] WEIGHTS_GAUSSIAN = {0.227027F, 0.1945946F, 0.1216216F, 0.054054F, 0.016216F};
+    private static final int BLUR_RANGE = 4;
+    private static final int FADE_WIDTH = 16;
 
     private static ScreenParticleRenderer instance;
 
@@ -55,20 +57,7 @@ public class ScreenParticleRenderer {
         width = mc.getWindow().getWidth();
         height = mc.getWindow().getHeight();
         mainRenderTarget = new MainTarget(width, height);
-        mainRenderTarget.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
-        mainRenderTarget.clear();
-
-        if (ConfigServerControlledSyncedToClient.dynamicGuiShowClientsEntireScreen) {
-            widthScaledDown = width;
-            heightScaledDown = height;
-        } else {
-            widthScaledDown = defaultWidthScaledDown;
-            heightScaledDown = defaultHeightScaledDown;
-        }
-
-        mainRenderTargetScaledDown = new MainTarget(widthScaledDown, heightScaledDown);
-        mainRenderTargetScaledDown.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
-        mainRenderTargetScaledDown.clear();
+        resizeScaledDown(width, height);
     }
 
     public synchronized void resize(int width, int height) {
@@ -80,219 +69,135 @@ public class ScreenParticleRenderer {
     }
 
     public void resizeScaledDown(int width, int height) {
-        checkSetup();
-        int widthToUse = defaultWidthScaledDown;
-        int heightToUse = defaultHeightScaledDown;
         if (ConfigServerControlledSyncedToClient.dynamicGuiShowClientsEntireScreen) {
-            widthToUse = width;
-            heightToUse = height;
+            widthScaledDown = width;
+            heightScaledDown = height;
+        } else {
+            widthScaledDown = defaultWidthScaledDown;
+            heightScaledDown = defaultHeightScaledDown;
         }
-
-        widthScaledDown = widthToUse;
-        heightScaledDown = heightToUse;
-
-        CULog.dbg("resizeScaledDown to " + widthToUse + " " + heightToUse);
-
-        if (mainRenderTargetScaledDown.width != widthToUse || mainRenderTargetScaledDown.height != heightToUse) {
-            mainRenderTargetScaledDown.resize(widthToUse, heightToUse);
-        }
-    }
-
-    public void bind() {
-        mainRenderTarget.bindWrite(true);
-    }
-
-    public void unbind() {
-        mainRenderTarget.unbindWrite();
-    }
-
-    public void bindScaledDown() {
-        mainRenderTargetScaledDown.bindWrite(true);
-    }
-
-    public void unbindScaledDown() {
-        mainRenderTargetScaledDown.unbindWrite();
     }
 
     public MainTarget getMainRenderTarget() {
         return mainRenderTarget;
     }
 
-    public MainTarget getMainRenderTargetScaledDown() {
-        return mainRenderTargetScaledDown;
+    public void clearMainRenderTarget() {
+        RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(
+                mainRenderTarget.getColorTexture(), new Vector4f(0, 0, 0, 0), mainRenderTarget.getDepthTexture(), 0.0);
     }
 
-    public void setMainRenderTarget(MainTarget mainRenderTarget) {
-        this.mainRenderTarget = mainRenderTarget;
-    }
-
-    public void innerBlitCustomShader(PoseStack pose, int p_281399_, int p_283222_, int p_283615_, int p_283430_, int p_281729_, float p_283247_, float p_282598_, float p_282883_, float p_283017_) {
-        RenderSystem.setShaderTexture(0, mainRenderTarget.getColorTextureId());
-        RenderSystem.setShader(PlayerStatusManagerClient.positionTexBlur.getProgram());
-
-        if (PlayerStatusManagerClient.positionTexBlur == null) {
-            return;
-        }
-        if (PlayerStatusManagerClient.positionTexBlur.RESOLUTION != null) {
-            int sizeX = ScreenParticleRenderer.getInstance().widthScaledDown;
-            int sizeY = ScreenParticleRenderer.getInstance().heightScaledDown;
-            PlayerStatusManagerClient.positionTexBlur.RESOLUTION.set((float)sizeX, (float)sizeY);
-        }
-        if (PlayerStatusManagerClient.positionTexBlur.RADIUS != null) {
-            PlayerStatusManagerClient.positionTexBlur.RADIUS.set((float)0);
-        }
-
-        Matrix4f matrix4f = pose.last().pose();
-        BufferBuilder bufferbuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        //bufferbuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-
-        //UV coordinates adjusted to fix upside down render from data from earlier, cant figure out why its backwards to begin with but we fixed it via UV here
-        // Bottom-left vertex
-        bufferbuilder.addVertex(matrix4f, (float)p_281399_, (float)p_283615_, (float)p_281729_).setUv(p_283247_, p_283017_);
-        // Top-left vertex
-        bufferbuilder.addVertex(matrix4f, (float)p_281399_, (float)p_283430_, (float)p_281729_).setUv(p_283247_, p_282883_);
-        // Top-right vertex
-        bufferbuilder.addVertex(matrix4f, (float)p_283222_, (float)p_283430_, (float)p_281729_).setUv(p_282598_, p_282883_);
-        // Bottom-right vertex
-        bufferbuilder.addVertex(matrix4f, (float)p_283222_, (float)p_283615_, (float)p_281729_).setUv(p_282598_, p_283017_);
-
-        BufferUploader.drawWithShader(bufferbuilder.build());
-    }
-
-    public void innerBlitCustomShader2(int textureID, PoseStack pose, int p_281399_, int p_283222_, int p_283615_, int p_283430_, int p_281729_, float p_283247_, float p_282598_, float p_282883_, float p_283017_) {
-        //RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
-        RenderSystem.setShaderTexture(0, mainRenderTarget.getColorTextureId());
-        RenderSystem.setShader(PlayerStatusManagerClient.positionTexBlur.getProgram());
-
-        if (PlayerStatusManagerClient.positionTexBlur == null) {
-            return;
-        }
-        if (PlayerStatusManagerClient.positionTexBlur.RESOLUTION != null) {
-            int sizeX = ScreenParticleRenderer.getInstance().widthScaledDown;
-            int sizeY = ScreenParticleRenderer.getInstance().heightScaledDown;
-            PlayerStatusManagerClient.positionTexBlur.RESOLUTION.set((float)sizeX, (float)sizeY);
-        }
-        if (PlayerStatusManagerClient.positionTexBlur.RADIUS != null) {
-            PlayerStatusManagerClient.positionTexBlur.RADIUS.set((float)0);
-        }
-
-        Matrix4f matrix4f = pose.last().pose();
-        BufferBuilder bufferbuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        //bufferbuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-
-        //UV coordinates adjusted to fix upside down render from data from earlier, cant figure out why its backwards to begin with but we fixed it via UV here
-        // Bottom-left vertex
-        bufferbuilder.addVertex(matrix4f, (float)p_281399_, (float)p_283615_, (float)p_281729_).setUv(p_283247_, p_283017_);
-        // Top-left vertex
-        bufferbuilder.addVertex(matrix4f, (float)p_281399_, (float)p_283430_, (float)p_281729_).setUv(p_283247_, p_282883_);
-        // Top-right vertex
-        bufferbuilder.addVertex(matrix4f, (float)p_283222_, (float)p_283430_, (float)p_281729_).setUv(p_282598_, p_282883_);
-        // Bottom-right vertex
-        bufferbuilder.addVertex(matrix4f, (float)p_283222_, (float)p_283615_, (float)p_281729_).setUv(p_282598_, p_283017_);
-
-        BufferUploader.drawWithShader(bufferbuilder.build());
-    }
-
-    public void innerBlitCustomShaderHorizontal(PoseStack pose, int p_281399_, int p_283222_, int p_283615_, int p_283430_, int p_281729_, float p_283247_, float p_282598_, float p_282883_, float p_283017_) {
-        if (RenderHelper.xaeroWorldMapTextureID != -1) {
-            //RenderSystem._setShaderTexture(0, RenderHelper.xaeroWorldMapTextureID);
-            GlStateManager._bindTexture(RenderHelper.xaeroWorldMapTextureID);
-            RenderSystem.setShaderTexture(0, RenderHelper.xaeroWorldMapTextureID);
-            /*int test = 181;
-            GlStateManager._bindTexture(test);
-            RenderSystem.setShaderTexture(0, test);*/
-        } else {
-            RenderSystem.setShaderTexture(0, mainRenderTarget.getColorTextureId());
-        }
-        //RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
-        RenderSystem.setShader(PlayerStatusManagerClient.positionTexBlurHorizontal.getProgram());
-
-        if (PlayerStatusManagerClient.positionTexBlurHorizontal == null) {
+    public void performCaptureBlurAndReadback(int mouseX, int mouseY) {
+        checkSetup();
+        GpuTexture colorTexture = mainRenderTarget.getColorTexture();
+        if (colorTexture == null) {
+            CULog.dbg("performCaptureBlurAndReadback: color texture is null");
             return;
         }
 
-        if (PlayerStatusManagerClient.positionTexBlurHorizontal.BLUR_LEVEL != null) {
-            PlayerStatusManagerClient.positionTexBlurHorizontal.BLUR_LEVEL.set((float)(RenderHelper.xaeroWorldMapTextureID != -1 ? 0 : ConfigServerControlledSyncedToClient.dynamicGuiBlurLevel));
+        int sourceWidth = mainRenderTarget.width;
+        int sourceHeight = mainRenderTarget.height;
+        double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+        if (ConfigServerControlledSyncedToClient.dynamicGuiShowClientsEntireScreen) {
+            guiScale = 1;
         }
+        int outW = widthScaledDown;
+        int outH = heightScaledDown;
+        int cropW = Math.min(sourceWidth, (int) (outW * guiScale));
+        int cropH = Math.min(sourceHeight, (int) (outH * guiScale));
+        int cropX = (sourceWidth - cropW) / 2;
+        int cropY = (sourceHeight - cropH) / 2;
 
-        Matrix4f matrix4f = pose.last().pose();
-        BufferBuilder bufferbuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        //bufferbuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        float radius = (float) ConfigServerControlledSyncedToClient.dynamicGuiSizeRadiusInPixelsToShow;
+        int blurLevel = RenderHelper.xaeroWorldMapTextureID != -1 ? 0 : ConfigServerControlledSyncedToClient.dynamicGuiBlurLevel;
 
-        if (RenderHelper.xaeroWorldMapTextureID != -1) {
-            bufferbuilder.addVertex(matrix4f, (float)p_281399_, (float)p_283615_, (float)p_281729_).setUv(p_283247_, p_282883_);
-            bufferbuilder.addVertex(matrix4f, (float)p_281399_, (float)p_283430_, (float)p_281729_).setUv(p_283247_, p_283017_);
-            bufferbuilder.addVertex(matrix4f, (float)p_283222_, (float)p_283430_, (float)p_281729_).setUv(p_282598_, p_283017_);
-            bufferbuilder.addVertex(matrix4f, (float)p_283222_, (float)p_283615_, (float)p_281729_).setUv(p_282598_, p_282883_);
-        } else {
-            //UV coordinates adjusted to fix upside down render from data from earlier, cant figure out why its backwards to begin with but we fixed it via UV here
-            // Bottom-left vertex
-            bufferbuilder.addVertex(matrix4f, (float)p_281399_, (float)p_283615_, (float)p_281729_).setUv(p_283247_, p_283017_);
-            // Top-left vertex
-            bufferbuilder.addVertex(matrix4f, (float)p_281399_, (float)p_283430_, (float)p_281729_).setUv(p_283247_, p_282883_);
-            // Top-right vertex
-            bufferbuilder.addVertex(matrix4f, (float)p_283222_, (float)p_283430_, (float)p_281729_).setUv(p_282598_, p_282883_);
-            // Bottom-right vertex
-            bufferbuilder.addVertex(matrix4f, (float)p_283222_, (float)p_283615_, (float)p_281729_).setUv(p_282598_, p_283017_);
-        }
+        int blockSize = colorTexture.getFormat().blockSize();
+        GpuBuffer gpuBuffer = RenderSystem.getDevice().createBuffer(() -> "WATUT gui capture readback",
+                GpuBuffer.USAGE_MAP_READ | GpuBuffer.USAGE_COPY_DST, (long) cropW * cropH * blockSize);
 
-
-
-        BufferUploader.drawWithShader(bufferbuilder.build());
+        RenderSystem.getDevice().createCommandEncoder().copyTextureToBuffer(colorTexture, gpuBuffer, 0, () -> {
+            try (GpuBufferSlice.MappedView view = gpuBuffer.map(true, false)) {
+                ByteBuffer src = view.data().order(ByteOrder.LITTLE_ENDIAN);
+                ByteBuffer out = process(src, cropW, cropH, blockSize, outW, outH, radius, blurLevel);
+                RenderHelper.processor.submitForProcessing(new CapturedFrame(out, outW, outH));
+            } catch (Exception e) {
+                CULog.err("WATUT: gui capture readback failed: " + e);
+            } finally {
+                gpuBuffer.close();
+            }
+        }, 0, cropX, cropY, cropW, cropH);
     }
 
-    public void innerBlitCustomShaderVertical(PoseStack pose, int p_281399_, int p_283222_, int p_283615_, int p_283430_, int p_281729_, float p_283247_, float p_282598_, float p_282883_, float p_283017_) {
-        RenderSystem.setShaderTexture(0, mainRenderTargetScaledDown.getColorTextureId());
-        //RenderSystem._setShaderTexture(0, mainRenderTarget.getColorTextureId());
-        RenderSystem.setShader(PlayerStatusManagerClient.positionTexBlurVertical.getProgram());
+    private static ByteBuffer process(ByteBuffer src, int srcW, int srcH, int blockSize, int outW, int outH, float radius, int blurLevel) {
+        float[] weights = blurLevel == 1 ? WEIGHTS_LEVEL_1 : WEIGHTS_GAUSSIAN;
+        float[] r = new float[outW * outH];
+        float[] g = new float[outW * outH];
+        float[] b = new float[outW * outH];
+        float[] a = new float[outW * outH];
 
-        if (PlayerStatusManagerClient.positionTexBlurVertical == null) {
-            return;
+        for (int oy = 0; oy < outH; oy++) {
+            int sy = Math.min(srcH - 1, (int) ((oy + 0.5F) * srcH / outH));
+            for (int ox = 0; ox < outW; ox++) {
+                int sx = Math.min(srcW - 1, (int) ((ox + 0.5F) * srcW / outW));
+                int i = ox + oy * outW;
+                int center = pixel(src, sx, sy, srcW, blockSize);
+                a[i] = ((center >>> 24) & 0xFF) / 255F;
+                if (a[i] <= 0) continue;
+                if (blurLevel == 0) {
+                    r[i] = (center & 0xFF) / 255F;
+                    g[i] = ((center >>> 8) & 0xFF) / 255F;
+                    b[i] = ((center >>> 16) & 0xFF) / 255F;
+                } else {
+                    for (int k = -BLUR_RANGE; k <= BLUR_RANGE; k++) {
+                        int p = pixel(src, Math.clamp(sx + k, 0, srcW - 1), sy, srcW, blockSize);
+                        float w = weights[Math.abs(k)];
+                        r[i] += (p & 0xFF) / 255F * w;
+                        g[i] += ((p >>> 8) & 0xFF) / 255F * w;
+                        b[i] += ((p >>> 16) & 0xFF) / 255F * w;
+                    }
+                }
+            }
         }
-        if (PlayerStatusManagerClient.positionTexBlurVertical.RESOLUTION != null) {
-            int sizeX = ScreenParticleRenderer.getInstance().widthScaledDown;
-            int sizeY = ScreenParticleRenderer.getInstance().heightScaledDown;
-            PlayerStatusManagerClient.positionTexBlurVertical.RESOLUTION.set((float)sizeX, (float)sizeY);
+
+        ByteBuffer out = ByteBuffer.allocateDirect(outW * outH * bytesPerPixel).order(ByteOrder.LITTLE_ENDIAN);
+        float midX = outW / 2F;
+        float midY = outH / 2F;
+        for (int oy = 0; oy < outH; oy++) {
+            for (int ox = 0; ox < outW; ox++) {
+                int i = ox + oy * outW;
+                float alpha = a[i];
+                float rr = r[i], gg = g[i], bb = b[i];
+                if (blurLevel != 0) {
+                    rr = gg = bb = 0;
+                    for (int k = -BLUR_RANGE; k <= BLUR_RANGE; k++) {
+                        int j = ox + Math.clamp(oy + k, 0, outH - 1) * outW;
+                        float w = weights[Math.abs(k)];
+                        rr += r[j] * w;
+                        gg += g[j] * w;
+                        bb += b[j] * w;
+                    }
+                }
+                if (radius != -1) {
+                    float dist = (float) Math.hypot(ox + 0.5F - midX, oy + 0.5F - midY);
+                    if (dist > radius + FADE_WIDTH) {
+                        alpha = 0;
+                    } else if (dist > radius) {
+                        alpha = Math.min(alpha, 1 - ((dist - radius) / FADE_WIDTH));
+                    }
+                }
+                out.putInt(i * bytesPerPixel, (toByte(alpha) << 24) | (toByte(bb) << 16) | (toByte(gg) << 8) | toByte(rr));
+            }
         }
-
-        //visual cutoff radius
-        if (PlayerStatusManagerClient.positionTexBlurVertical.RADIUS != null) {
-            PlayerStatusManagerClient.positionTexBlurVertical.RADIUS.set((float) ConfigServerControlledSyncedToClient.dynamicGuiSizeRadiusInPixelsToShow);
-        }
-
-        if (PlayerStatusManagerClient.positionTexBlurVertical.BLUR_LEVEL != null) {
-            PlayerStatusManagerClient.positionTexBlurVertical.BLUR_LEVEL.set((float)(RenderHelper.xaeroWorldMapTextureID != -1 ? 0 : ConfigServerControlledSyncedToClient.dynamicGuiBlurLevel));
-        }
-
-        Matrix4f matrix4f = pose.last().pose();
-        BufferBuilder bufferbuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        //bufferbuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-
-        //UV coordinates adjusted to fix upside down render from data from earlier, cant figure out why its backwards to begin with but we fixed it via UV here
-        // Bottom-left vertex
-        bufferbuilder.addVertex(matrix4f, (float)p_281399_, (float)p_283615_, (float)p_281729_).setUv(p_283247_, p_283017_);
-        // Top-left vertex
-        bufferbuilder.addVertex(matrix4f, (float)p_281399_, (float)p_283430_, (float)p_281729_).setUv(p_283247_, p_282883_);
-        // Top-right vertex
-        bufferbuilder.addVertex(matrix4f, (float)p_283222_, (float)p_283430_, (float)p_281729_).setUv(p_282598_, p_282883_);
-        // Bottom-right vertex
-        bufferbuilder.addVertex(matrix4f, (float)p_283222_, (float)p_283615_, (float)p_281729_).setUv(p_282598_, p_283017_);
-
-        BufferUploader.drawWithShader(bufferbuilder.build());
+        out.position(0);
+        out.limit(outW * outH * bytesPerPixel);
+        return out;
     }
 
-    //copy of GuiGraphics.innerBlit with PoseStack added
-    public void innerBlit(PoseStack pose, ResourceLocation atlasLocation, int x1, int x2, int y1, int y2, int blitOffset, float minU, float maxU, float minV, float maxV) {
-        RenderSystem.setShaderTexture(0, atlasLocation);
-        //RenderSystem.setShaderTexture(0, mainRenderTarget.getColorTextureId());
-        RenderSystem.setShader(CoreShaders.POSITION_TEX);
-        Matrix4f matrix4f = pose.last().pose();
-        BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        //bufferbuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        bufferBuilder.addVertex(matrix4f, (float)x1, (float)y1, (float)blitOffset).setUv(minU, minV);
-        bufferBuilder.addVertex(matrix4f, (float)x1, (float)y2, (float)blitOffset).setUv(minU, maxV);
-        bufferBuilder.addVertex(matrix4f, (float)x2, (float)y2, (float)blitOffset).setUv(maxU, maxV);
-        bufferBuilder.addVertex(matrix4f, (float)x2, (float)y1, (float)blitOffset).setUv(maxU, minV);
-        BufferUploader.drawWithShader(bufferBuilder.build());
+    private static int pixel(ByteBuffer src, int x, int y, int srcW, int blockSize) {
+        return src.getInt((x + y * srcW) * blockSize);
+    }
+
+    private static int toByte(float v) {
+        return Math.clamp(Math.round(v * 255F), 0, 255);
     }
 }

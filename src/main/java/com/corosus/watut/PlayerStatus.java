@@ -381,6 +381,13 @@ public class PlayerStatus {
         return screenData;
     }
 
+    public void releaseScreenData() {
+        if (screenData != null) {
+            screenData.release();
+            screenData = null;
+        }
+    }
+
     public void setScreenData(ScreenData screenData) {
         this.screenData = screenData;
     }

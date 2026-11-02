@@ -1,5 +1,6 @@
 package com.corosus.watut.particle;
 
+import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.spritesets.SpriteSetPlayer;
 import net.minecraft.client.multiplayer.ClientLevel;
 
@@ -44,7 +45,7 @@ public class ParticleStaticLoD extends ParticleRotating {
     public void setParticleFromDistanceToCamera(float distanceToCamera) {
         float step = 3F;
         int i = (int) Math.max(0, Math.min(sprites.getFrames()-1, ((distanceToCamera - step) / step) + 1));
-        this.setSprite(sprites.getList().get(i));
+        this.setSprite(sprites.getFrame(i));
     }
 
 }

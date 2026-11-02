@@ -1,20 +1,23 @@
 package com.corosus.watut.client.screen;
 
-import java.nio.ByteBuffer;
 import java.util.concurrent.*;
 import java.util.function.Function;
 
-public class ByteBufferProcessor {
-    private final BlockingQueue<ByteBuffer> inputQueue;
-    private final BlockingQueue<ByteBuffer> outputQueue;
+public class ByteBufferProcessor<T> {
+    private final BlockingQueue<T> inputQueue;
+    private final BlockingQueue<T> outputQueue;
     private final ExecutorService executorService;
-    private final Function<ByteBuffer, ByteBuffer> processingFunction;
+    private final Function<T, T> processingFunction;
     private volatile boolean isRunning;
     
-    public ByteBufferProcessor(Function<ByteBuffer, ByteBuffer> processingFunction) {
+    public ByteBufferProcessor(Function<T, T> processingFunction) {
         this.inputQueue = new LinkedBlockingQueue<>();
         this.outputQueue = new LinkedBlockingQueue<>();
-        this.executorService = Executors.newSingleThreadExecutor();
+        this.executorService = Executors.newSingleThreadExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "watut-screen-processor");
+            thread.setDaemon(true);
+            return thread;
+        });
         this.processingFunction = processingFunction;
         this.isRunning = true;
         
@@ -25,9 +28,9 @@ public class ByteBufferProcessor {
         executorService.submit(() -> {
             while (isRunning || !inputQueue.isEmpty()) {
                 try {
-                    ByteBuffer input = inputQueue.poll(100, TimeUnit.MILLISECONDS);
+                    T input = inputQueue.poll(100, TimeUnit.MILLISECONDS);
                     if (input != null) {
-                        ByteBuffer result = processingFunction.apply(input);
+                        T result = processingFunction.apply(input);
                         outputQueue.put(result);
                     }
                 } catch (InterruptedException e) {
@@ -38,7 +41,7 @@ public class ByteBufferProcessor {
         });
     }
     
-    public void submitForProcessing(ByteBuffer buffer) {
+    public void submitForProcessing(T buffer) {
         if (!isRunning) {
             throw new IllegalStateException("Processor has been shutdown");
         }
@@ -50,7 +53,7 @@ public class ByteBufferProcessor {
         }
     }
     
-    public ByteBuffer getProcessedBuffer() throws InterruptedException {
+    public T getProcessedBuffer() throws InterruptedException {
         return outputQueue.poll(100, TimeUnit.MILLISECONDS);
     }
 

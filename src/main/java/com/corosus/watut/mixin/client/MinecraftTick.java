@@ -18,8 +18,8 @@ public abstract class MinecraftTick {
         WatutMod.getPlayerStatusManagerClient().tickGame();
     }
 
-    @Inject(method = "updateLevelInEngines", at = @At("TAIL"))
-    private void updateLevelInEngines(ClientLevel p_91325_, CallbackInfo ci) {
+    @Inject(method = "updateLevelInEngines(Lnet/minecraft/client/multiplayer/ClientLevel;Z)V", at = @At("TAIL"))
+    private void updateLevelInEngines(ClientLevel p_91325_, boolean stopSound, CallbackInfo ci) {
         PlayerStatusManagerClient.getParticleEngine().setLevel(p_91325_);
     }
 }

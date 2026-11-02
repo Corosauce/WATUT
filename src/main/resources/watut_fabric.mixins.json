@@ -16,8 +16,8 @@
     "client.GameRendererResize",
     "client.ParticleEngineMixinFabric",
     "client.NativeImageAccessor",
-    "client.RenderTargetBindWrite",
-    "client.RenderStateShardSetup"
+    "client.GameRendererCaptureMixin",
+    "client.GameRendererAccessor"
   ],
   "mixins": [
     "PlayerLoggedIn",

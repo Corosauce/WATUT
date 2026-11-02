@@ -15,6 +15,7 @@ public class PlayerStatusManager {
     protected boolean singleplayerTesting = false;
 
     public void tickPlayer(Player player) {
+        //DEBUG TEST
         singleplayerTesting = false;
         if (player.level().isClientSide()) {
             tickPlayerClient(player);

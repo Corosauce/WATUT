@@ -1,19 +1,9 @@
 package com.corosus.watut.client.screen;
 
-import com.corosus.watut.PlayerStatusManagerClient;
 import com.corosus.watut.client.ParticleRenderTypeOld;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.particle.ParticleRenderType;
-import net.minecraft.client.renderer.CoreShaders;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.world.level.Level;
+import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.system.MemoryUtil;
 
@@ -50,42 +40,48 @@ public class ScreenData {
 
     public static boolean testing = false;
 
+    private static int nextTextureIndex = 0;
+    private Identifier textureId;
+
+    public static boolean isValidReceivedSize(int width, int height) {
+        int max = com.corosus.watut.config.ConfigServerControlledSyncedToClient.dynamicGuiShowClientsEntireScreen ? 4096 : 512;
+        return width > 0 && height > 0 && width <= max && height <= max;
+    }
+
     public void initClient() {
-
+        if (textureId == null) {
+            textureId = Identifier.fromNamespaceAndPath(com.corosus.watut.WatutMod.MODID, "dynamic/screen_" + (nextTextureIndex++));
+        }
+        final Identifier id = textureId;
         this.particleRenderType = new ParticleRenderTypeOld() {
-            public @Nullable BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
-                //oculus breaks our shader for some reason
-                if (RenderHelper.isShadersEnabled() || testing) {
-                    RenderSystem.setShader(CoreShaders.PARTICLE);
-                } else {
-                    RenderSystem.setShader(PlayerStatusManagerClient.particle.getProgram());
-                }
-                RenderSystem.setShaderTexture(0, getImage().getId());
-
-                RenderSystem.depthMask(true);
-                RenderSystem.enableBlend();
-                RenderSystem.defaultBlendFunc();
-                RenderSystem.disableCull();
-                return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+            @Override
+            public Identifier getTextureId() {
+                return getImage() != null ? id : null;
             }
 
             public String toString() {
                 return "DYNAMIC_TEXTURE";
             }
         };
+    }
 
-        //WatutMod.instance().addParticleRenderType(particleRenderType);
-
+    public Identifier getTextureId() {
+        return textureId;
     }
 
     public ByteBuffer getTexturePixelData() {
         return texturePixelData;
     }
 
-    public void freeTexturePixelData() {
-        if (texturePixelData != null) {
-            MemoryUtil.memFree(texturePixelData);
+    public void release() {
+        closeImage();
+        if (decompressionBuffer != null) {
+            MemoryUtil.memFree(decompressionBuffer);
+            decompressionBuffer = null;
         }
+        texturePixelData = null;
+        getIsBufferReady().set(false);
+        markNeedsNewRenderFromPixelData(false);
     }
 
     public void setTexturePixelData(ByteBuffer texturePixelData) {
@@ -178,7 +174,12 @@ public class ScreenData {
 
     public void closeImage() {
         if (this.image != null) {
-            this.image.close();
+            if (textureId != null) {
+                net.minecraft.client.Minecraft.getInstance().getTextureManager().release(textureId);
+            } else {
+                this.image.close();
+            }
+            this.image = null;
         }
     }
 

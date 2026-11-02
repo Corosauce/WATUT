@@ -2,8 +2,6 @@ package com.corosus.watut.client.screen;
 
 import com.corosus.coroutil.util.CULog;
 import com.corosus.watut.PlayerStatus;
-import com.corosus.watut.ShaderRegistry;
-import com.corosus.watut.ShaderReloader;
 import com.corosus.watut.WatutMod;
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
@@ -11,14 +9,13 @@ import com.corosus.watut.mixin.client.NativeImageAccessor;
 import com.mojang.blaze3d.ProjectionType;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.VertexSorting;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
-import org.lwjgl.opengl.GL11;
 import org.lwjgl.system.MemoryUtil;
 
 import java.io.ByteArrayInputStream;
@@ -28,15 +25,18 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 import java.util.zip.Inflater;
 
 public class RenderHelper {
 
     public static boolean performingOwnRender = false;
-    public static ResourceLocation cursor = ResourceLocation.fromNamespaceAndPath(WatutMod.MODID, "textures/misc/mouse.png");
+    public static Identifier cursor = Identifier.fromNamespaceAndPath(WatutMod.MODID, "textures/misc/mouse.png");
+
+    public static volatile boolean captureRequested = false;
+    public static int captureMouseX = 0;
+    public static int captureMouseY = 0;
 
     //xaero minimap support (doesnt capture extra elements just terrain)
     public static Class guiMap;
@@ -122,8 +122,8 @@ public class RenderHelper {
         return guiMap.isInstance(screen);
     }
 
-    public static ByteBufferProcessor processor = new ByteBufferProcessor(buffer -> {
-        ByteBuffer processed = compress(buffer);
+    public static ByteBufferProcessor<CapturedFrame> processor = new ByteBufferProcessor<>(frame -> {
+        ByteBuffer processed = compress(frame.data());
 
         //TODO: testing
         /*byte[] newData = new byte[buffer.remaining()];
@@ -151,7 +151,7 @@ public class RenderHelper {
 
         WatutMod.getPlayerStatusManagerClient().getStatusLocal().getScreenData().setTexturePixelDataDiff(newData);*/
 
-        return processed;
+        return new CapturedFrame(processed, frame.width(), frame.height());
     });
 
     /*public static int encodeIndex(int index, byte[] encodedBytes) {
@@ -197,7 +197,7 @@ public class RenderHelper {
         }
     }*/
 
-    public static void guiRender(GuiGraphics guiGraphics) {
+    public static void guiRender() {
         long gameTime = 0;
         if (Minecraft.getInstance().level != null) {
             gameTime = Minecraft.getInstance().level.getGameTime();
@@ -211,6 +211,14 @@ public class RenderHelper {
                 screenData.markNeedsNewRenderFromPixelData(false);
                 screenData.setGameTicksSinceLastScreenReceiveAndRender(gameTime);
 
+                ByteBuffer decoded = screenData.getDecompressionBuffer();
+                if (!ScreenData.isValidReceivedSize(screenData.getWidth(), screenData.getHeight())
+                        || decoded == null || decoded.limit() != screenData.getWidth() * screenData.getHeight() * ScreenParticleRenderer.bytesPerPixel) {
+                    CULog.dbg("WATUT: dropping screen frame, size " + screenData.getWidth() + "x" + screenData.getHeight() + " does not match decoded data " + (decoded != null ? decoded.limit() : -1));
+                    screenData.getIsBufferReady().set(false);
+                    continue;
+                }
+
                 ScreenParticleRenderer.getInstance().checkSetup();
 
                 if (playerStatus.getScreenData().getParticleRenderType() == null) {
@@ -218,19 +226,19 @@ public class RenderHelper {
                 }
 
                 if (screenData.getImage() == null) {
-                    screenData.setImage(new DynamicTexture(screenData.getWidth(), screenData.getHeight(), true));
+                    setScreenImage(screenData);
                 } else {
                     //detect a resolution change and remake buffer, only used if experimental rendering of entire screen config is on
                     //CULog.dbg("screendata sizes " + screenData.getWidth() + " " + screenData.getHeight());
                     if (screenData.getImage().getPixels().getWidth() != screenData.getWidth() || screenData.getImage().getPixels().getHeight() != screenData.getHeight()) {
                         screenData.closeImage();
-                        screenData.setImage(new DynamicTexture(screenData.getWidth(), screenData.getHeight(), true));
+                        setScreenImage(screenData);
                         CULog.dbg("screendata image resized to " + screenData.getWidth() + " " + screenData.getHeight());
                     }
                 }
                 //hack into NativeImage to directly inject pixel data, working around its requirements for a PNG format parse
                 long nativeImagePixelMemoryAddress = ((NativeImageAccessor)((Object)screenData.getImage().getPixels())).pixels();
-                if (nativeImagePixelMemoryAddress != -1) {
+                if (nativeImagePixelMemoryAddress != -1 && nativeImagePixelMemoryAddress != 0) {
                     MemoryUtil.memCopy(MemoryUtil.memAddress(screenData.getDecompressionBuffer()), nativeImagePixelMemoryAddress,
                             screenData.getWidth() * screenData.getHeight() * ScreenParticleRenderer.bytesPerPixel);
                 }
@@ -243,16 +251,10 @@ public class RenderHelper {
         }
     }
 
-    public static void bindVanillaRenderTargetAndSetupProjectionMatrix() {
-        Window window = Minecraft.getInstance().getWindow();
-        Matrix4f matrix4f = (new Matrix4f()).setOrtho(0.0F, (float)((double)window.getWidth() / window.getGuiScale()), (float)((double)window.getHeight() / window.getGuiScale()), 0.0F, 1000.0F, 21000.0F/*net.minecraftforge.client.ForgeHooksClient.getGuiFarPlane()*/);
-        RenderSystem.setProjectionMatrix(matrix4f, ProjectionType.ORTHOGRAPHIC);
-
-        Minecraft.getInstance().getMainRenderTarget().bindWrite(true);
-    }
-
-    public static void unbindVanillaRenderTarget() {
-        Minecraft.getInstance().getMainRenderTarget().unbindWrite();
+    private static void setScreenImage(ScreenData screenData) {
+        DynamicTexture texture = new DynamicTexture(() -> "watut_image", screenData.getWidth(), screenData.getHeight(), true);
+        screenData.setImage(texture);
+        Minecraft.getInstance().getTextureManager().register(screenData.getTextureId(), texture);
     }
 
     public static boolean useDynamicGUISystem() {
@@ -261,9 +263,9 @@ public class RenderHelper {
         return true;
     }
 
-    public static synchronized void renderWithTooltipEnd(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
+    public static synchronized void renderWithTooltipEnd(GuiGraphicsExtractor pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
         if (!useDynamicGUISystem()) return;
-        if (Minecraft.getInstance().level == null || Minecraft.getInstance().player == null) {
+        if (Minecraft.getInstance().level == null || Minecraft.getInstance().player == null || Minecraft.getInstance().gui == null) {
             return;
         }
 
@@ -271,11 +273,11 @@ public class RenderHelper {
 
         if (processor.hasProcessedBuffers()) {
             try {
-                ByteBuffer result = processor.getProcessedBuffer();
+                CapturedFrame result = processor.getProcessedBuffer();
                 if (result != null) {
                     ScreenData screenDataLocal = playerStatusLocal.getScreenData();
-                    screenDataLocal.setTexturePixelData(result);
-                    WatutMod.getPlayerStatusManagerClient().sendScreenRenderData(playerStatusLocal);
+                    screenDataLocal.setTexturePixelData(result.data());
+                    WatutMod.getPlayerStatusManagerClient().sendScreenRenderData(playerStatusLocal, result.width(), result.height());
                 }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
@@ -284,322 +286,112 @@ public class RenderHelper {
 
         boolean needsScreenUpdate = playerStatusLocal.getScreenData().isNeedsNewRenderToPixelData();
 
-
-
         if (needsScreenUpdate && !processor.hasWork()) {
-
             playerStatusLocal.getScreenData().setNeedsNewRenderToPixelData(false);
             ScreenParticleRenderer.getInstance().checkSetup();
-            unbindVanillaRenderTarget();
-            ScreenParticleRenderer.getInstance().bind();
 
-            RenderSystem.clear(16640);
-
-            if (Minecraft.getInstance().screen != null) {
-                //TODO: isRenderingParticleGUI2 cant be conditional now with the render target binding redirect mixin
-                if (ConfigServerControlledSyncedToClient.dynamicGuiDisableBackgroundRendering) {
-                    //ScreenParticleRenderer.isRenderingParticleGUI = true;
-                    ScreenParticleRenderer.isRenderingParticleGUI2 = true;
-                }
-                performingOwnRender = true;
-
-                xaeroWorldMapTextureID = -1;
-
-                if (isXaeroGuiMap(Minecraft.getInstance().screen)) {
-                    try {
-                        Object fbo = guiMapPrimaryScaleFBO.get(null);
-                        if (fbo != null) {
-                            Object colorTextureIdObj = colorTextureId.get(fbo);
-                            if (colorTextureIdObj != null) {
-                                xaeroWorldMapTextureID = (int) colorTextureIdObj;
-                            }
+            xaeroWorldMapTextureID = -1;
+            if (Minecraft.getInstance().gui.screen() != null && isXaeroGuiMap(Minecraft.getInstance().gui.screen())) {
+                try {
+                    Object fbo = guiMapPrimaryScaleFBO.get(null);
+                    if (fbo != null) {
+                        Object colorTextureIdObj = colorTextureId.get(fbo);
+                        if (colorTextureIdObj != null) {
+                            xaeroWorldMapTextureID = (int) colorTextureIdObj;
                         }
-                    } catch (IllegalAccessException e) {
-                        e.printStackTrace();
                     }
-                } else {
-                    Minecraft.getInstance().screen.renderWithTooltip(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
-                }
-
-                //render our cursor
-                ScreenParticleRenderer.getInstance().innerBlit(pGuiGraphics.pose(), cursor, pMouseX, pMouseX + 6, pMouseY, pMouseY + 10, 100, 0, 1, 0, 1);
-
-                performingOwnRender = false;
-                ScreenParticleRenderer.isRenderingParticleGUI = false;
-                ScreenParticleRenderer.isRenderingParticleGUI2 = false;
-            }
-
-            //if (true) return;
-
-            //readPixelsTest();
-            ByteBuffer pixelBuffer;
-            //pixelBuffer = getPixelDataFromFrameBuffer();
-
-            ScreenParticleRenderer.getInstance().unbind();
-
-            Matrix4f matrix4f = (new Matrix4f()).setOrtho(0.0F, (float)ScreenParticleRenderer.getInstance().widthScaledDown, (float)ScreenParticleRenderer.getInstance().heightScaledDown, 0.0F, 1000.0F, 21000.0F/*net.minecraftforge.client.ForgeHooksClient.getGuiFarPlane()*/);
-            RenderSystem.setProjectionMatrix(matrix4f, ProjectionType.ORTHOGRAPHIC);
-
-            ScreenParticleRenderer.getInstance().bindScaledDown();
-
-            //ScreenParticleRenderer.isRenderingParticleGUI2 = true;
-
-            RenderSystem.clear(16640);
-
-            double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
-            if (ConfigServerControlledSyncedToClient.dynamicGuiShowClientsEntireScreen) {
-                guiScale = 1;
-            }
-            int croppedWidth = (int) (ScreenParticleRenderer.getInstance().widthScaledDown * guiScale);
-            int croppedHeight = (int) (ScreenParticleRenderer.getInstance().heightScaledDown * guiScale);
-
-            int centerX = ScreenParticleRenderer.getInstance().width / 2;
-            int centerY = ScreenParticleRenderer.getInstance().height / 2;
-            int x1 = centerX - (croppedWidth / 2);
-            int x2 = centerX + (croppedWidth / 2);
-            int y1 = centerY - (croppedHeight / 2);
-            int y2 = centerY + (croppedHeight / 2);
-            float minU = (float)x1 / (float)ScreenParticleRenderer.getInstance().width;
-            float maxU = (float)x2 / (float)ScreenParticleRenderer.getInstance().width;
-            float minV = (float)y1 / (float)ScreenParticleRenderer.getInstance().height;
-            float maxV = (float)y2 / (float)ScreenParticleRenderer.getInstance().height;
-
-            x1 = 0;
-            x2 = ScreenParticleRenderer.getInstance().widthScaledDown;
-            y1 = 0;
-            y2 = ScreenParticleRenderer.getInstance().heightScaledDown;
-
-            boolean test = false;
-            if (test) {
-                ScreenParticleRenderer.getInstance().innerBlit(pGuiGraphics.pose(), cursor, pMouseX, pMouseX + 6, pMouseY, pMouseY + 10, 100, 0, 1, 0, 1);
-            } else {
-                boolean useBlur = true;
-                if (useBlur) {
-                    ScreenParticleRenderer.getInstance().innerBlitCustomShaderHorizontal(pGuiGraphics.pose()
-                            , x1, x2
-                            , y1, y2
-                            , 0
-                            , minU, maxU, minV, maxV);
-
-                /*ScreenParticleRenderer.getInstance().innerBlitCustomShaderVertical(pGuiGraphics.pose()
-                        , x1, x2
-                        , y1, y2
-                        , 0
-                        , minU, maxU, minV, maxV);*/
-
-                    ScreenParticleRenderer.getInstance().innerBlitCustomShaderVertical(pGuiGraphics.pose()
-                            , 0, ScreenParticleRenderer.getInstance().widthScaledDown
-                            , 0, ScreenParticleRenderer.getInstance().heightScaledDown
-                            , 0
-                            , 0, 1, 0, 1);
-                } else {
-                    ScreenParticleRenderer.getInstance().innerBlitCustomShader(pGuiGraphics.pose()
-                            , x1, x2
-                            , y1, y2
-                            , 0
-                            , minU, maxU, minV, maxV);
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
                 }
             }
 
-
-            //if (true) return;
-
-            //TEST
-            //bindVanillaRenderTargetAndSetupProjectionMatrix();
-            //readPixelsTest();
-
-            //getting data from scaled down framebuffer
-            //ByteBuffer pixelBuffer = getPixelDataFromFrameBuffer();
-            pixelBuffer = getPixelDataFromFrameBuffer();
-            //readPixelsTest();
-
-            boolean useThread = true;
-            if (useThread) {
-                processor.submitForProcessing(pixelBuffer);
-            } else {
-                ByteBuffer byteBuffer = compress(pixelBuffer);
-                playerStatusLocal.getScreenData().setTexturePixelData(byteBuffer);
-                WatutMod.getPlayerStatusManagerClient().sendScreenRenderData(playerStatusLocal);
-            }
-
-            ScreenParticleRenderer.getInstance().unbindScaledDown();
-
-            bindVanillaRenderTargetAndSetupProjectionMatrix();
+            captureRequested = true;
+            captureMouseX = pMouseX;
+            captureMouseY = pMouseY;
         }
     }
 
     public static ByteBuffer compress(ByteBuffer inputBuffer) {
         Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
+        try {
+            // Copy ByteBuffer data into a byte array
+            byte[] inputBytes = new byte[inputBuffer.remaining()];
+            inputBuffer.get(inputBytes);
+            deflater.setInput(inputBytes);
+            deflater.finish();
 
-        // Copy ByteBuffer data into a byte array
-        byte[] inputBytes = new byte[inputBuffer.remaining()];
-        inputBuffer.get(inputBytes);
-        deflater.setInput(inputBytes);
-        deflater.finish();
+            // Use a direct buffer for compressed data
+            ByteBuffer outputBuffer = ByteBuffer.allocateDirect(inputBytes.length + 512); // Allow extra space
+            byte[] temp = new byte[1024];
 
-        // Use a direct buffer for compressed data
-        ByteBuffer outputBuffer = ByteBuffer.allocateDirect(inputBytes.length + 512); // Allow extra space
-        byte[] temp = new byte[1024];
-
-        while (!deflater.finished()) {
-            int compressedBytes = deflater.deflate(temp);
-            if (outputBuffer.remaining() < compressedBytes) {
-                // Expand the direct buffer dynamically
-                ByteBuffer newBuffer = ByteBuffer.allocateDirect(outputBuffer.capacity() * 2);
-                outputBuffer.flip();
-                newBuffer.put(outputBuffer);
-                outputBuffer = newBuffer;
+            while (!deflater.finished()) {
+                int compressedBytes = deflater.deflate(temp);
+                if (outputBuffer.remaining() < compressedBytes) {
+                    // Expand the direct buffer dynamically
+                    ByteBuffer newBuffer = ByteBuffer.allocateDirect(outputBuffer.capacity() * 2);
+                    outputBuffer.flip();
+                    newBuffer.put(outputBuffer);
+                    outputBuffer = newBuffer;
+                }
+                outputBuffer.put(temp, 0, compressedBytes);
             }
-            outputBuffer.put(temp, 0, compressedBytes);
-        }
-        deflater.end();
 
-        outputBuffer.flip(); // Prepare buffer for reading
-        inputBuffer.flip();
-        return outputBuffer;
+            outputBuffer.flip(); // Prepare buffer for reading
+            inputBuffer.flip();
+            return outputBuffer;
+        } finally {
+            deflater.end();
+        }
     }
 
     public static ByteBuffer decompress(ScreenData screenData, ByteBuffer compressedBuffer, int expectedSize) throws Exception {
-        Inflater inflater = new Inflater();
-
-        // Copy compressed data into a byte array
-        byte[] compressedBytes = new byte[compressedBuffer.remaining()];
-        compressedBuffer.get(compressedBytes);
-        inflater.setInput(compressedBytes);
-
-        ByteBuffer decompressionBuffer = screenData.getDecompressionBuffer();
-
-        // Use a direct buffer for decompressed data
-        if (decompressionBuffer == null) {
-            CULog.dbg("Creating new buffer for decompression");
-            decompressionBuffer = MemoryUtil.memAlloc(expectedSize); // Allocate initial space
-            screenData.setDecompressionBuffer(decompressionBuffer);
-        } else {
-            decompressionBuffer.clear(); // Reset the buffer for writing
+        if (expectedSize <= 0) {
+            throw new DataFormatException("invalid expected size " + expectedSize);
         }
+        screenData.getIsBufferReady().set(false);
+        Inflater inflater = new Inflater();
+        try {
+            // Copy compressed data into a byte array
+            byte[] compressedBytes = new byte[compressedBuffer.remaining()];
+            compressedBuffer.get(compressedBytes);
+            inflater.setInput(compressedBytes);
 
-        byte[] temp = new byte[1024];
-
-        while (!inflater.finished()) {
-            int decompressedBytes = inflater.inflate(temp);
-
-            // Ensure there is enough space in the buffer
-            if (decompressionBuffer.remaining() < decompressedBytes) {
-                // Resize the buffer by creating a new one with double the capacity
-                int newCapacity = Math.max(decompressionBuffer.capacity() * 2, decompressionBuffer.capacity() + decompressedBytes);
-                CULog.dbg("adjusting size of buffer for decompression");
-                ByteBuffer newBuffer = MemoryUtil.memAlloc(newCapacity);
-                decompressionBuffer.flip(); // Prepare for reading
-                newBuffer.put(decompressionBuffer); // Copy old data to new buffer
-                MemoryUtil.memFree(decompressionBuffer);
-                decompressionBuffer = newBuffer;
+            ByteBuffer decompressionBuffer = screenData.getDecompressionBuffer();
+            if (decompressionBuffer == null || decompressionBuffer.capacity() != expectedSize) {
+                if (decompressionBuffer != null) {
+                    MemoryUtil.memFree(decompressionBuffer);
+                }
+                CULog.dbg("Creating new buffer for decompression");
+                decompressionBuffer = MemoryUtil.memAlloc(expectedSize);
                 screenData.setDecompressionBuffer(decompressionBuffer);
             }
-
-            decompressionBuffer.put(temp, 0, decompressedBytes);
-        }
-        inflater.end();
-
-        decompressionBuffer.flip(); // Prepare buffer for reading
-
-        return decompressionBuffer;
-    }
-
-    public static ByteBuffer decompress2(ScreenData screenData, ByteBuffer compressedBuffer, int expectedSize) throws Exception {
-        Inflater inflater = new Inflater();
-
-        // Copy compressed data into a byte array
-        byte[] compressedBytes = new byte[compressedBuffer.remaining()];
-        compressedBuffer.get(compressedBytes);
-        inflater.setInput(compressedBytes);
-
-        ByteBuffer decompressionBuffer = screenData.getDecompressionBuffer();
-
-        // Use a direct buffer for decompressed data
-        if (decompressionBuffer == null) {
-            decompressionBuffer = ByteBuffer.allocateDirect(expectedSize); // Allocate space for expected size
-            screenData.setDecompressionBuffer(decompressionBuffer);
-        } else {
             decompressionBuffer.clear();
-        }
-        //ByteBuffer outputBuffer = ByteBuffer.allocateDirect(expectedSize); // Allocate space for expected size
-        byte[] temp = new byte[1024];
 
-        while (!inflater.finished()) {
-            int decompressedBytes = inflater.inflate(temp);
-            if (decompressionBuffer.remaining() < decompressedBytes) {
-                throw new IllegalStateException("Decompressed size exceeds expected size!");
+            byte[] temp = new byte[1024];
+            while (!inflater.finished()) {
+                int decompressedBytes = inflater.inflate(temp);
+                if (decompressedBytes == 0 && (inflater.needsInput() || inflater.needsDictionary())) {
+                    throw new DataFormatException("truncated screen data");
+                }
+                if (decompressionBuffer.remaining() < decompressedBytes) {
+                    throw new DataFormatException("screen data inflates past " + expectedSize + " bytes");
+                }
+                decompressionBuffer.put(temp, 0, decompressedBytes);
             }
-            decompressionBuffer.put(temp, 0, decompressedBytes);
-        }
-        inflater.end();
+            if (decompressionBuffer.position() != expectedSize) {
+                throw new DataFormatException("screen data inflated to " + decompressionBuffer.position() + " bytes, expected " + expectedSize);
+            }
 
-        decompressionBuffer.flip(); // Prepare buffer for reading
-        return decompressionBuffer;
+            decompressionBuffer.flip(); // Prepare buffer for reading
+            return decompressionBuffer;
+        } finally {
+            inflater.end();
+        }
     }
 
-    public static ByteBuffer decompressGZIP(ByteBuffer compressedBuffer) throws IOException {
-        // Extract the byte array from the input ByteBuffer
-        byte[] compressedBytes = new byte[compressedBuffer.remaining()];
-        compressedBuffer.get(compressedBytes);
-
-        // Use a ByteArrayInputStream to wrap the compressed data
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(compressedBytes);
-
-        // Create a GZIPInputStream for decompression
-        GZIPInputStream gzipInputStream = new GZIPInputStream(byteArrayInputStream);
-
-        // Read decompressed data into a ByteArrayOutputStream
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        byte[] buffer = new byte[1024];
-        int bytesRead;
-        while ((bytesRead = gzipInputStream.read(buffer)) != -1) {
-            byteArrayOutputStream.write(buffer, 0, bytesRead);
-        }
-
-        // Close streams
-        gzipInputStream.close();
-        byteArrayInputStream.close();
-
-        // Get the decompressed data as a byte array
-        byte[] decompressedBytes = byteArrayOutputStream.toByteArray();
-
-        // Create a direct ByteBuffer and put the decompressed data into it
-        ByteBuffer directBuffer = ByteBuffer.allocateDirect(decompressedBytes.length);
-        directBuffer.put(decompressedBytes);
-        directBuffer.flip(); // Flip the buffer to prepare it for reading
-
-        return directBuffer;
-    }
-
-    public static ByteBuffer compressGZIP(ByteBuffer inputBuffer) throws IOException {
-        // Extract bytes from the input ByteBuffer
-        byte[] inputBytes = new byte[inputBuffer.remaining()];
-        inputBuffer.get(inputBytes);
-
-        // Create a ByteArrayOutputStream to hold the compressed data
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-
-        // Use GZIPOutputStream to compress the data
-        try (GZIPOutputStream gzipOutputStream = new GZIPOutputStream(byteArrayOutputStream)) {
-            gzipOutputStream.write(inputBytes);
-        }
-
-        // Get the compressed data as a byte array
-        byte[] compressedBytes = byteArrayOutputStream.toByteArray();
-
-        // Wrap the compressed data in a ByteBuffer and return it
-        return ByteBuffer.wrap(compressedBytes);
-    }
-
+    @Deprecated
     public static ByteBuffer getPixelDataFromFrameBuffer() {
-        int width = ScreenParticleRenderer.getInstance().widthScaledDown;
-        int height = ScreenParticleRenderer.getInstance().heightScaledDown;
-
-        ByteBuffer pixelBuffer = ByteBuffer.allocateDirect(width * height * ScreenParticleRenderer.bytesPerPixel); // RGBA = 4 bytes per pixel
-        GL11.glReadPixels(0, 0, width, height, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixelBuffer);
-
-        return pixelBuffer;
+        throw new UnsupportedOperationException("glReadPixels not available in 1.21.5 - use readPixelDataAsync");
     }
 
     public static boolean validatePixelByteBuffer(ByteBuffer byteBuffer, int expectedSize, int expectedAlignment) {
@@ -615,49 +407,8 @@ public class RenderHelper {
         return true;
     }
 
+    @Deprecated
     public static void readPixelsTest() {
-        int width = ScreenParticleRenderer.getInstance().width;
-        int height = ScreenParticleRenderer.getInstance().height;
-
-        /*int width = ScreenParticleRenderer.getInstance().widthScaledDown;
-        int height = ScreenParticleRenderer.getInstance().heightScaledDown;*/
-
-        ByteBuffer pixelBuffer = ByteBuffer.allocateDirect(width * height * ScreenParticleRenderer.bytesPerPixel); // RGBA = 4 bytes per pixel
-        GL11.glReadPixels(0, 0, width, height, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixelBuffer);
-
-        // Process the pixel data (example: print the color of the first pixel)
-        int red = Byte.toUnsignedInt(pixelBuffer.get(0));
-        int green = Byte.toUnsignedInt(pixelBuffer.get(1));
-        int blue = Byte.toUnsignedInt(pixelBuffer.get(2));
-        int alpha = Byte.toUnsignedInt(pixelBuffer.get(3));
-
-        /**
-         * The pixel data is read from the lower-left corner of the framebuffer by default.
-         * Ensure the buffer size matches the width, height, and bytes per pixel.
-         * Performance: glReadPixels can be slow, so avoid using it in performance-critical loops.
-         */
-
-        /**
-         * reading specific pixel:
-         *
-         * int index = (y * width + x) * componentsPerPixel;
-         */
-
-        int x = width / 2; // X coordinate of the pixel
-        int y = height / 2; // Y coordinate of the pixel
-
-        // Calculate the index for pixel (x, y)
-        int componentsPerPixel = 4; // RGBA
-        int index = (y * width + x) * componentsPerPixel;
-
-        red = Byte.toUnsignedInt(pixelBuffer.get(index));
-        green = Byte.toUnsignedInt(pixelBuffer.get(index + 1));
-        blue = Byte.toUnsignedInt(pixelBuffer.get(index + 2));
-        alpha = Byte.toUnsignedInt(pixelBuffer.get(index + 3));
-
-        System.out.printf("Pixel color at (0,0): R=%d, G=%d, B=%d, A=%d%n", red, green, blue, alpha);
-
-        //confirmed works
     }
 
 }

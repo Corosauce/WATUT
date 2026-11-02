@@ -61,16 +61,17 @@ public class ConfigServerSyncHelper {
             for (Map.Entry<String, Class> entry : settingsTypes.entrySet()) {
                 String name = entry.getKey();
                 Class value = entry.getValue();
+                Object current = getFieldValue(name);
                 if (value == int.class) {
-                    setFieldValue(name, nbt.getInt(name));
+                    setFieldValue(name, nbt.getIntOr(name, (Integer) current));
                 } else if (value == float.class) {
-                    setFieldValue(name, nbt.getFloat(name));
+                    setFieldValue(name, nbt.getFloatOr(name, (Float) current));
                 } else if (value == double.class) {
-                    setFieldValue(name, nbt.getDouble(name));
+                    setFieldValue(name, nbt.getDoubleOr(name, (Double) current));
                 } else if (value == String.class) {
-                    setFieldValue(name, nbt.getString(name));
+                    setFieldValue(name, nbt.getStringOr(name, (String) current));
                 } else if (value == boolean.class) {
-                    setFieldValue(name, nbt.getBoolean(name));
+                    setFieldValue(name, nbt.getBooleanOr(name, (Boolean) current));
                 }
             }
         } catch (Exception e) {

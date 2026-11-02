@@ -5,7 +5,7 @@ import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigCommon;
 import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
 import com.corosus.watut.config.CustomArmCorrections;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.players.PlayerList;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -53,7 +53,7 @@ public abstract class WatutMod
 
     public static void generateJsonConfigFile(String filename) {
         String filePath = "config/" + filename;
-        String fileContents = getContentsFromResourceLocation(ResourceLocation.fromNamespaceAndPath(MODID, filePath));
+        String fileContents = getContentsFromResourceLocation(Identifier.fromNamespaceAndPath(MODID, filePath));
         if (!fileContents.equals("")) {
             File fileOut = new File("./config/" + filename);
             if (!fileOut.exists()) {
@@ -66,7 +66,7 @@ public abstract class WatutMod
         }
     }
 
-    public static String getContentsFromResourceLocation(ResourceLocation resourceLocation) {
+    public static String getContentsFromResourceLocation(Identifier resourceLocation) {
         try {
             //server side compatible way
             String str = "assets/" + resourceLocation.toString().replace(":", "/");

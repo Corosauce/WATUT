@@ -15,6 +15,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadHandler;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
@@ -78,7 +79,7 @@ public class WatutNetworkingNeoForge extends WatutNetworking {
 
     @Override
     public void clientSendToServer(CompoundTag data) {
-        PacketDistributor.sendToServer(new PacketNBTFromClient(data));
+        ClientPacketDistributor.sendToServer(new PacketNBTFromClient(data));
     }
 
     @Override

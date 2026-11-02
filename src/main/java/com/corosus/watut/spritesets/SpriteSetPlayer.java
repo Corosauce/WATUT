@@ -18,8 +18,18 @@ public class SpriteSetPlayer implements SpriteSet {
     }
 
     @Override
+    public TextureAtlasSprite first() {
+        if (list == null) return null;
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    @Override
     public TextureAtlasSprite get(int pAge, int pLifetime) {
-        int index = (pAge / tickDelay) % frames;
+        if (list == null || list.isEmpty()) return null;
+        int index = 0;
+        if (tickDelay > 0) {
+            index = (pAge / tickDelay) % frames;
+        }
         if (index < list.size()) {
             return list.get(index);
         } else {
@@ -27,8 +37,14 @@ public class SpriteSetPlayer implements SpriteSet {
         }
     }
 
+    public TextureAtlasSprite getFrame(int index) {
+        if (list == null || list.isEmpty()) return null;
+        return list.get(Math.max(0, Math.min(index, list.size() - 1)));
+    }
+
     @Override
     public TextureAtlasSprite get(RandomSource pRandom) {
+        if (list == null || list.isEmpty()) return null;
         return list.get(0);
     }
 

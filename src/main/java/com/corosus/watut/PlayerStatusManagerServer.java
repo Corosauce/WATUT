@@ -13,7 +13,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -22,6 +22,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class PlayerStatusManagerServer extends PlayerStatusManager {
@@ -42,36 +43,82 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
      * @param player
      * @param data
      */
-    public void receiveAny(Player player, CompoundTag data) {
+    private static final Set<String> RELAY_KEYS = Set.of(
+            WatutNetworking.NBTDataPlayerGuiStatus,
+            WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo,
+            WatutNetworking.NBTDataPlayerGuiDontSendItemInfo,
+            WatutNetworking.NBTDataPlayerChatStatus,
+            WatutNetworking.NBTDataPlayerTypingAmp,
+            WatutNetworking.NBTDataPlayerIdleTicks,
+            WatutNetworking.NBTDataPlayerMouseX,
+            WatutNetworking.NBTDataPlayerMouseY,
+            WatutNetworking.NBTDataPlayerMousePressed,
+            WatutNetworking.NBTDataPlayerScreenCompressedPixelData,
+            WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount,
+            WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex,
+            WatutNetworking.NBTDataPlayerScreenCompressedPixelDataSize,
+            WatutNetworking.NBTDataPlayerScreenWidth,
+            WatutNetworking.NBTDataPlayerScreenHeight);
+
+    private static final Set<String> CACHE_KEYS = Set.of(
+            WatutNetworking.NBTDataPlayerUUID,
+            WatutNetworking.NBTDataPlayerGuiStatus,
+            WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo,
+            WatutNetworking.NBTDataPlayerGuiDontSendItemInfo,
+            WatutNetworking.NBTDataPlayerChatStatus,
+            WatutNetworking.NBTDataPlayerTypingAmp,
+            WatutNetworking.NBTDataPlayerIdleTicks,
+            WatutNetworking.NBTDataPlayerTicksToGoIdle);
+
+    private static CompoundTag copyKnownKeys(CompoundTag from, Set<String> keys) {
+        CompoundTag out = new CompoundTag();
+        for (String key : keys) {
+            Tag tag = from.get(key);
+            if (tag != null) out.put(key, tag.copy());
+        }
+        return out;
+    }
+
+    public void receiveAny(Player player, CompoundTag clientData) {
+        CompoundTag data = copyKnownKeys(clientData, RELAY_KEYS);
+        if (data.contains(WatutNetworking.NBTDataPlayerGuiStatus)
+                && PlayerStatus.PlayerGuiState.get(data.getIntOr(WatutNetworking.NBTDataPlayerGuiStatus, -1)) == null) {
+            return;
+        }
+        if (data.contains(WatutNetworking.NBTDataPlayerChatStatus)
+                && PlayerStatus.PlayerChatState.get(data.getIntOr(WatutNetworking.NBTDataPlayerChatStatus, -1)) == null) {
+            return;
+        }
+
         //CULog.dbg("server side receive packet index " + data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex) + " of " + data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount));
         //CULog.dbg("TEST server side receive packet index " + data.getInt("testIndex"));
         data.putString(WatutNetworking.NBTDataPlayerUUID, player.getUUID().toString());
 
         if (data.contains(WatutNetworking.NBTDataPlayerGuiStatus)) {
-            PlayerStatus.PlayerGuiState playerGuiState = PlayerStatus.PlayerGuiState.get(data.getInt(WatutNetworking.NBTDataPlayerGuiStatus));
+            PlayerStatus.PlayerGuiState playerGuiState = PlayerStatus.PlayerGuiState.get(data.getInt(WatutNetworking.NBTDataPlayerGuiStatus).get());
             getStatus(player).setPlayerGuiState(playerGuiState);
         }
 
         if (data.contains(WatutNetworking.NBTDataPlayerChatStatus)) {
-            PlayerStatus.PlayerChatState state = PlayerStatus.PlayerChatState.get(data.getInt(WatutNetworking.NBTDataPlayerChatStatus));
+            PlayerStatus.PlayerChatState state = PlayerStatus.PlayerChatState.get(data.getInt(WatutNetworking.NBTDataPlayerChatStatus).get());
             getStatus(player).setPlayerChatState(state);
         }
 
         if (data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
-            handleIdleState(player, data.getInt(WatutNetworking.NBTDataPlayerIdleTicks));
+            handleIdleState(player, data.getInt(WatutNetworking.NBTDataPlayerIdleTicks).get());
             //send latest config setting for ticks to go idle
             data.putInt(WatutNetworking.NBTDataPlayerTicksToGoIdle, ConfigCommon.ticksToMarkPlayerIdle);
         }
 
         if (data.contains(WatutNetworking.NBTDataPlayerMouseX)) {
-            float x = data.getFloat(WatutNetworking.NBTDataPlayerMouseX);
-            float y = data.getFloat(WatutNetworking.NBTDataPlayerMouseY);
-            boolean pressed = data.getBoolean(WatutNetworking.NBTDataPlayerMousePressed);
+            float x = data.getFloat(WatutNetworking.NBTDataPlayerMouseX).get();
+            float y = data.getFloat(WatutNetworking.NBTDataPlayerMouseY).get();
+            boolean pressed = data.getBoolean(WatutNetworking.NBTDataPlayerMousePressed).get();
             setMouse(player.getUUID(), x, y, pressed);
         }
 
         //update active snapshot with latest data
-        getStatus(player).getNbtCache().merge(data);
+        getStatus(player).getNbtCache().merge(copyKnownKeys(data, CACHE_KEYS));
 
         if (data.contains(WatutNetworking.NBTDataPlayerGuiStatus) || data.contains(WatutNetworking.NBTDataPlayerIdleTicks) || data.contains(WatutNetworking.NBTDataPlayerChatStatus)/* || data.contains(WatutNetworking.NBTDataPlayerScreenCompressedPixelData)*/) {
             WatutNetworking.instance().serverSendToClientAll(data);
@@ -111,7 +158,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         WatutMod.dbg("player logged in " + player.getName());
         if (player instanceof ServerPlayer) {
             for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
-                WatutMod.dbg("sending update all packet for " + entry.getKey().toString() + " to " + player.getDisplayName().getString() + " with status " + PlayerStatus.PlayerGuiState.get(entry.getValue().getNbtCache().getInt(WatutNetworking.NBTDataPlayerGuiStatus)));
+                WatutMod.dbg("sending update all packet for " + entry.getKey().toString() + " to " + player.getDisplayName().getString() + " with status " + PlayerStatus.PlayerGuiState.get(entry.getValue().getNbtCache().getInt(WatutNetworking.NBTDataPlayerGuiStatus).get()));
                 WatutNetworking.instance().serverSendToClientPlayer(entry.getValue().getNbtCache(), player);
             }
 
@@ -140,10 +187,11 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
     }
 
     public void sendItemMove(Player player, Level level, ItemStack itemStack, float fromX, float fromY, float fromZ, float toX, float toY, float toZ) {
+        //DEBUG TEST
         boolean singleplayerTesting = false;
         if (singleplayerTesting || level.getNearestPlayer(fromX, fromY, fromZ, ConfigServerControlledSyncedToClient.distanceRequiredToShowGUIInfo, (entity) -> entity != player) != null) {
             CompoundTag data = new CompoundTag();
-            Tag itemData = itemStack.save(level.registryAccess());
+            Tag itemData = ItemStack.CODEC.encodeStart(level.registryAccess().createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), itemStack).result().orElse(new CompoundTag());
             /**
              * If the itemstack contains too much data, play it safe and convert it to a simple version, might cause incorrect appearance issues
              */
@@ -151,7 +199,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
             if (itemData.sizeInBytes() > 31000) {
                 CULog.dbg("itemstack too large for sending, using simple version");
                 itemStack = getSimpleItemStack(itemStack);
-                itemData = itemStack.save(level.registryAccess());
+                itemData = ItemStack.CODEC.encodeStart(level.registryAccess().createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), itemStack).result().orElse(new CompoundTag());
             }
             data.put(WatutNetworking.NBTDataItemTransferItemStack, itemData);
             data.putFloat(WatutNetworking.NBTDataItemTransferFromX, fromX);
@@ -173,7 +221,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         playerStatus.getInventorySnapshotPlayer().itemStackList.clear();
         playerStatus.getInventorySnapshotContainer().itemStackList.clear();
         playerStatus.getInventorySnapshotCarried().itemStackList.clear();
-        for (ItemStack item : player.getInventory().items) {
+        for (ItemStack item : player.getInventory().getNonEquipmentItems()) {
             playerStatus.getInventorySnapshotPlayer().itemStackList.add(item.copy());
         }
         for (Slot slot : abstractContainerMenu.slots) {
@@ -188,7 +236,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
 
     }
 
-    public void doClickPre(AbstractContainerMenu abstractContainerMenu, int pSlotId, int pButton, ClickType pClickType, Player player) {
+    public void doClickPre(AbstractContainerMenu abstractContainerMenu, int pSlotId, int pButton, ContainerInput pClickType, Player player) {
         //System.out.println("? " + pClickType);
 
         if (!ConfigServerControlledSyncedToClient.showItemsBeingTransferredBetweenPlayerAndContainer) return;
@@ -198,7 +246,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         if (playerStatus.getLastBlockOpened().equals(BlockPos.ZERO)) return;
 
         //we only handle pickup states in post, also only support pickup or swap
-        /*if (pClickType != ClickType.SWAP) {
+        /*if (pClickType != ContainerInput.SWAP) {
             return;
         }*/
 
@@ -213,7 +261,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         playerStatus.setLastBlockOpened(pos);
     }
 
-    public void doClickPost(AbstractContainerMenu abstractContainerMenu, int pSlotId, int pButton, ClickType pClickType, Player player) {
+    public void doClickPost(AbstractContainerMenu abstractContainerMenu, int pSlotId, int pButton, ContainerInput pClickType, Player player) {
         if (!ConfigServerControlledSyncedToClient.showItemsBeingTransferredBetweenPlayerAndContainer) return;
         if (FakePlayerHelper.isFakePlayer(player)) return;
         PlayerStatus playerStatus = getStatus(player);
@@ -223,7 +271,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         InventorySnapshot inventorySnapshotPlayerPost = new InventorySnapshot();
         InventorySnapshot inventorySnapshotContainerPost = new InventorySnapshot();
         InventorySnapshot inventorySnapshotCarriedPost = new InventorySnapshot();
-        for (ItemStack item : player.getInventory().items) {
+        for (ItemStack item : player.getInventory().getNonEquipmentItems()) {
             inventorySnapshotPlayerPost.itemStackList.add(item.copy());
         }
         for (Slot slot : abstractContainerMenu.slots) {
@@ -263,7 +311,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
          * -- same for the inverse as youd expect
          */
 
-        if (pClickType == ClickType.PICKUP) {
+        if (pClickType == ContainerInput.PICKUP) {
             //CULog.dbg("? " + abstractContainerMenu.getCarried());
 
 
@@ -335,7 +383,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
                     }
                 }
             }*/
-        } else if (pClickType == ClickType.QUICK_MOVE) {
+        } else if (pClickType == ContainerInput.QUICK_MOVE) {
             //compare player removed items against container added items
             for (ItemStack itemStackRemoved : playerRemovedItems) {
                 ItemStack itemStackAdded = getMatchingItem(itemStackRemoved, containerAddedItems);

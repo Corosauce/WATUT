@@ -11,9 +11,10 @@
     "client.ScreenRenderWithTooltip",
     "client.GameRendererResize",
     "client.ParticleEngineMixin",
+    "client.TextureAtlasUpload",
     "client.NativeImageAccessor",
-    "client.RenderTargetBindWrite",
-    "client.RenderStateShardSetup"
+    "client.GameRendererCaptureMixin",
+    "client.GameRendererAccessor"
   ],
   "mixins": [
     "AbstractContainerMenuDoClick",
