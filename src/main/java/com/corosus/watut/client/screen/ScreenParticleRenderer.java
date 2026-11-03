@@ -89,22 +89,38 @@ public class ScreenParticleRenderer {
 
     public void performCaptureBlurAndReadback(int mouseX, int mouseY) {
         checkSetup();
+        boolean dbg = RenderHelper.CAPTURE_DEBUG;
+
         GpuTexture colorTexture = mainRenderTarget.getColorTexture();
         if (colorTexture == null) {
-            CULog.dbg("performCaptureBlurAndReadback: color texture is null");
+            CULog.dbg("[watut-capture] readback aborted: capture target color texture is null");
             return;
         }
 
         int sourceWidth = mainRenderTarget.width;
         int sourceHeight = mainRenderTarget.height;
-        double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+        int cropW;
+        int cropH;
+        int outW;
+        int outH;
         if (ConfigServerControlledSyncedToClient.dynamicGuiShowClientsEntireScreen) {
-            guiScale = 1;
+            cropW = sourceWidth;
+            cropH = sourceHeight;
+            outW = widthScaledDown;
+            outH = heightScaledDown;
+        } else if (RenderHelper.xaeroWorldMapTextureID != -1) {
+            int side = Math.min(sourceWidth, sourceHeight);
+            cropW = side;
+            cropH = side;
+            outW = 256;
+            outH = 256;
+        } else {
+            double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+            cropW = Math.min(sourceWidth, (int) (widthScaledDown * guiScale));
+            cropH = Math.min(sourceHeight, (int) (heightScaledDown * guiScale));
+            outW = widthScaledDown;
+            outH = heightScaledDown;
         }
-        int outW = widthScaledDown;
-        int outH = heightScaledDown;
-        int cropW = Math.min(sourceWidth, (int) (outW * guiScale));
-        int cropH = Math.min(sourceHeight, (int) (outH * guiScale));
         int cropX = (sourceWidth - cropW) / 2;
         int cropY = (sourceHeight - cropH) / 2;
 
@@ -112,12 +128,16 @@ public class ScreenParticleRenderer {
         int blurLevel = RenderHelper.xaeroWorldMapTextureID != -1 ? 0 : ConfigServerControlledSyncedToClient.dynamicGuiBlurLevel;
 
         int blockSize = colorTexture.getFormat().blockSize();
+        if (dbg) CULog.dbg("[watut-capture] readback src=" + sourceWidth + "x" + sourceHeight
+                + " crop=" + cropW + "x" + cropH + "@" + cropX + "," + cropY
+                + " out=" + outW + "x" + outH + " blurLevel=" + blurLevel + " xaeroSentinel=" + RenderHelper.xaeroWorldMapTextureID);
         GpuBuffer gpuBuffer = RenderSystem.getDevice().createBuffer(() -> "WATUT gui capture readback",
                 GpuBuffer.USAGE_MAP_READ | GpuBuffer.USAGE_COPY_DST, (long) cropW * cropH * blockSize);
 
         RenderSystem.getDevice().createCommandEncoder().copyTextureToBuffer(colorTexture, gpuBuffer, 0, () -> {
             try (GpuBufferSlice.MappedView view = gpuBuffer.map(true, false)) {
                 ByteBuffer src = view.data().order(ByteOrder.LITTLE_ENDIAN);
+                if (dbg) logCapturePixelStats(src, cropW, cropH, blockSize);
                 ByteBuffer out = process(src, cropW, cropH, blockSize, outW, outH, radius, blurLevel);
                 RenderHelper.processor.submitForProcessing(new CapturedFrame(out, outW, outH));
             } catch (Exception e) {
@@ -191,6 +211,23 @@ public class ScreenParticleRenderer {
         out.position(0);
         out.limit(outW * outH * bytesPerPixel);
         return out;
+    }
+
+    private static void logCapturePixelStats(ByteBuffer src, int srcW, int srcH, int blockSize) {
+        int r = 0, g = 0, b = 0, a = 0, lit = 0, n = 0;
+        for (int gy = 0; gy < 16; gy++) {
+            for (int gx = 0; gx < 16; gx++) {
+                int p = src.getInt((Math.min(srcW - 1, srcW * gx / 16) + Math.min(srcH - 1, srcH * gy / 16) * srcW) * blockSize);
+                r += p & 0xFF;
+                g += (p >>> 8) & 0xFF;
+                b += (p >>> 16) & 0xFF;
+                a += (p >>> 24) & 0xFF;
+                if (((p >>> 24) & 0xFF) > 0 && (p & 0xFFFFFF) != 0) lit++;
+                n++;
+            }
+        }
+        CULog.dbg("[watut-capture] pixels: avgRGBA=" + (r / n) + "," + (g / n) + "," + (b / n) + "," + (a / n)
+                + " litSamples=" + lit + "/" + n + (lit == 0 ? " <- CAPTURE EMPTY, nothing drawn to target" : ""));
     }
 
     private static int pixel(ByteBuffer src, int x, int y, int srcW, int blockSize) {

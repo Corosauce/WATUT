@@ -7,7 +7,9 @@ import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
 import com.corosus.watut.mixin.client.NativeImageAccessor;
 import com.mojang.blaze3d.ProjectionType;
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.Window;
+import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
@@ -42,8 +44,11 @@ public class RenderHelper {
     public static Class guiMap;
     public static Class improvedFramebuffer;
     public static int xaeroWorldMapTextureID = -1;
+
+    public static boolean CAPTURE_DEBUG = false;
     public static Field guiMapPrimaryScaleFBO;
     public static Field colorTextureId;
+    public static Method improvedFramebufferGetTas;
 
     //shaders enable check support
     public static Class irisConfig;
@@ -55,11 +60,6 @@ public class RenderHelper {
     static {
         try {
             guiMap = Class.forName("xaero.map.gui.GuiMap");
-        } catch (ClassNotFoundException e) {
-            //e.printStackTrace();
-        }
-        try {
-            improvedFramebuffer = Class.forName("xaero.map.graphics.ImprovedFramebuffer");
         } catch (ClassNotFoundException e) {
             //e.printStackTrace();
         }
@@ -88,7 +88,11 @@ public class RenderHelper {
         try {
             improvedFramebuffer = Class.forName("xaero.map.graphics.ImprovedFramebuffer");
         } catch (ClassNotFoundException e) {
-            //e.printStackTrace();
+            try {
+                improvedFramebuffer = Class.forName("xaero.map.common.ImprovedFramebuffer");
+            } catch (ClassNotFoundException e2) {
+                //e.printStackTrace();
+            }
         }
         try {
             if (guiMap != null) {
@@ -96,13 +100,56 @@ public class RenderHelper {
                 guiMapPrimaryScaleFBO.setAccessible(true);
             }
             if (improvedFramebuffer != null) {
-                colorTextureId = improvedFramebuffer.getDeclaredField("colorTextureId");
+                try {
+                    improvedFramebufferGetTas = improvedFramebuffer.getMethod("getTas");
+                } catch (NoSuchMethodException e) {
+                    try {
+                        colorTextureId = improvedFramebuffer.getDeclaredField("colorTextureId");
+                    } catch (NoSuchFieldException e2) {
+                        CULog.log("watut: xaero minimap not installed or mod structure changed");
+                    }
+                }
             } else {
                 CULog.log("watut: xaero minimap not installed or mod structure changed");
             }
         } catch (NoSuchFieldException e) {
             CULog.log("watut: xaero minimap not installed or mod structure changed");
             //e.printStackTrace();
+        }
+    }
+
+    private static boolean xaeroReflectionLogged = false;
+
+    public static void logXaeroReflectionOnce() {
+        if (!CAPTURE_DEBUG || xaeroReflectionLogged) return;
+        xaeroReflectionLogged = true;
+        CULog.dbg("[watut-capture] xaero reflection: guiMap=" + (guiMap != null)
+                + " framebuffer=" + (improvedFramebuffer == null ? "NONE" : improvedFramebuffer.getName())
+                + " primaryScaleFBO=" + (guiMapPrimaryScaleFBO != null)
+                + " handle=" + (improvedFramebufferGetTas != null ? "getTas()" : (colorTextureId != null ? "colorTextureId" : "NONE")));
+    }
+
+    public static void blitXaeroFboIntoCapture(RenderTarget captureTarget) {
+        if (guiMapPrimaryScaleFBO == null) return;
+        try {
+            Object fbo = guiMapPrimaryScaleFBO.get(null);
+            if (!(fbo instanceof RenderTarget fbTarget)) {
+                if (CAPTURE_DEBUG) CULog.dbg("[watut-capture] xaero fb copy skipped, fbo=" + fbo);
+                return;
+            }
+            GpuTexture src = fbTarget.getColorTexture();
+            GpuTexture dst = captureTarget.getColorTexture();
+            if (src == null || dst == null) {
+                if (CAPTURE_DEBUG) CULog.dbg("[watut-capture] xaero fb copy skipped, src=" + src + " dst=" + dst);
+                return;
+            }
+            int w = Math.min(fbTarget.width, captureTarget.width);
+            int h = Math.min(fbTarget.height, captureTarget.height);
+            RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(src, dst, 0, 0, 0, 0, 0, w, h);
+            if (CAPTURE_DEBUG) CULog.dbg("[watut-capture] copied xaero fb " + fbTarget.width + "x" + fbTarget.height
+                    + " -> capture target " + captureTarget.width + "x" + captureTarget.height + " at " + w + "x" + h);
+        } catch (Exception e) {
+            CULog.err("[watut-capture] xaero fb copy failed: " + e);
         }
     }
 
@@ -286,24 +333,50 @@ public class RenderHelper {
 
         boolean needsScreenUpdate = playerStatusLocal.getScreenData().isNeedsNewRenderToPixelData();
 
+        if (CAPTURE_DEBUG && needsScreenUpdate && processor.hasWork()) {
+            CULog.dbg("[watut-capture] rearm flagged but processor queue busy, queueSize=" + processor.getQueueSize());
+        }
+
         if (needsScreenUpdate && !processor.hasWork()) {
+            logXaeroReflectionOnce();
             playerStatusLocal.getScreenData().setNeedsNewRenderToPixelData(false);
             ScreenParticleRenderer.getInstance().checkSetup();
 
-            xaeroWorldMapTextureID = -1;
+            int detectedXaeroSentinel = -1;
+            String xaeroDebugDesc = "";
             if (Minecraft.getInstance().gui.screen() != null && isXaeroGuiMap(Minecraft.getInstance().gui.screen())) {
                 try {
                     Object fbo = guiMapPrimaryScaleFBO.get(null);
-                    if (fbo != null) {
-                        Object colorTextureIdObj = colorTextureId.get(fbo);
-                        if (colorTextureIdObj != null) {
-                            xaeroWorldMapTextureID = (int) colorTextureIdObj;
+                    if (fbo == null) {
+                        xaeroDebugDesc = "primaryScaleFBO is NULL (map never allocated?)";
+                    } else {
+                        String size = "?x?";
+                        try {
+                            size = improvedFramebuffer.getMethod("getWidth").invoke(fbo) + "x" + improvedFramebuffer.getMethod("getHeight").invoke(fbo);
+                        } catch (Exception e) {
+                        }
+                        if (improvedFramebufferGetTas != null) {
+                            if (improvedFramebufferGetTas.invoke(fbo) != null) {
+                                detectedXaeroSentinel = 1;
+                            }
+                            xaeroDebugDesc = "fb " + size + " getTas()=" + (detectedXaeroSentinel == 1 ? "present" : "NULL");
+                        } else if (colorTextureId != null) {
+                            Object colorTextureIdObj = colorTextureId.get(fbo);
+                            if (colorTextureIdObj != null) {
+                                detectedXaeroSentinel = (int) colorTextureIdObj;
+                            }
+                            xaeroDebugDesc = "fb " + size + " colorTextureId=" + colorTextureIdObj;
                         }
                     }
-                } catch (IllegalAccessException e) {
+                } catch (IllegalAccessException | java.lang.reflect.InvocationTargetException e) {
                     e.printStackTrace();
                 }
             }
+            if (CAPTURE_DEBUG && detectedXaeroSentinel != xaeroWorldMapTextureID) {
+                CULog.dbg("[watut-capture] xaero sentinel " + xaeroWorldMapTextureID + " -> " + detectedXaeroSentinel
+                        + " (" + (xaeroDebugDesc.isEmpty() ? "no xaero screen" : xaeroDebugDesc) + ")");
+            }
+            xaeroWorldMapTextureID = detectedXaeroSentinel;
 
             captureRequested = true;
             captureMouseX = pMouseX;

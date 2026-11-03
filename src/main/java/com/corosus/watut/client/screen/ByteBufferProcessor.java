@@ -64,6 +64,10 @@ public class ByteBufferProcessor<T> {
     public boolean hasWork() {
         return !inputQueue.isEmpty();
     }
+
+    public int getQueueSize() {
+        return inputQueue.size();
+    }
     
     public void shutdown() {
         isRunning = false;

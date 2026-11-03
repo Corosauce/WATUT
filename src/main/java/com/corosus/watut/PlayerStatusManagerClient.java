@@ -60,6 +60,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     private int steadyTickCounter = 0;
     private int forcedSyncRate = 40;
 
+    private static final boolean FORCE_XAERO_MAP_UPDATES = false;
+
     private Level lastLevel;
 
     private boolean wasMousePressed = false;
@@ -137,17 +139,41 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         //if (Minecraft.getInstance().gui.screen() != null) System.out.println(Minecraft.getInstance().gui.screen());
 
-        if (/*!selfPlayerStatus.isIdle()*/selfPlayerStatus.getTicksSinceLastAction() < (20 * 5)) {
-            if (selfPlayerStatus.getScreenData().getGameTicksSinceLastScreenSend() + ConfigServerControlledSyncedToClient.dynamicGuiTickSendRateOfGUIUpdates < gameTime) {
+        boolean selfUpdatingMapOpen = FORCE_XAERO_MAP_UPDATES && RenderHelper.isXaeroGuiMap(Minecraft.getInstance().gui.screen());
+
+        if (RenderHelper.CAPTURE_DEBUG && Minecraft.getInstance().gui.screen() != null
+                && steadyTickCounter % 20 == 0) {
+            CULog.dbg("[watut-capture] rearm-gate screen=" + Minecraft.getInstance().gui.screen().getClass().getName()
+                    + " xaeroMatch=" + selfUpdatingMapOpen
+                    + " ticksSinceAction=" + selfPlayerStatus.getTicksSinceLastAction()
+                    + " guiState=" + selfPlayerStatus.getPlayerGuiState()
+                    + " lastSend=" + selfPlayerStatus.getScreenData().getGameTicksSinceLastScreenSend()
+                    + " gameTime=" + gameTime
+                    + " rate=" + ConfigServerControlledSyncedToClient.dynamicGuiTickSendRateOfGUIUpdates
+                    + " dontSendConstant=" + ConfigServerControlledSyncedToClient.dynamicGuiDontSendConstantGUIUpdates
+                    + " flag=" + selfPlayerStatus.getScreenData().isNeedsNewRenderToPixelData());
+        }
+
+        if (/*!selfPlayerStatus.isIdle()*/selfPlayerStatus.getTicksSinceLastAction() < (20 * 5) || selfUpdatingMapOpen) {
+            long lastSend = selfPlayerStatus.getScreenData().getGameTicksSinceLastScreenSend();
+            boolean sendDue = lastSend + ConfigServerControlledSyncedToClient.dynamicGuiTickSendRateOfGUIUpdates < gameTime;
+            boolean gameTimeStalled = gameTime <= lastSend;
+            if (!sendDue && selfUpdatingMapOpen && gameTimeStalled
+                    && steadyTickCounter % ConfigServerControlledSyncedToClient.dynamicGuiTickSendRateOfGUIUpdates == 0) {
+                sendDue = true;
+            }
+            if (sendDue) {
                 if (Minecraft.getInstance().gui.screen() != null
                         && !(Minecraft.getInstance().gui.screen() instanceof LevelLoadingScreen)
                         && !(Minecraft.getInstance().gui.screen() instanceof LevelLoadingScreen)
-                        && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE
+                        && (selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.NONE
+                                || selfUpdatingMapOpen)
                         && selfPlayerStatus.getPlayerGuiState() != PlayerStatus.PlayerGuiState.CHAT_SCREEN) {
                     //System.out.println("? " + selfPlayerStatus.getScreenData().getLastScreen());
                     if (!ConfigServerControlledSyncedToClient.dynamicGuiDontSendConstantGUIUpdates || selfPlayerStatus.getScreenData().getLastScreen() != Minecraft.getInstance().gui.screen()) {
                         selfPlayerStatus.getScreenData().setGameTicksSinceLastScreenSend(gameTime);
                         selfPlayerStatus.getScreenData().setNeedsNewRenderToPixelData(true);
+                        if (RenderHelper.CAPTURE_DEBUG) CULog.dbg("[watut-capture] rearm fired");
 
                     }
                 }
@@ -586,7 +612,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 Vec3 posParticle = getParticlePosition(player);
 
                 //DEBUG TEST
-                boolean useChatIdleForTestingOtherGUIs = false;
+                boolean useChatIdleForTestingOtherGUIs = true;
                 boolean newRender = RenderHelper.useDynamicGUISystem() && !playerStatus.isPlayerGuiDontSendDetailedGUIInfo();
 
                 if (ConfigClient.showPlayerActiveChatGui && ConfigServerControlledSyncedToClient.showPlayerActiveChatGui) {
