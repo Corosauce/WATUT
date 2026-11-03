@@ -612,7 +612,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 Vec3 posParticle = getParticlePosition(player);
 
                 //DEBUG TEST
-                boolean useChatIdleForTestingOtherGUIs = true;
+                boolean useChatIdleForTestingOtherGUIs = false;
                 boolean newRender = RenderHelper.useDynamicGUISystem() && !playerStatus.isPlayerGuiDontSendDetailedGUIInfo();
 
                 if (ConfigClient.showPlayerActiveChatGui && ConfigServerControlledSyncedToClient.showPlayerActiveChatGui) {

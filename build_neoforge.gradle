@@ -23,6 +23,10 @@ repositories {
     maven {
         url "https://cursemaven.com"
     }
+    maven {
+        url "https://api.modrinth.com/maven"
+        content { includeGroup "maven.modrinth" }
+    }
     flatDir {
         dir 'libs'
     }
@@ -129,6 +133,8 @@ dependencies {
     implementation ("com.corosus.coroutil:coroutil-neoforge:${project.minecraft_version}-${project.coroutil_version}")
 
     compileOnly ("maven.modrinth:iris:1.11.4+26.2-neoforge")
+    //implementation ("xaeroworldmap-neoforge:xaeroworldmap-neoforge:26.2-1.47.3")
+    //implementation ("xaerominimap-neoforge:xaerominimap-neoforge:26.2-26.6.2")
 
     //implementation ("curse.maven:journeymap-32274:5950315")
     //implementation ("curse.maven:corpse-316582:5964725")
@@ -334,4 +340,7 @@ publisher {
     curseDepends {
         required "coroutil"
     }
+}
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ['-Xmaxerrs', '5000']
 }
