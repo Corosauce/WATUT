@@ -267,17 +267,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
 
         //update typing state
-        String chatText = "";
-        if (mc.gui.screen() instanceof ChatScreen chatScreen) {
-            chatText = chatScreen.input.getValue();
-        } else if (mc.gui.screen() instanceof BookEditScreen bookEditScreen) {
-            chatText = bookEditScreen.page.getValue();
-        } else if (mc.gui.screen() instanceof AbstractSignEditScreen abstractSignEditScreen) {
-            chatText = abstractSignEditScreen.signField.getMessageFn.get();
-        } else if (mc.gui.screen() instanceof AbstractCommandBlockEditScreen abstractCommandBlockEditScreen) {
-            //note, the first tick this is open, chatText is blank, next tick contains the correct data
-            chatText = abstractCommandBlockEditScreen.commandEdit.getValue();
-        }
+        String chatText = getChatText();
 
         if (checkIfTyping(chatText, player)) {
             sendChatStatus(PlayerStatus.PlayerChatState.CHAT_TYPING);
@@ -505,7 +495,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     public void onGuiRender() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.gui == null) return;
-        if (mc.gui.screen() instanceof ChatScreen && mc.getConnection() != null && ConfigClient.screenTypingVisible && ConfigServerControlledSyncedToClient.screenTypingVisible) {
+        if (mc.gui.screen() instanceof ChatScreen && mc.getConnection() != null && ConfigClient.screenTypingVisible && ConfigServerControlledSyncedToClient.screenTypingVisible && !getChatText().startsWith("/")) {
             ChatScreen chat = (ChatScreen) mc.gui.screen();
             GuiGraphicsExtractor guigraphics = new GuiGraphicsExtractor(mc, mc.gameRenderer.gameRenderState().guiRenderState, 0, 0);
             int height = chat.height + 26;
@@ -1408,6 +1398,22 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         //update buffers carefully if needed
         ScreenParticleRenderer.getInstance().resizeScaledDown(ScreenParticleRenderer.getInstance().width, ScreenParticleRenderer.getInstance().height);
 
+    }
+
+    public String getChatText() {
+        Minecraft mc = Minecraft.getInstance();
+        String chatText = "";
+        if (mc.gui.screen() instanceof ChatScreen chatScreen) {
+            chatText = chatScreen.input.getValue();
+        } else if (mc.gui.screen() instanceof BookEditScreen bookEditScreen) {
+            chatText = bookEditScreen.page.getValue();
+        } else if (mc.gui.screen() instanceof AbstractSignEditScreen abstractSignEditScreen) {
+            chatText = abstractSignEditScreen.signField.getMessageFn.get();
+        } else if (mc.gui.screen() instanceof AbstractCommandBlockEditScreen abstractCommandBlockEditScreen) {
+            //note, the first tick this is open, chatText is blank, next tick contains the correct data
+            chatText = abstractCommandBlockEditScreen.commandEdit.getValue();
+        }
+        return chatText;
     }
 
 }
