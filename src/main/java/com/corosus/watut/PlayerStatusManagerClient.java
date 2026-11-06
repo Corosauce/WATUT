@@ -1212,13 +1212,13 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         PlayerStatus statusPrev = getStatusPrev(uuid);
 
         if (data.contains(WatutNetworking.NBTDataPlayerTypingAmp)) {
-            status.setTypingAmplifier(data.getFloat(WatutNetworking.NBTDataPlayerTypingAmp).get());
+            status.setTypingAmplifier(data.getFloatOr(WatutNetworking.NBTDataPlayerTypingAmp, 0F));
         }
 
         if (data.contains(WatutNetworking.NBTDataPlayerMouseX)) {
-            float x = data.getFloat(WatutNetworking.NBTDataPlayerMouseX).get();
-            float y = data.getFloat(WatutNetworking.NBTDataPlayerMouseY).get();
-            boolean pressed = data.getBoolean(WatutNetworking.NBTDataPlayerMousePressed).get();
+            float x = data.getFloatOr(WatutNetworking.NBTDataPlayerMouseX, 0F);
+            float y = data.getFloatOr(WatutNetworking.NBTDataPlayerMouseY, 0F);
+            boolean pressed = data.getBooleanOr(WatutNetworking.NBTDataPlayerMousePressed, false);
             boolean differentPress = status.isPressing() != pressed;
             setMouse(uuid, x, y, pressed);
             setPoseTarget(uuid, differentPress);
@@ -1232,10 +1232,10 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         }
 
         if (data.contains(WatutNetworking.NBTDataPlayerGuiStatus)) {
-            PlayerStatus.PlayerGuiState playerGuiState = PlayerStatus.PlayerGuiState.get(data.getInt(WatutNetworking.NBTDataPlayerGuiStatus).get());
+            PlayerStatus.PlayerGuiState playerGuiState = PlayerStatus.PlayerGuiState.get(data.getIntOr(WatutNetworking.NBTDataPlayerGuiStatus, 0));
             status.setPlayerGuiState(playerGuiState);
-            if (data.contains(WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo)) status.setPlayerGuiDontSendDetailedGUIInfo(data.getBoolean(WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo).get());
-            if (data.contains(WatutNetworking.NBTDataPlayerGuiDontSendItemInfo)) status.setPlayerGuiDontSendItemInfo(data.getBoolean(WatutNetworking.NBTDataPlayerGuiDontSendItemInfo).get());
+            if (data.contains(WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo)) status.setPlayerGuiDontSendDetailedGUIInfo(data.getBooleanOr(WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo, false));
+            if (data.contains(WatutNetworking.NBTDataPlayerGuiDontSendItemInfo)) status.setPlayerGuiDontSendItemInfo(data.getBooleanOr(WatutNetworking.NBTDataPlayerGuiDontSendItemInfo, false));
             if (status.getPlayerGuiState() != statusPrev.getPlayerGuiState()) {
                 WatutMod.dbg("New gui player state and new pose target set relating to: " + status.getPlayerGuiState() + " for " + uuid);
                 if (statusPrev.getPlayerGuiState() == PlayerStatus.PlayerGuiState.NONE) {
@@ -1256,7 +1256,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         
 
         if (data.contains(WatutNetworking.NBTDataPlayerChatStatus)) {
-            PlayerStatus.PlayerChatState state = PlayerStatus.PlayerChatState.get(data.getInt(WatutNetworking.NBTDataPlayerChatStatus).get());
+            PlayerStatus.PlayerChatState state = PlayerStatus.PlayerChatState.get(data.getIntOr(WatutNetworking.NBTDataPlayerChatStatus, 0));
             status.setPlayerChatState(state);
             if (status.getPlayerChatState() != statusPrev.getPlayerChatState()) {
                 WatutMod.dbg("New chat player state and new pose target set relating to: " + status.getPlayerChatState() + " for " + uuid);
@@ -1273,11 +1273,12 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         if (data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
             //Watut.dbg("receive idle ticks from server: " + data.getInt(WatutNetworking.NBTDataPlayerIdleTicks) + " for " + uuid + " playerStatus hash: " + status);
-            status.setTicksSinceLastAction(data.getInt(WatutNetworking.NBTDataPlayerIdleTicks).get());
-            status.setTicksToMarkPlayerIdleSyncedForClient(data.getInt(WatutNetworking.NBTDataPlayerTicksToGoIdle).get());
-            statusPrev.setTicksToMarkPlayerIdleSyncedForClient(data.getInt(WatutNetworking.NBTDataPlayerTicksToGoIdle).get());
-            getStatusLocal().setTicksToMarkPlayerIdleSyncedForClient(data.getInt(WatutNetworking.NBTDataPlayerTicksToGoIdle).get());
-            getStatusPrevLocal().setTicksToMarkPlayerIdleSyncedForClient(data.getInt(WatutNetworking.NBTDataPlayerTicksToGoIdle).get());
+            status.setTicksSinceLastAction(data.getIntOr(WatutNetworking.NBTDataPlayerIdleTicks, 0));
+            int ticksToGoIdle = data.getIntOr(WatutNetworking.NBTDataPlayerTicksToGoIdle, status.getTicksToMarkPlayerIdleSyncedForClient());
+            status.setTicksToMarkPlayerIdleSyncedForClient(ticksToGoIdle);
+            statusPrev.setTicksToMarkPlayerIdleSyncedForClient(ticksToGoIdle);
+            getStatusLocal().setTicksToMarkPlayerIdleSyncedForClient(ticksToGoIdle);
+            getStatusPrevLocal().setTicksToMarkPlayerIdleSyncedForClient(ticksToGoIdle);
             if (statusPrev.isIdle() != status.isIdle()) {
                 WatutMod.dbg("New idle player state and new pose target set relating to idle state: " + status.isIdle() + " for " + uuid);
                 setPoseTarget(uuid, false);
@@ -1289,11 +1290,11 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         //if (true) return;
 
         if (data.contains(WatutNetworking.NBTDataPlayerScreenCompressedPixelData)) {
-            byte[] pixelData = data.getByteArray(WatutNetworking.NBTDataPlayerScreenCompressedPixelData).get();
-            int packetCount = data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount).get();
-            int packetIndex = data.getInt(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex).get();
-            int width = data.getInt(WatutNetworking.NBTDataPlayerScreenWidth).get();
-            int height = data.getInt(WatutNetworking.NBTDataPlayerScreenHeight).get();
+            byte[] pixelData = data.getByteArray(WatutNetworking.NBTDataPlayerScreenCompressedPixelData).orElse(new byte[0]);
+            int packetCount = data.getIntOr(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketCount, 0);
+            int packetIndex = data.getIntOr(WatutNetworking.NBTDataPlayerScreenCompressedPixelDataPacketIndex, 0);
+            int width = data.getIntOr(WatutNetworking.NBTDataPlayerScreenWidth, 0);
+            int height = data.getIntOr(WatutNetworking.NBTDataPlayerScreenHeight, 0);
             if (!ScreenData.isValidReceivedSize(width, height) || packetCount < 1) {
                 CULog.dbg("WATUT: dropping screen packet with size " + width + "x" + height + " count " + packetCount);
                 return;

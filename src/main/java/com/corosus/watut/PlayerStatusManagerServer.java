@@ -95,25 +95,25 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         data.putString(WatutNetworking.NBTDataPlayerUUID, player.getUUID().toString());
 
         if (data.contains(WatutNetworking.NBTDataPlayerGuiStatus)) {
-            PlayerStatus.PlayerGuiState playerGuiState = PlayerStatus.PlayerGuiState.get(data.getInt(WatutNetworking.NBTDataPlayerGuiStatus).get());
+            PlayerStatus.PlayerGuiState playerGuiState = PlayerStatus.PlayerGuiState.get(data.getIntOr(WatutNetworking.NBTDataPlayerGuiStatus, 0));
             getStatus(player).setPlayerGuiState(playerGuiState);
         }
 
         if (data.contains(WatutNetworking.NBTDataPlayerChatStatus)) {
-            PlayerStatus.PlayerChatState state = PlayerStatus.PlayerChatState.get(data.getInt(WatutNetworking.NBTDataPlayerChatStatus).get());
+            PlayerStatus.PlayerChatState state = PlayerStatus.PlayerChatState.get(data.getIntOr(WatutNetworking.NBTDataPlayerChatStatus, 0));
             getStatus(player).setPlayerChatState(state);
         }
 
         if (data.contains(WatutNetworking.NBTDataPlayerIdleTicks)) {
-            handleIdleState(player, data.getInt(WatutNetworking.NBTDataPlayerIdleTicks).get());
+            handleIdleState(player, data.getIntOr(WatutNetworking.NBTDataPlayerIdleTicks, 0));
             //send latest config setting for ticks to go idle
             data.putInt(WatutNetworking.NBTDataPlayerTicksToGoIdle, ConfigCommon.ticksToMarkPlayerIdle);
         }
 
         if (data.contains(WatutNetworking.NBTDataPlayerMouseX)) {
-            float x = data.getFloat(WatutNetworking.NBTDataPlayerMouseX).get();
-            float y = data.getFloat(WatutNetworking.NBTDataPlayerMouseY).get();
-            boolean pressed = data.getBoolean(WatutNetworking.NBTDataPlayerMousePressed).get();
+            float x = data.getFloatOr(WatutNetworking.NBTDataPlayerMouseX, 0F);
+            float y = data.getFloatOr(WatutNetworking.NBTDataPlayerMouseY, 0F);
+            boolean pressed = data.getBooleanOr(WatutNetworking.NBTDataPlayerMousePressed, false);
             setMouse(player.getUUID(), x, y, pressed);
         }
 
@@ -158,7 +158,7 @@ public class PlayerStatusManagerServer extends PlayerStatusManager {
         WatutMod.dbg("player logged in " + player.getName());
         if (player instanceof ServerPlayer) {
             for (Map.Entry<UUID, PlayerStatus> entry : lookupPlayerToStatus.entrySet()) {
-                WatutMod.dbg("sending update all packet for " + entry.getKey().toString() + " to " + player.getDisplayName().getString() + " with status " + PlayerStatus.PlayerGuiState.get(entry.getValue().getNbtCache().getInt(WatutNetworking.NBTDataPlayerGuiStatus).get()));
+                WatutMod.dbg("sending update all packet for " + entry.getKey().toString() + " to " + player.getDisplayName().getString() + " with status " + PlayerStatus.PlayerGuiState.get(entry.getValue().getNbtCache().getIntOr(WatutNetworking.NBTDataPlayerGuiStatus, -1)));
                 WatutNetworking.instance().serverSendToClientPlayer(entry.getValue().getNbtCache(), player);
             }
 
