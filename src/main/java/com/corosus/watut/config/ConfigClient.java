@@ -50,6 +50,9 @@ public class ConfigClient implements IConfigCategory {
     @ConfigComment("Show 'Player is typing...' on the chat screen")
     public static boolean screenTypingVisible = true;
 
+    @ConfigComment("Hide yourself from the 'Player is typing...' on the chat screen")
+    public static boolean screenTypingHideOwnTyping = false;
+
     @ConfigComment("Adjust the X position where the 'Player is typing...' text shows in the chat Gui")
     public static int screenTypingRelativePosition_X = 0;
 

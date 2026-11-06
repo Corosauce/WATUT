@@ -513,7 +513,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 PlayerInfo info = mc.getConnection().getPlayerInfo(entry.getKey());
                 if (info != null) {
                     GameProfile profile = info.getProfile();
-                    if (profile != null) {
+                    boolean isOwnPlayer = mc.player != null && mc.player.getUUID().equals(entry.getKey());
+                    if (profile != null && !(ConfigClient.screenTypingHideOwnTyping && isOwnPlayer)) {
                         str += profile.name() + ", ";
                     }
                 }
