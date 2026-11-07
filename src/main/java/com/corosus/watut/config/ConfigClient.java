@@ -86,6 +86,9 @@ public class ConfigClient implements IConfigCategory {
     @ConfigComment("Privacy setting, if you dont want to show the items you are transferring to and from yourself and containers, set this to true")
     public static boolean dontSendItemInfo = false;
 
+    @ConfigComment("Debug: Helpful to see what the window looked in world like after you closed it is no longer blocking your view")
+    public static boolean debugIdleChatWindowShowsLastGuiCaptureScreen = false;
+
 
     @Override
     public String getName() {

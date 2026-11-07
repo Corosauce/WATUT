@@ -550,6 +550,10 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         return player != mc.player || !mc.options.getCameraType().isFirstPerson();
     }
 
+    public boolean inWorldFeaturesBlocked() {
+        return ConfigServerControlledSyncedToClient.LTMode && !WatutModClient.isClientPlayerInTropics();
+    }
+
     public void tickOtherPlayerClient(Player player) {
         PlayerStatus playerStatus = getStatus(player);
         PlayerStatus playerStatusPrev = getStatusPrev(player);
@@ -588,7 +592,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         double quadSize = 0.3F + Math.sin((stableTime / 10F) % 360) * 0.01F;
 
-        if (shouldAnimate(player) && !player.isInvisible()) {
+        if (shouldAnimate(player) && !player.isInvisible() && !inWorldFeaturesBlocked()) {
             if (idleParticleChangeOrGone) {
                 if (ConfigClient.showIdleStatesInPlayerAboveHead && ConfigServerControlledSyncedToClient.showIdleStatesInPlayerAboveHead && playerStatus.isIdle()) {
                     ParticleRotating particle = new ParticleStatic((ClientLevel) player.level(), player.position().x, player.position().y + idleY, player.position().z, ParticleRegistry.idle.getSprite());
@@ -610,7 +614,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 Vec3 posParticle = getParticlePosition(player);
 
                 //DEBUG TEST
-                boolean useChatIdleForTestingOtherGUIs = false;
+                boolean useChatIdleForTestingOtherGUIs = ConfigClient.debugIdleChatWindowShowsLastGuiCaptureScreen;
                 boolean newRender = RenderHelper.useDynamicGUISystem() && !playerStatus.isPlayerGuiDontSendDetailedGUIInfo();
 
                 if (ConfigClient.showPlayerActiveChatGui && ConfigServerControlledSyncedToClient.showPlayerActiveChatGui) {
@@ -826,7 +830,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             CULog.dbg("nope " + renderState.id);
         }*/
 
-        if (!ConfigClient.showPlayerAnimations || !ConfigServerControlledSyncedToClient.showPlayerAnimations) return;
+        if (!ConfigClient.showPlayerAnimations || !ConfigServerControlledSyncedToClient.showPlayerAnimations || inWorldFeaturesBlocked()) return;
         Minecraft mc = Minecraft.getInstance();
         boolean inOwnInventory = pEntity == mc.player && (mc.gui != null && mc.gui.screen() instanceof InventoryScreen) && pEntity.isAlive();
         //boolean isRealPlayer = pEntity.tickCount > 10;
@@ -1239,7 +1243,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             setPoseTarget(uuid, differentPress);
             if (pressed && differentPress) {
                 Player player = Minecraft.getInstance().level.getPlayerByUUID(uuid);
-                if (player != null && ConfigClient.playMouseClickSounds && ConfigServerControlledSyncedToClient.playMouseClickSounds && player != Minecraft.getInstance().player) {
+                if (player != null && ConfigClient.playMouseClickSounds && ConfigServerControlledSyncedToClient.playMouseClickSounds && player != Minecraft.getInstance().player && !inWorldFeaturesBlocked()) {
                     WatutMod.dbg("play sound for " + uuid + " name " + player.getDisplayName().getString());
                     player.level().playLocalSound(player.getOnPos(), SoundEvents.CHICKEN_EGG, SoundSource.PLAYERS, 0.05F, 0.1F, false);
                 }
@@ -1258,7 +1262,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
                 }
                 setPoseTarget(uuid, false);
                 Player player = Minecraft.getInstance().level.getPlayerByUUID(uuid);
-                if (player != null && ConfigClient.playScreenOpenSounds && ConfigServerControlledSyncedToClient.playScreenOpenSounds && player != Minecraft.getInstance().player) {
+                if (player != null && ConfigClient.playScreenOpenSounds && ConfigServerControlledSyncedToClient.playScreenOpenSounds && player != Minecraft.getInstance().player && !inWorldFeaturesBlocked()) {
                     PlayerStatus.PlayerGuiState playerGuiStatePrev = statusPrev.getPlayerGuiState();
                     if (PlayerStatus.PlayerGuiState.isSoundMakerGui(playerGuiState) || PlayerStatus.PlayerGuiState.isSoundMakerGui(playerGuiStatePrev) || playerGuiState == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiState == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiState == PlayerStatus.PlayerGuiState.MISC ||
                             playerGuiStatePrev == PlayerStatus.PlayerGuiState.INVENTORY || playerGuiStatePrev == PlayerStatus.PlayerGuiState.CRAFTING || playerGuiStatePrev == PlayerStatus.PlayerGuiState.MISC) {
@@ -1388,6 +1392,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     }
 
     public void receiveItemMove(CompoundTag data) {
+        if (inWorldFeaturesBlocked()) return;
         if (data.contains(WatutNetworking.NBTDataItemTransferItemStack)) {
 
             CompoundTag itemNbt = data.getCompoundOrEmpty(WatutNetworking.NBTDataItemTransferItemStack);
