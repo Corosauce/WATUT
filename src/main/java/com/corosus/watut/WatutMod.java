@@ -5,8 +5,11 @@ import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigCommon;
 import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
 import com.corosus.watut.config.CustomArmCorrections;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.players.PlayerList;
+import net.minecraft.world.level.Level;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
@@ -26,6 +29,9 @@ public abstract class WatutMod
     public static String configJSONName = "watut-item-arm-adjustments.json";
 
     private static WatutMod instance;
+
+    public static final ResourceKey<Level> TROPICS =
+            ResourceKey.create(Registries.DIMENSION, Identifier.fromNamespaceAndPath("tropicraft", "tropics"));
 
     public static WatutMod instance() {
         return instance;
