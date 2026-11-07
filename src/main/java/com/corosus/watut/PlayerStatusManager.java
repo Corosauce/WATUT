@@ -64,7 +64,9 @@ public class PlayerStatusManager {
     }
 
     public Vec3 calculateViewVector(float pXRot, float pYRot) {
-        float f = pXRot * ((float)Math.PI / 180F);
+        //float f = pXRot * ((float)Math.PI / 180F);
+        //we dont actually want to factor in x rot here (looking up and down), otherwise itll push particle closer when they look up or down, bad visual
+        float f = 1 * ((float)Math.PI / 180F);
         float f1 = -pYRot * ((float)Math.PI / 180F);
         float f2 = Mth.cos(f1);
         float f3 = Mth.sin(f1);
