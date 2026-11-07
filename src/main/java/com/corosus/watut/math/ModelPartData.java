@@ -46,4 +46,23 @@ public class ModelPartData {
         return modelPartData;
     }
 
+    /**
+     * Replaces NaN/infinite values with neutral ones, a model part with a non finite transform isnt rendered
+     *
+     * @return true if anything had to be replaced
+     */
+    public boolean sanitize() {
+        boolean changed = false;
+        if (!Float.isFinite(x)) { x = 0; changed = true; }
+        if (!Float.isFinite(y)) { y = 0; changed = true; }
+        if (!Float.isFinite(z)) { z = 0; changed = true; }
+        if (!Float.isFinite(xRot)) { xRot = 0; changed = true; }
+        if (!Float.isFinite(yRot)) { yRot = 0; changed = true; }
+        if (!Float.isFinite(zRot)) { zRot = 0; changed = true; }
+        if (!Float.isFinite(xScale)) { xScale = 1; changed = true; }
+        if (!Float.isFinite(yScale)) { yScale = 1; changed = true; }
+        if (!Float.isFinite(zScale)) { zScale = 1; changed = true; }
+        return changed;
+    }
+
 }

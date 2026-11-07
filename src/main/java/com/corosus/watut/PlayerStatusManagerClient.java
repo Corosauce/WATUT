@@ -403,6 +403,10 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
     public Pair<Float, Float> getMousePos() {
         Minecraft mc = Minecraft.getInstance();
+        //window size is 0 while minimized on windows, use last values saved instead
+        if (mc.getWindow().getScreenWidth() <= 0 || mc.getWindow().getScreenHeight() <= 0 || mc.getWindow().getGuiScale() <= 0) {
+            return Pair.of(getStatusLocal().getScreenPosPercentX(), getStatusLocal().getScreenPosPercentY());
+        }
         double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
         //not actual max, just doing some guestimation work
         double guiScaleMax = 4;
@@ -429,6 +433,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         yPercent = Math.max(Math.min(yPercent, edgeLimit), -edgeLimit);
         //prevent hand in pants
         //yPercent = Math.min(yPercent, edgeLimitYLower);
+        //is NaN safety check
+        if (!Double.isFinite(xPercent)) xPercent = 0;
+        if (!Double.isFinite(yPercent)) yPercent = 0;
         return Pair.of((float) xPercent, (float) yPercent);
     }
 
@@ -945,13 +952,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         playerStatus.getLerpPrev().leftArm = playerStatus.getLerpTarget().leftArm.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().leftArm, playerStatus.lastPartialTick);
         playerStatus.getLerpPrev().head = playerStatus.getLerpTarget().head.copyPartialLerp(playerStatus, playerStatus.getLerpPrev().head, playerStatus.lastPartialTick);
 
-        //rightArm can become NaN for some reason???????
-        if (Float.isNaN(playerStatus.getLerpPrev().rightArm.yRot)) {
-            playerStatus.getLerpPrev().rightArm.yRot = 0;
-        }
-        if (Float.isNaN(playerStatus.getLerpPrev().rightArm.xRot)) {
-            playerStatus.getLerpPrev().rightArm.xRot = 0;
-        }
+        //fix NaN values that happen while mc is minimized on windows
+        sanitizeLerpables(uuid, playerStatus.getLerpPrev());
 
         boolean pointing = PlayerStatus.PlayerGuiState.isPointingGui(playerStatus.getPlayerGuiState());
         boolean typing = playerStatus.getPlayerChatState() == PlayerStatus.PlayerChatState.CHAT_TYPING;
@@ -1031,7 +1033,16 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
             playerStatus.getLerpPrev().head.yRot = playerStatus.yRotHeadBeforeOverriding;
         }
 
+        sanitizeLerpables(uuid, playerStatus.getLerpTarget());
+    }
 
+    private void sanitizeLerpables(UUID uuid, Lerpables lerpables) {
+        boolean hadNaN = lerpables.head.sanitize() | lerpables.body.sanitize()
+                | lerpables.rightArm.sanitize() | lerpables.leftArm.sanitize()
+                | lerpables.rightLeg.sanitize() | lerpables.leftLeg.sanitize();
+        if (hadNaN) {
+            CULog.dbg("watut: cleared non finite pose values for " + uuid);
+        }
     }
 
     public Vec3 getParticlePosition(Player player) {
@@ -1219,6 +1230,9 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         if (data.contains(WatutNetworking.NBTDataPlayerMouseX)) {
             float x = data.getFloatOr(WatutNetworking.NBTDataPlayerMouseX, 0F);
             float y = data.getFloatOr(WatutNetworking.NBTDataPlayerMouseY, 0F);
+            //older watut versions can send NaN from a minimized window
+            if (!Float.isFinite(x)) x = 0;
+            if (!Float.isFinite(y)) y = 0;
             boolean pressed = data.getBooleanOr(WatutNetworking.NBTDataPlayerMousePressed, false);
             boolean differentPress = status.isPressing() != pressed;
             setMouse(uuid, x, y, pressed);
