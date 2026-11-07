@@ -96,7 +96,7 @@ public class ConfigServerControlledSyncedToClient implements IConfigCategory {
     public static boolean playMouseClickSounds = true;
 
     @ConfigComment("If true, disables all in world features for players not in the tropicraft:tropics dimension, helps with minigames that disguises player into the environment")
-    public static boolean LTMode = true;
+    public static boolean LTMode = false;
 
     @Override
     public String getName() {
