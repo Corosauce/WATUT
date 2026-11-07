@@ -45,6 +45,9 @@ public class ConfigServerControlledSyncedToClient implements IConfigCategory {
     @ConfigParams(comment = "Disables the background rendering for most guis, might hide things like JEI or other things count as background rendering")
     public static boolean dynamicGuiDisableBackgroundRendering = true;
 
+    @ConfigComment("Screens that show the simple gui icon instead of the dynamic gui. Full class names eg net.minecraft.client.gui.screens.PauseScreen, separated by commas or new lines. An entry ending in . is for partial matches, eg net.minecraft.client.gui.screens.options")
+    public static String dynamicGuiScreenBlacklist = "";
+
     /**
      * MISC
      */

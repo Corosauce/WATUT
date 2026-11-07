@@ -35,6 +35,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
@@ -318,6 +321,45 @@ public class RenderHelper {
         return true;
     }
 
+    private static String screenBlacklistSource = null;
+    private static List<String> screenBlacklistExact = List.of();
+    private static List<String> screenBlacklistPrefixes = List.of();
+
+    public static boolean isScreenBlacklisted(@Nullable Screen screen) {
+        if (screen == null) return false;
+        String source = ConfigServerControlledSyncedToClient.dynamicGuiScreenBlacklist;
+        if (!Objects.equals(source, screenBlacklistSource)) {
+            parseScreenBlacklist(source);
+        }
+        if (screenBlacklistExact.isEmpty() && screenBlacklistPrefixes.isEmpty()) return false;
+
+        String className = screen.getClass().getName();
+        if (screenBlacklistExact.contains(className)) return true;
+        for (String prefix : screenBlacklistPrefixes) {
+            if (className.startsWith(prefix)) return true;
+        }
+        return false;
+    }
+
+    private static void parseScreenBlacklist(@Nullable String source) {
+        List<String> exact = new ArrayList<>();
+        List<String> prefixes = new ArrayList<>();
+        if (source != null) {
+            for (String entry : source.split("[,\\n]")) {
+                entry = entry.trim();
+                if (entry.isEmpty() || entry.startsWith("#")) continue;
+                if (entry.endsWith(".")) {
+                    prefixes.add(entry);
+                } else {
+                    exact.add(entry);
+                }
+            }
+        }
+        screenBlacklistExact = exact;
+        screenBlacklistPrefixes = prefixes;
+        screenBlacklistSource = source;
+    }
+
     public static final int STANDARD_GUI_WIDTH = 176;
     public static final int STANDARD_GUI_HEIGHT = 166;
     private static final int CREATIVE_TAB_OVERHANG = 28;
@@ -381,6 +423,8 @@ public class RenderHelper {
         if (Minecraft.getInstance().level == null || Minecraft.getInstance().player == null || Minecraft.getInstance().gui == null) {
             return;
         }
+        //fallback to simple gui if blacklisted, so skip all this
+        if (isScreenBlacklisted(Minecraft.getInstance().gui.screen())) return;
 
         PlayerStatus playerStatusLocal = WatutMod.getPlayerStatusManagerClient().getStatusLocal();
 

@@ -564,7 +564,8 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
         float idleY = (float) (2.6 + (cos * 0.03F));
 
         boolean idleParticleChangeOrGone = playerStatus.isIdle() != playerStatusPrev.isIdle() || playerStatus.getParticleIdle() == null;
-        boolean statusParticleChangeOrGone = playerStatus.getPlayerGuiState() != playerStatusPrev.getPlayerGuiState() || playerStatus.getParticle() == null;
+        boolean statusParticleChangeOrGone = playerStatus.getPlayerGuiState() != playerStatusPrev.getPlayerGuiState() || playerStatus.getParticle() == null
+                || playerStatus.isPlayerGuiDontSendDetailedGUIInfo() != playerStatusPrev.isPlayerGuiDontSendDetailedGUIInfo();
         boolean statusChatParticleChangeOrGone = playerStatus.getPlayerChatState() != playerStatusPrev.getPlayerChatState() && playerStatus.getPlayerGuiState() == PlayerStatus.PlayerGuiState.CHAT_SCREEN;
 
         if (idleParticleChangeOrGone || !playerStatus.isIdle()) {
@@ -793,6 +794,7 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
 
         playerStatusPrev.setPlayerGuiState(playerStatus.getPlayerGuiState());
         playerStatusPrev.setPlayerChatState(playerStatus.getPlayerChatState());
+        playerStatusPrev.setPlayerGuiDontSendDetailedGUIInfo(playerStatus.isPlayerGuiDontSendDetailedGUIInfo());
         if (playerStatusPrev.getTicksSinceLastAction() != playerStatus.getTicksSinceLastAction()) {
             playerStatusPrev.setTicksSinceLastAction(playerStatus.getTicksSinceLastAction());
         }
@@ -1092,16 +1094,21 @@ public class PlayerStatusManagerClient extends PlayerStatusManager {
     }
 
     public void sendGuiStatus(PlayerStatus.PlayerGuiState playerStatus, boolean force) {
-        if (getStatusLocal().getPlayerGuiState() != playerStatus || force) {
+        Minecraft mc = Minecraft.getInstance();
+        boolean dontSendDetailedGUIInfo = ConfigClient.dontSendDetailedGUIInfo || RenderHelper.isScreenBlacklisted(mc.gui != null ? mc.gui.screen() : null);
+        //update if it detects a blacklist screen or not vs before
+        boolean detailChanged = getStatusLocal().isPlayerGuiDontSendDetailedGUIInfo() != dontSendDetailedGUIInfo;
+        if (getStatusLocal().getPlayerGuiState() != playerStatus || force || detailChanged) {
             CompoundTag data = new CompoundTag();
             data.putInt(WatutNetworking.NBTDataPlayerGuiStatus, playerStatus.ordinal());
-            data.putBoolean(WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo, ConfigClient.dontSendDetailedGUIInfo);
+            data.putBoolean(WatutNetworking.NBTDataPlayerGuiDontSendDetailedGUIInfo, dontSendDetailedGUIInfo);
             data.putBoolean(WatutNetworking.NBTDataPlayerGuiDontSendItemInfo, ConfigClient.dontSendItemInfo);
             //CULog.dbg("sending status from client: " + playerStatus + " for " + Minecraft.getInstance().player.getUUID());
             //CULog.dbg("data: " + data);
             WatutNetworking.instance().clientSendToServer(data);
         }
         getStatusLocal().setPlayerGuiState(playerStatus);
+        getStatusLocal().setPlayerGuiDontSendDetailedGUIInfo(dontSendDetailedGUIInfo);
     }
 
     public void sendChatStatus(PlayerStatus.PlayerChatState playerStatus) {
