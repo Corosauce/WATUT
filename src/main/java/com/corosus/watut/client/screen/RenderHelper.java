@@ -5,6 +5,7 @@ import com.corosus.watut.PlayerStatus;
 import com.corosus.watut.WatutMod;
 import com.corosus.watut.config.ConfigClient;
 import com.corosus.watut.config.ConfigServerControlledSyncedToClient;
+import com.corosus.watut.mixin.client.AbstractContainerScreenAccessor;
 import com.corosus.watut.mixin.client.NativeImageAccessor;
 import com.mojang.blaze3d.ProjectionType;
 import com.mojang.blaze3d.pipeline.RenderTarget;
@@ -14,10 +15,17 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.AbstractSelectionList;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
+import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryUtil;
 
 import java.io.ByteArrayInputStream;
@@ -308,6 +316,64 @@ public class RenderHelper {
         if (ConfigServerControlledSyncedToClient.dynamicGuiUseOldSimpleGUIVisual) return false;
         if (ConfigClient.dontSendDetailedGUIInfo) return false;
         return true;
+    }
+
+    public static final int STANDARD_GUI_WIDTH = 176;
+    public static final int STANDARD_GUI_HEIGHT = 166;
+    private static final int CREATIVE_TAB_OVERHANG = 28;
+
+    /**
+     * Finding out the size of a screen by checking all its elements, getting the mins and maxs
+     * @param screen
+     * @return
+     */
+    public static @Nullable ScreenRectangle getGuiContentBounds(@Nullable Screen screen) {
+        if (screen == null) return null;
+        if (screen instanceof AbstractContainerScreen<?> containerScreen) {
+            AbstractContainerScreenAccessor accessor = (AbstractContainerScreenAccessor) containerScreen;
+            int top = accessor.watut_getTopPos();
+            int height = accessor.watut_getImageHeight();
+            if (screen instanceof CreativeModeInventoryScreen) {
+                top -= CREATIVE_TAB_OVERHANG;
+                height += CREATIVE_TAB_OVERHANG * 2;
+            }
+            return new ScreenRectangle(accessor.watut_getLeftPos(), top, accessor.watut_getImageWidth(), height);
+        }
+
+        int minX = Integer.MAX_VALUE;
+        int minY = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int maxY = Integer.MIN_VALUE;
+        for (GuiEventListener child : screen.children()) {
+            if (child instanceof AbstractWidget widget && !widget.visible) continue;
+            ScreenRectangle rect;
+            if (child instanceof AbstractSelectionList<?> list) {
+                rect = new ScreenRectangle(list.getRowLeft(), list.getY(), list.getRowWidth(), list.getHeight());
+            } else {
+                rect = child.getRectangle();
+            }
+            if (rect.width() <= 0 || rect.height() <= 0) continue;
+            minX = Math.min(minX, rect.left());
+            minY = Math.min(minY, rect.top());
+            maxX = Math.max(maxX, rect.right());
+            maxY = Math.max(maxY, rect.bottom());
+        }
+        if (minX == Integer.MAX_VALUE) return null;
+        return new ScreenRectangle(minX, minY, maxX - minX, maxY - minY);
+    }
+
+    /**
+     * Variable scaling for guis larger than viewable area
+     * @param content
+     * @param screenGuiHeight
+     * @return
+     */
+    public static float getGuiContentScale(ScreenRectangle content, int screenGuiHeight) {
+        float middleY = screenGuiHeight / 2F;
+        float symmetricHeight = 2 * Math.max(middleY - content.top(), content.bottom() - middleY);
+        float scaleX = content.width() / (float) STANDARD_GUI_WIDTH;
+        float scaleY = symmetricHeight / STANDARD_GUI_HEIGHT;
+        return Math.max(1F, Math.max(scaleX, scaleY));
     }
 
     public static synchronized void renderWithTooltipEnd(GuiGraphicsExtractor pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {

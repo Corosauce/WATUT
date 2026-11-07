@@ -8,6 +8,8 @@ import com.mojang.blaze3d.pipeline.MainTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTexture;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
+import net.minecraft.client.gui.screens.Screen;
 import org.joml.Vector4f;
 
 import java.nio.ByteBuffer;
@@ -101,28 +103,65 @@ public class ScreenParticleRenderer {
         int sourceHeight = mainRenderTarget.height;
         int cropW;
         int cropH;
+        int cropX;
+        int cropY;
         int outW;
         int outH;
+        //area the output image represents, can extend past the screen edges, the part outside the screen comes out transparent
+        int virtualW;
+        int virtualH;
+        int virtualOffsetX = 0;
+        int virtualOffsetY = 0;
+        float contentScale = 1F;
         if (ConfigServerControlledSyncedToClient.dynamicGuiShowClientsEntireScreen) {
             cropW = sourceWidth;
             cropH = sourceHeight;
             outW = widthScaledDown;
             outH = heightScaledDown;
+            cropX = (sourceWidth - cropW) / 2;
+            cropY = (sourceHeight - cropH) / 2;
+            virtualW = cropW;
+            virtualH = cropH;
         } else if (RenderHelper.xaeroWorldMapTextureID != -1) {
             int side = Math.min(sourceWidth, sourceHeight);
             cropW = side;
             cropH = side;
             outW = 256;
             outH = 256;
+            cropX = (sourceWidth - cropW) / 2;
+            cropY = (sourceHeight - cropH) / 2;
+            virtualW = cropW;
+            virtualH = cropH;
         } else {
-            double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
-            cropW = Math.min(sourceWidth, (int) (widthScaledDown * guiScale));
-            cropH = Math.min(sourceHeight, (int) (heightScaledDown * guiScale));
+            Minecraft mc = Minecraft.getInstance();
+            double guiScale = mc.getWindow().getGuiScale();
             outW = widthScaledDown;
             outH = heightScaledDown;
+            double centerX = sourceWidth / 2D;
+
+            Screen screen = mc.gui != null ? mc.gui.screen() : null;
+            ScreenRectangle content = RenderHelper.getGuiContentBounds(screen);
+            if (content != null && screen != null) {
+                contentScale = RenderHelper.getGuiContentScale(content, screen.height);
+                //keep main gui in center if things like recipe book pushes it to the side
+                centerX = (content.left() + content.width() / 2D) * guiScale;
+            }
+
+            virtualW = (int) Math.round(outW * guiScale * contentScale);
+            virtualH = (int) Math.round(outH * guiScale * contentScale);
+            int virtualX = (int) Math.round(centerX - virtualW / 2D);
+            int virtualY = (sourceHeight - virtualH) / 2;
+
+            cropX = Math.max(0, virtualX);
+            cropY = Math.max(0, virtualY);
+            cropW = Math.min(sourceWidth, virtualX + virtualW) - cropX;
+            cropH = Math.min(sourceHeight, virtualY + virtualH) - cropY;
+            virtualOffsetX = cropX - virtualX;
+            virtualOffsetY = cropY - virtualY;
+            if (cropW <= 0 || cropH <= 0) {
+                return;
+            }
         }
-        int cropX = (sourceWidth - cropW) / 2;
-        int cropY = (sourceHeight - cropH) / 2;
 
         float radius = (float) ConfigServerControlledSyncedToClient.dynamicGuiSizeRadiusInPixelsToShow;
         int blurLevel = RenderHelper.xaeroWorldMapTextureID != -1 ? 0 : ConfigServerControlledSyncedToClient.dynamicGuiBlurLevel;
@@ -130,16 +169,20 @@ public class ScreenParticleRenderer {
         int blockSize = colorTexture.getFormat().blockSize();
         if (dbg) CULog.dbg("[watut-capture] readback src=" + sourceWidth + "x" + sourceHeight
                 + " crop=" + cropW + "x" + cropH + "@" + cropX + "," + cropY
+                + " virtual=" + virtualW + "x" + virtualH + " offset=" + virtualOffsetX + "," + virtualOffsetY + " contentScale=" + contentScale
                 + " out=" + outW + "x" + outH + " blurLevel=" + blurLevel + " xaeroSentinel=" + RenderHelper.xaeroWorldMapTextureID);
+        final int fCropW = cropW, fCropH = cropH, fOutW = outW, fOutH = outH;
+        final int fVirtualW = virtualW, fVirtualH = virtualH, fVirtualOffsetX = virtualOffsetX, fVirtualOffsetY = virtualOffsetY;
         GpuBuffer gpuBuffer = RenderSystem.getDevice().createBuffer(() -> "WATUT gui capture readback",
                 GpuBuffer.USAGE_MAP_READ | GpuBuffer.USAGE_COPY_DST, (long) cropW * cropH * blockSize);
 
         RenderSystem.getDevice().createCommandEncoder().copyTextureToBuffer(colorTexture, gpuBuffer, 0, () -> {
             try (GpuBufferSlice.MappedView view = gpuBuffer.map(true, false)) {
                 ByteBuffer src = view.data().order(ByteOrder.LITTLE_ENDIAN);
-                if (dbg) logCapturePixelStats(src, cropW, cropH, blockSize);
-                ByteBuffer out = process(src, cropW, cropH, blockSize, outW, outH, radius, blurLevel);
-                RenderHelper.processor.submitForProcessing(new CapturedFrame(out, outW, outH));
+                if (dbg) logCapturePixelStats(src, fCropW, fCropH, blockSize);
+                ByteBuffer out = process(src, fCropW, fCropH, blockSize, fOutW, fOutH, radius, blurLevel,
+                        fVirtualW, fVirtualH, fVirtualOffsetX, fVirtualOffsetY);
+                RenderHelper.processor.submitForProcessing(new CapturedFrame(out, fOutW, fOutH));
             } catch (Exception e) {
                 CULog.err("WATUT: gui capture readback failed: " + e);
             } finally {
@@ -148,7 +191,9 @@ public class ScreenParticleRenderer {
         }, 0, cropX, cropY, cropW, cropH);
     }
 
-    private static ByteBuffer process(ByteBuffer src, int srcW, int srcH, int blockSize, int outW, int outH, float radius, int blurLevel) {
+
+    private static ByteBuffer process(ByteBuffer src, int srcW, int srcH, int blockSize, int outW, int outH, float radius, int blurLevel,
+                                      int virtualW, int virtualH, int virtualOffsetX, int virtualOffsetY) {
         float[] weights = blurLevel == 1 ? WEIGHTS_LEVEL_1 : WEIGHTS_GAUSSIAN;
         float[] r = new float[outW * outH];
         float[] g = new float[outW * outH];
@@ -156,9 +201,11 @@ public class ScreenParticleRenderer {
         float[] a = new float[outW * outH];
 
         for (int oy = 0; oy < outH; oy++) {
-            int sy = Math.min(srcH - 1, (int) ((oy + 0.5F) * srcH / outH));
+            int sy = (int) ((oy + 0.5F) * virtualH / outH) - virtualOffsetY;
+            if (sy < 0 || sy >= srcH) continue;
             for (int ox = 0; ox < outW; ox++) {
-                int sx = Math.min(srcW - 1, (int) ((ox + 0.5F) * srcW / outW));
+                int sx = (int) ((ox + 0.5F) * virtualW / outW) - virtualOffsetX;
+                if (sx < 0 || sx >= srcW) continue;
                 int i = ox + oy * outW;
                 int center = pixel(src, sx, sy, srcW, blockSize);
                 a[i] = ((center >>> 24) & 0xFF) / 255F;

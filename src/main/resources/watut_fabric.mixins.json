@@ -17,7 +17,9 @@
     "client.ParticleEngineMixinFabric",
     "client.NativeImageAccessor",
     "client.GameRendererCaptureMixin",
-    "client.GameRendererAccessor"
+    "client.GameRendererAccessor",
+    "client.AbstractContainerScreenAccessor",
+    "client.GuiGraphicsCaptureBackgroundFilter"
   ],
   "mixins": [
     "PlayerLoggedIn",
